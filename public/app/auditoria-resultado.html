@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultado da Auditoria — Fluxer Auditoria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-x"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+        <div class="logo-text">fluxer<span>.</span></div>
+      </div>
+      <nav class="sidebar-group">
+        <div class="sidebar-group-title">Mentoria</div>
+        <a href="/app/auditoria-upload.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Auditoria de Tráfego
+        </a>
+        <a href="/app/historico.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Histórico
+        </a>
+        <a href="/app/criativos.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          Engenharia Reversa
+        </a>
+      </nav>
+      <nav class="sidebar-group" id="sidebar-admin-group" style="display:none">
+        <div class="sidebar-group-title">Gestão</div>
+        <a href="/admin/dashboard.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard Liderança
+        </a>
+        <a href="/admin/mentorados.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          Mentorados
+        </a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">U</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="sidebar-user-name">Usuário</div>
+            <div class="sidebar-user-role" id="sidebar-user-role">Mentorado</div>
+          </div>
+        </div>
+        <a href="#" class="sidebar-link" id="btn-logout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="breadcrumb">
+            <a href="/app/auditoria-upload.html" class="breadcrumb-item">Análises</a>
+            <span class="breadcrumb-sep">›</span>
+            <a href="/app/auditoria-upload.html" class="breadcrumb-item">Auditoria de Tráfego</a>
+            <span class="breadcrumb-sep">›</span>
+            <span class="breadcrumb-item active">Resultado</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <h1 class="page-title" id="page-title">Resultado da Auditoria</h1>
+        <p class="page-subtitle" id="page-subtitle">—</p>
+        <p class="page-filename" id="page-filename" style="color:var(--text-secondary);font-size:13px;font-weight:400;margin-top:-18px;margin-bottom:24px;">—</p>
+
+        <div class="banner-card">
+          <div class="banner-kpis">
+            <div class="banner-kpi">
+              <div class="banner-kpi-value" id="info-revenue">—</div>
+              <div class="banner-kpi-label">Faturamento Bruto</div>
+            </div>
+            <div class="banner-kpi">
+              <div class="banner-kpi-value" id="stat-purchases">—</div>
+              <div class="banner-kpi-label">Total de Compras</div>
+            </div>
+            <div class="banner-kpi">
+              <div class="banner-kpi-value" id="info-price">—</div>
+              <div class="banner-kpi-label">Valor do Produto</div>
+            </div>
+            <div class="banner-kpi">
+              <div class="banner-kpi-value" id="info-roas">—</div>
+              <div class="banner-kpi-label">ROAS</div>
+            </div>
+            <div class="banner-kpi">
+              <div class="banner-kpi-value" id="stat-cpa">—</div>
+              <div class="banner-kpi-label">CPA Médio</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="stat-card">
+            <div class="stat-label">Total Campanhas</div>
+            <div class="stat-value" id="info-campaigns">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Gasto Total</div>
+            <div class="stat-value" id="stat-spend">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">
+              CTR Médio
+              <span class="tooltip-trigger" data-tooltip="Porcentagem de pessoas que clicaram no anúncio depois de vê-lo." aria-label="Ajuda">ⓘ</span>
+            </div>
+            <div class="stat-value" id="stat-ctr">—</div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button type="button" class="tab active" data-tab="recs" aria-selected="true">Recomendações</button>
+          <button type="button" class="tab" data-tab="metrics" aria-selected="false">Métricas</button>
+        </div>
+
+        <div id="tab-recs">
+          <div id="recommendations-list">
+            <!-- Recomendações inseridas via JS -->
+          </div>
+        </div>
+
+        <div id="tab-metrics" hidden>
+          <div class="table-wrapper">
+            <table id="campaigns-table">
+              <thead>
+                <tr>
+                  <th>Campanha</th>
+                  <th>Gasto</th>
+                  <th class="tooltip-trigger" data-tooltip="Porcentagem de pessoas que clicaram no anúncio depois de vê-lo.">CTR</th>
+                  <th class="tooltip-trigger" data-tooltip="Quanto custa cada clique no link.">CPC</th>
+                  <th class="tooltip-trigger" data-tooltip="Quantas pessoas viram a página de destino após clicar.">Vis. Página</th>
+                  <th class="tooltip-trigger" data-tooltip="Percentual de cliques que resultaram em visualização da página de destino.">Taxa Vis. Página</th>
+                  <th>Checkouts</th>
+                  <th>Compras</th>
+                  <th class="tooltip-trigger" data-tooltip="Quanto custa cada compra.">CPA</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Preenchido via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 28px;">
+          <div class="grid-2" style="gap: 12px;">
+            <a href="/app/auditoria-upload.html" class="btn btn-primary" style="text-align: center;">Nova Auditoria</a>
+            <a href="/app/historico.html" class="btn btn-secondary" style="text-align: center;">Voltar ao Histórico</a>
+            <button type="button" class="btn btn-secondary" id="btn-print" style="grid-column: 1 / -1;">Imprimir Relatório</button>
+            <button type="button" class="btn btn-secondary" id="btn-export-excel" style="grid-column: 1 / -1; display:none;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Exportar Excel
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="/js/api.js"></script>
+  <script>
+    (function () {
+      if (!API.requireAuth()) return;
+      initSidebar();
+
+      var pathname = window.location.pathname;
+      if (pathname.indexOf('auditoria-resultado') !== -1) {
+        var auditLink = document.querySelector('.sidebar-link[href="/app/auditoria-upload.html"]');
+        if (auditLink) auditLink.classList.add('active');
+      }
+
+      var id = new URLSearchParams(window.location.search).get('id');
+      if (!id) {
+        document.getElementById('page-subtitle').textContent = 'ID da auditoria não informado.';
+        return;
+      }
+
+      var pageTitle = document.getElementById('page-title');
+      var pageSubtitle = document.getElementById('page-subtitle');
+      var infoPrice = document.getElementById('info-price');
+      var infoCampaigns = document.getElementById('info-campaigns');
+      var statSpend = document.getElementById('stat-spend');
+      var statPurchases = document.getElementById('stat-purchases');
+      var statCpa = document.getElementById('stat-cpa');
+      var statCtr = document.getElementById('stat-ctr');
+      var recommendationsList = document.getElementById('recommendations-list');
+      var campaignsTableBody = document.querySelector('#campaigns-table tbody');
+      var tabRecs = document.getElementById('tab-recs');
+      var tabMetrics = document.getElementById('tab-metrics');
+      var tabs = document.querySelectorAll('.tabs .tab');
+      var btnPrint = document.getElementById('btn-print');
+      var btnExportExcel = document.getElementById('btn-export-excel');
+      var currentUser = API.getUser();
+      if (btnExportExcel && currentUser && currentUser.role === 'LIDERANCA') {
+        btnExportExcel.style.display = '';
+      }
+      var exportData = { audit: null, campaigns: [] };
+
+      function escapeHtml(str) {
+        if (str == null) return '';
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      function getScenarioBadge(s) {
+        var map = {
+          1: '<span class="badge badge-s1">Escalável</span>',
+          2: '<span class="badge badge-s2">Otimizar</span>',
+          3: '<span class="badge badge-s3">Atenção</span>'
+        };
+        return map[s] || '<span class="badge badge-info">N/A</span>';
+      }
+
+      API.get('/api/audits/' + id)
+        .then(function (data) {
+          var audit = data.audit;
+          var campaigns = data.campaigns || [];
+          exportData.audit = audit;
+          exportData.campaigns = campaigns;
+          if (!audit) {
+            pageSubtitle.textContent = 'Auditoria não encontrada.';
+            return;
+          }
+
+          var price = audit.product_price != null ? parseFloat(audit.product_price) : 0;
+          var hasPre = audit.has_pre_checkout === 1 || audit.has_pre_checkout === true;
+          var filename = audit.filename || '—';
+          var dateStr = formatDate(audit.created_at) || '—';
+
+          var pTypeLabel = audit.product_type === 'mid_ticket' ? 'Middle Ticket' : 'Low Ticket';
+          pageSubtitle.textContent = dateStr + '  ·  ' + pTypeLabel;
+          document.getElementById('page-filename').textContent = filename;
+
+          infoPrice.textContent = typeof formatCurrency === 'function' ? formatCurrency(price) : 'R$ ' + price.toFixed(2).replace('.', ',');
+          infoCampaigns.textContent = campaigns.length;
+
+          var infoRevenue = document.getElementById('info-revenue');
+          var infoRoas = document.getElementById('info-roas');
+
+          var totalSpend = 0;
+          var totalPurchases = 0;
+          var totalCpa = 0;
+          var cpaCount = 0;
+          var totalLinkClicks = 0;
+          var totalImpressions = 0;
+
+          campaigns.forEach(function (c) {
+            totalSpend += parseFloat(c.spend) || 0;
+            totalPurchases += parseInt(c.purchases, 10) || 0;
+            if (c.cpa != null && c.purchases > 0) {
+              totalCpa += parseFloat(c.cpa) || 0;
+              cpaCount++;
+            }
+            totalLinkClicks += parseInt(c.link_clicks, 10) || 0;
+            totalImpressions += parseInt(c.impressions, 10) || 0;
+          });
+
+          var avgCpa = cpaCount > 0 ? totalCpa / cpaCount : 0;
+          var avgCtr = totalImpressions > 0 ? totalLinkClicks / totalImpressions : 0;
+
+          var revenue = totalPurchases * price;
+          var roas = totalSpend > 0 ? revenue / totalSpend : 0;
+          if (infoRevenue) infoRevenue.textContent = formatCurrency(revenue);
+          if (infoRoas) infoRoas.textContent = roas > 0 ? roas.toFixed(2).replace('.', ',') + 'x' : '—';
+
+          statSpend.textContent = typeof formatCurrency === 'function' ? formatCurrency(totalSpend) : 'R$ ' + totalSpend.toFixed(2).replace('.', ',');
+          statPurchases.textContent = totalPurchases;
+          statCpa.textContent = typeof formatCurrency === 'function' ? formatCurrency(avgCpa) : 'R$ ' + avgCpa.toFixed(2).replace('.', ',');
+          statCtr.textContent = typeof formatPercent === 'function' ? formatPercent(avgCtr) : ((avgCtr * 100).toFixed(2).replace('.', ',') + '%');
+
+          recommendationsList.innerHTML = '';
+          var scenarioGroups = {};
+          campaigns.forEach(function (camp) {
+            var scenario = camp.scenario || 0;
+            if (!scenarioGroups[scenario]) {
+              var rec = (camp.recommendations && camp.recommendations[0]) || {};
+              var steps = [];
+              try {
+                steps = typeof rec.steps_json === 'string' ? JSON.parse(rec.steps_json || '[]') : (rec.steps_json || []);
+              } catch (e) {}
+              if (!Array.isArray(steps)) steps = [];
+              scenarioGroups[scenario] = {
+                title: rec.title || '',
+                steps: steps,
+                campaigns: []
+              };
+            }
+            scenarioGroups[scenario].campaigns.push(camp.campaign_name || 'Sem nome');
+          });
+
+          var scenarioOrder = [1, 2, 3, 0];
+          scenarioOrder.forEach(function (s) {
+            var group = scenarioGroups[s];
+            if (!group) return;
+            var badge = getScenarioBadge(s);
+            var scenarioClass = 'scenario-' + s;
+            var campaignsList = group.campaigns.map(function (name) {
+              return '<li>' + escapeHtml(name) + '</li>';
+            }).join('');
+            var triggerPhrases = [
+              'Analise quais anúncios têm melhor performance e crie novas variações mantendo a mesma mensagem principal.',
+              'Identifique públicos e criativos vencedores para otimizações futuras.'
+            ];
+            var showReverseBtn = false;
+            var stepsHtml = group.steps.map(function (step) {
+              for (var tp = 0; tp < triggerPhrases.length; tp++) {
+                if (step.indexOf(triggerPhrases[tp]) !== -1) { showReverseBtn = true; break; }
+              }
+              return '<li>' + escapeHtml(step) + '</li>';
+            }).join('');
+            var reverseBtnHtml = showReverseBtn
+              ? '<a href="/app/criativos.html?audit_id=' + id + '" class="btn btn-primary" style="margin-top:14px;display:inline-flex;align-items:center;gap:8px;">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>' +
+                'Engenharia Reversa dos melhores criativos</a>'
+              : '';
+            var card = document.createElement('div');
+            card.className = 'rec-card ' + scenarioClass;
+            card.innerHTML =
+              '<div class="rec-title">' + badge + ' ' + escapeHtml(group.title) + '</div>' +
+              '<div style="margin:12px 0 8px;font-weight:600;font-size:13px;color:var(--text-secondary);">Campanhas (' + group.campaigns.length + '):</div>' +
+              '<ul style="margin:0 0 12px 18px;font-size:13px;line-height:1.8;">' + campaignsList + '</ul>' +
+              (stepsHtml ? '<div style="font-weight:600;font-size:13px;color:var(--text-secondary);margin-bottom:6px;">Passos recomendados:</div><ol class="rec-steps">' + stepsHtml + '</ol>' : '') +
+              reverseBtnHtml;
+            recommendationsList.appendChild(card);
+          });
+
+          if (recommendationsList.children.length === 0) {
+            recommendationsList.innerHTML = '<p class="empty-state" style="padding: 24px; color: var(--text-secondary);">Nenhuma recomendação para esta auditoria.</p>';
+          }
+
+          campaignsTableBody.innerHTML = '';
+          campaigns.forEach(function (c) {
+            var spendStr = typeof formatCurrency === 'function' ? formatCurrency(c.spend) : 'R$ ' + (parseFloat(c.spend) || 0).toFixed(2).replace('.', ',');
+            var ctrStr = typeof formatPercent === 'function' ? formatPercent(c.ctr_link) : ((parseFloat(c.ctr_link) || 0) * 100).toFixed(2).replace('.', ',') + '%';
+            var cpcStr = typeof formatCurrency === 'function' ? formatCurrency(c.cpc) : 'R$ ' + (parseFloat(c.cpc) || 0).toFixed(2).replace('.', ',');
+            var cpaStr = typeof formatCurrency === 'function' ? formatCurrency(c.cpa) : 'R$ ' + (parseFloat(c.cpa) || 0).toFixed(2).replace('.', ',');
+            var lpRateStr = (c.lp_rate != null && c.lp_rate > 0) ? formatPercent(c.lp_rate) : '—';
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+              '<td>' + escapeHtml(c.campaign_name || '—') + '</td>' +
+              '<td>' + spendStr + '</td>' +
+              '<td>' + ctrStr + '</td>' +
+              '<td>' + cpcStr + '</td>' +
+              '<td>' + (c.lp_views != null ? c.lp_views : '—') + '</td>' +
+              '<td>' + lpRateStr + '</td>' +
+              '<td>' + (c.checkouts != null ? c.checkouts : '—') + '</td>' +
+              '<td>' + (c.purchases != null ? c.purchases : '—') + '</td>' +
+              '<td>' + cpaStr + '</td>' +
+              '<td>' + getScenarioBadge(c.scenario) + '</td>';
+            campaignsTableBody.appendChild(tr);
+          });
+        })
+        .catch(function (err) {
+          pageSubtitle.textContent = err && err.message ? err.message : 'Erro ao carregar auditoria.';
+        });
+
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          var t = this.getAttribute('data-tab');
+          tabs.forEach(function (x) {
+            x.classList.remove('active');
+            x.setAttribute('aria-selected', 'false');
+          });
+          this.classList.add('active');
+          this.setAttribute('aria-selected', 'true');
+          if (t === 'recs') {
+            tabRecs.hidden = false;
+            tabMetrics.hidden = true;
+          } else {
+            tabRecs.hidden = true;
+            tabMetrics.hidden = false;
+          }
+        });
+      });
+
+      if (btnPrint) {
+        btnPrint.addEventListener('click', function () {
+          window.print();
+        });
+      }
+
+      if (btnExportExcel) {
+        btnExportExcel.addEventListener('click', function () {
+          if (!exportData.audit || !window.XLSX) return;
+          var a = exportData.audit;
+          var camps = exportData.campaigns || [];
+          var price = parseFloat(a.product_price) || 0;
+
+          var metricsRows = camps.map(function (c) {
+            var purchases = parseInt(c.purchases, 10) || 0;
+            var spend = parseFloat(c.spend) || 0;
+            var scenarioMap = { 1: 'Escalável', 2: 'Otimizar', 3: 'Atenção' };
+            return {
+              'Campanha': c.campaign_name || '',
+              'Gasto (R$)': spend,
+              'CTR (%)': ((parseFloat(c.ctr_link) || 0) * 100),
+              'CPC (R$)': parseFloat(c.cpc) || 0,
+              'Vis. Página': c.lp_views || 0,
+              'Taxa Vis. Página (%)': ((parseFloat(c.lp_rate) || 0) * 100),
+              'Checkouts': c.checkouts || 0,
+              'Compras': purchases,
+              'CPA (R$)': parseFloat(c.cpa) || 0,
+              'Status': scenarioMap[c.scenario] || 'N/A'
+            };
+          });
+
+          var totalSpend = 0, totalPurchases = 0;
+          camps.forEach(function (c) {
+            totalSpend += parseFloat(c.spend) || 0;
+            totalPurchases += parseInt(c.purchases, 10) || 0;
+          });
+          var revenue = totalPurchases * price;
+          var roas = totalSpend > 0 ? revenue / totalSpend : 0;
+          var pTypeLabel = a.product_type === 'mid_ticket' ? 'Middle Ticket' : 'Low Ticket';
+
+          var summaryRows = [
+            { 'Indicador': 'Faturamento Bruto', 'Valor': 'R$ ' + revenue.toFixed(2).replace('.', ',') },
+            { 'Indicador': 'Total de Compras', 'Valor': totalPurchases },
+            { 'Indicador': 'Valor do Produto', 'Valor': 'R$ ' + price.toFixed(2).replace('.', ',') },
+            { 'Indicador': 'ROAS', 'Valor': roas.toFixed(2).replace('.', ',') + 'x' },
+            { 'Indicador': 'Gasto Total', 'Valor': 'R$ ' + totalSpend.toFixed(2).replace('.', ',') },
+            { 'Indicador': 'Tipo de Produto', 'Valor': pTypeLabel },
+            { 'Indicador': 'Data', 'Valor': formatDate(a.created_at) }
+          ];
+
+          var recsRows = [];
+          camps.forEach(function (c) {
+            var recs = c.recommendations || [];
+            recs.forEach(function (r) {
+              var steps = [];
+              try { steps = typeof r.steps_json === 'string' ? JSON.parse(r.steps_json || '[]') : (r.steps_json || []); } catch (e) {}
+              recsRows.push({
+                'Campanha': c.campaign_name || '',
+                'Status': { 1: 'Escalável', 2: 'Otimizar', 3: 'Atenção' }[c.scenario] || 'N/A',
+                'Título': r.title || '',
+                'Recomendação': r.message || '',
+                'Passos': Array.isArray(steps) ? steps.join(' | ') : ''
+              });
+            });
+          });
+
+          var wb = XLSX.utils.book_new();
+          var ws1 = XLSX.utils.json_to_sheet(summaryRows);
+          ws1['!cols'] = [{ wch: 22 }, { wch: 30 }];
+          XLSX.utils.book_append_sheet(wb, ws1, 'Resumo');
+
+          var ws2 = XLSX.utils.json_to_sheet(metricsRows);
+          ws2['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }];
+          XLSX.utils.book_append_sheet(wb, ws2, 'Métricas');
+
+          if (recsRows.length > 0) {
+            var ws3 = XLSX.utils.json_to_sheet(recsRows);
+            ws3['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 30 }, { wch: 50 }, { wch: 60 }];
+            XLSX.utils.book_append_sheet(wb, ws3, 'Recomendações');
+          }
+
+          var filename = 'auditoria-' + (a.id || 'relatorio') + '.xlsx';
+          XLSX.writeFile(wb, filename);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfil — Fluxer Auditoria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-x"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+        <div class="logo-text">fluxer<span>.</span></div>
+      </div>
+      <nav class="sidebar-group">
+        <div class="sidebar-group-title">Mentoria</div>
+        <a href="/app/auditoria-upload.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Auditoria de Tráfego
+        </a>
+        <a href="/app/historico.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Histórico
+        </a>
+        <a href="/app/criativos.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          Engenharia Reversa
+        </a>
+      </nav>
+      <nav class="sidebar-group" id="sidebar-admin-group" style="display:none">
+        <div class="sidebar-group-title">Gestão</div>
+        <a href="/admin/dashboard.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard Liderança
+        </a>
+        <a href="/admin/mentorados.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          Mentorados
+        </a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">U</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="sidebar-user-name">Usuário</div>
+            <div class="sidebar-user-role" id="sidebar-user-role">Mentorado</div>
+          </div>
+        </div>
+        <a href="#" class="sidebar-link" id="btn-logout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="breadcrumb">
+            <span class="breadcrumb-item">Configurações</span>
+            <span class="breadcrumb-sep">›</span>
+            <span class="breadcrumb-item active">Perfil</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <h1 class="page-title">Meu Perfil</h1>
+        <p class="page-subtitle">Suas informações de conta</p>
+
+        <div class="card" style="max-width: 500px;">
+          <div class="form-group">
+            <label for="profile-name">Nome</label>
+            <input type="text" id="profile-name" readonly>
+          </div>
+          <div class="form-group">
+            <label for="profile-email">Email</label>
+            <input type="email" id="profile-email" readonly>
+          </div>
+          <div class="form-group">
+            <label for="profile-role">Tipo de conta</label>
+            <input type="text" id="profile-role" readonly>
+          </div>
+          <div class="form-group">
+            <label for="profile-since">Membro desde</label>
+            <input type="text" id="profile-since" readonly>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    (function () {
+      if (!API.requireAuth()) return;
+      initSidebar();
+
+      API.get('/api/auth/me')
+        .then(function (data) {
+          var u = data && data.user ? data.user : null;
+          if (!u) return;
+          document.getElementById('profile-name').value = u.name || '';
+          document.getElementById('profile-email').value = u.email || '';
+          document.getElementById('profile-role').value = u.role === 'LIDERANCA' ? 'Liderança' : 'Mentorado';
+          document.getElementById('profile-since').value = typeof formatDate === 'function' ? formatDate(u.created_at) : (u.created_at || '—');
+        })
+        .catch(function (err) {
+          console.error(err);
+        });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Auditoria — Fluxer Auditoria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+        <div class="logo-text">fluxer<span>.</span></div>
+      </div>
+      <nav class="sidebar-group">
+        <div class="sidebar-group-title">Mentoria</div>
+        <a href="/app/auditoria-upload.html" class="sidebar-link active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Auditoria de Tráfego
+        </a>
+        <a href="/app/historico.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Histórico
+        </a>
+        <a href="/app/criativos.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          Engenharia Reversa
+        </a>
+      </nav>
+      <nav class="sidebar-group" id="sidebar-admin-group" style="display:none">
+        <div class="sidebar-group-title">Gestão</div>
+        <a href="/admin/dashboard.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard Liderança
+        </a>
+        <a href="/admin/mentorados.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          Mentorados
+        </a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">U</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="sidebar-user-name">Usuário</div>
+            <div class="sidebar-user-role" id="sidebar-user-role">Mentorado</div>
+          </div>
+        </div>
+        <a href="#" class="sidebar-link" id="btn-logout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="breadcrumb">
+            <a href="/app/auditoria-upload.html" class="breadcrumb-item">Análises</a>
+            <span class="breadcrumb-sep">›</span>
+            <span class="breadcrumb-item active">Auditoria de Tráfego</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <h1 class="page-title">Nova Auditoria de Tráfego</h1>
+        <p class="page-subtitle">Envie a planilha exportada do Gerenciador de Anúncios do Facebook</p>
+
+        <div id="alert" class="alert" style="display: none;" role="alert"></div>
+
+        <form id="audit-form">
+          <section class="card">
+            <h2 class="card-title">Configurações</h2>
+            <div class="form-group">
+              <label for="product_price">Valor do Produto (R$)</label>
+              <input type="number" id="product_price" name="product_price" required placeholder="Ex: 297.00" step="0.01" min="0.01">
+            </div>
+            <div class="form-group">
+              <label for="product_type">Tipo de Produto</label>
+              <select id="product_type" name="product_type" required>
+                <option value="" disabled selected>Selecione o tipo</option>
+                <option value="low_ticket">Low Ticket (até R$ 100)</option>
+                <option value="mid_ticket">Middle Ticket (acima de R$ 100)</option>
+              </select>
+            </div>
+            <div class="form-group switch-group">
+              <label class="switch">
+                <input type="checkbox" id="has_pre_checkout" name="has_pre_checkout">
+                <span class="switch-slider"></span>
+              </label>
+              <span style="margin-left: 12px;">Sim, meu funil tem uma etapa antes do checkout</span>
+            </div>
+          </section>
+
+          <div class="upload-area" id="upload-area">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="19" x2="12" y2="5"/>
+              <polyline points="5 12 12 5 19 12"/>
+            </svg>
+            <p>Arraste o arquivo ou clique para selecionar</p>
+            <p class="upload-hint">Formatos aceitos: .xlsx, .csv (máx. 10MB)</p>
+            <input type="file" id="file-input" accept=".xlsx,.csv" hidden>
+          </div>
+
+          <div class="file-selected" id="file-selected" style="display: none;"></div>
+
+          <button type="submit" class="btn btn-primary" style="width: auto;">Processar Auditoria</button>
+        </form>
+
+        <div class="loading-overlay" id="loading">
+          <div class="loading-spinner"></div>
+          <p>Processando auditoria...</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    (function () {
+      if (!API.requireAuth()) return;
+      initSidebar();
+
+      var uploadArea = document.getElementById('upload-area');
+      var fileInput = document.getElementById('file-input');
+      var fileSelected = document.getElementById('file-selected');
+      var form = document.getElementById('audit-form');
+      var loading = document.getElementById('loading');
+      var alertEl = document.getElementById('alert');
+
+      uploadArea.addEventListener('click', function () {
+        fileInput.click();
+      });
+
+      uploadArea.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.add('dragover');
+      });
+
+      uploadArea.addEventListener('dragleave', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.remove('dragover');
+      });
+
+      uploadArea.addEventListener('drop', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.remove('dragover');
+        var files = e.dataTransfer && e.dataTransfer.files;
+        if (files && files.length) {
+          fileInput.files = files;
+          onFileSelect();
+        }
+      });
+
+      fileInput.addEventListener('change', onFileSelect);
+
+      function onFileSelect() {
+        var file = fileInput.files && fileInput.files[0];
+        if (file) {
+          fileSelected.textContent = 'Arquivo selecionado: ' + file.name;
+          fileSelected.style.display = 'block';
+        } else {
+          fileSelected.style.display = 'none';
+          fileSelected.textContent = '';
+        }
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (alertEl) alertEl.style.display = 'none';
+
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) {
+          showAlert('alert', 'Selecione um arquivo para enviar.', 'error');
+          return;
+        }
+
+        var productPrice = document.getElementById('product_price').value;
+        var productType = document.getElementById('product_type').value;
+        var hasPreCheckout = document.getElementById('has_pre_checkout').checked;
+
+        if (!productType) {
+          showAlert('alert', 'Selecione o tipo de produto (Low Ticket ou Middle Ticket).', 'error');
+          return;
+        }
+
+        var fd = new FormData();
+        fd.append('file', file);
+        fd.append('product_price', productPrice);
+        fd.append('product_type', productType);
+        fd.append('has_pre_checkout', hasPreCheckout ? '1' : '0');
+
+        loading.classList.add('active');
+
+        API.post('/api/audits', fd)
+          .then(function (data) {
+            var id = data && data.id;
+            if (id) {
+              window.location.href = '/app/auditoria-resultado.html?id=' + id;
+            } else {
+              showAlert('alert', 'Resposta inválida do servidor.', 'error');
+              loading.classList.remove('active');
+            }
+          })
+          .catch(function (err) {
+            showAlert('alert', err && err.message ? err.message : 'Erro ao processar auditoria.', 'error');
+            loading.classList.remove('active');
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

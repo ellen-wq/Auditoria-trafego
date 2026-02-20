@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criativos dos Mentorados — Fluxer Auditoria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .strengths-card {
+      background: linear-gradient(135deg, var(--primary) 0%, #1e3a6e 100%);
+      color: white; border-radius: var(--radius); padding: 24px; margin-bottom: 24px;
+    }
+    .strengths-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+    .strengths-list { margin: 0 0 0 18px; font-size: 13px; line-height: 2; }
+    .strengths-list li { opacity: 0.95; }
+    .creative-entry {
+      background: var(--bg-white); border: 1px solid var(--border-light);
+      border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px;
+    }
+    .creative-entry .entry-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+      padding-bottom: 10px; border-bottom: 1px solid var(--border-light);
+    }
+    .creative-entry .entry-mentee { font-weight: 700; font-size: 13px; color: var(--primary); }
+    .creative-entry .entry-date { font-size: 11px; color: var(--text-muted); }
+    .creative-entry .entry-campaign { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+    .creative-entry .metrics-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+    .creative-entry .metric-pill {
+      background: #f0f4ff; padding: 3px 8px; border-radius: 20px;
+      font-size: 10px; color: var(--primary); font-weight: 600;
+    }
+    .creative-entry .copy-preview {
+      background: #f8f9fb; padding: 10px; border-radius: 8px;
+      font-size: 12px; color: var(--text-secondary); white-space: pre-wrap;
+      max-height: 80px; overflow: hidden; position: relative; margin-bottom: 8px;
+    }
+    .creative-entry .video-link { font-size: 12px; }
+    .creative-entry .analysis-summary { margin-top: 10px; font-size: 12px; line-height: 1.7; }
+    .creative-entry .analysis-summary strong { color: var(--primary); }
+    .filter-bar {
+      display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+      margin-bottom: 20px; padding: 16px; background: var(--bg-white);
+      border: 1px solid var(--border-light); border-radius: var(--radius);
+    }
+    .filter-bar .form-group { margin-bottom: 0; flex: 1; min-width: 140px; }
+    .filter-bar label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-x"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+        <div class="logo-text">fluxer<span>.</span></div>
+      </div>
+      <nav class="sidebar-group">
+        <div class="sidebar-group-title">Mentoria</div>
+        <a href="/app/auditoria-upload.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Auditoria de Tráfego
+        </a>
+        <a href="/app/historico.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Histórico
+        </a>
+      </nav>
+      <nav class="sidebar-group">
+        <div class="sidebar-group-title">Gestão</div>
+        <a href="/admin/dashboard.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard Liderança
+        </a>
+        <a href="/admin/mentorados.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          Mentorados
+        </a>
+        <a href="/admin/criativos.html" class="sidebar-link active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          Criativos
+        </a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">U</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="sidebar-user-name">Usuário</div>
+            <div class="sidebar-user-role" id="sidebar-user-role">Liderança</div>
+          </div>
+        </div>
+        <a href="#" class="sidebar-link" id="btn-logout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="breadcrumb">
+            <a href="/admin/dashboard.html" class="breadcrumb-item">Dashboard</a>
+            <span class="breadcrumb-sep">/</span>
+            <span class="breadcrumb-current">Criativos dos Mentorados</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header">
+          <h1 class="page-title">Criativos dos Mentorados</h1>
+          <p class="page-subtitle">Visão consolidada dos melhores criativos de todos os mentorados.</p>
+        </div>
+
+        <div class="filter-bar">
+          <div class="form-group">
+            <label>Data Início</label>
+            <input type="date" id="filter-from">
+          </div>
+          <div class="form-group">
+            <label>Data Fim</label>
+            <input type="date" id="filter-to">
+          </div>
+          <div class="form-group">
+            <label>Tipo de Produto</label>
+            <select id="filter-product-type">
+              <option value="">Todos</option>
+              <option value="low_ticket">Low Ticket</option>
+              <option value="mid_ticket">Middle Ticket</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-end;">
+            <button class="btn btn-primary btn-sm" id="btn-filter">Filtrar</button>
+            <button class="btn btn-secondary btn-sm" id="btn-clear">Limpar</button>
+          </div>
+        </div>
+
+        <div id="strengths-area"></div>
+
+        <div id="creatives-list">
+          <p class="empty-state" style="padding:40px;text-align:center;">Carregando...</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    (function () {
+      initSidebar();
+
+      var strengthsArea = document.getElementById('strengths-area');
+      var creativesList = document.getElementById('creatives-list');
+      var filterFrom = document.getElementById('filter-from');
+      var filterTo = document.getElementById('filter-to');
+      var filterProductType = document.getElementById('filter-product-type');
+      var btnFilter = document.getElementById('btn-filter');
+      var btnClear = document.getElementById('btn-clear');
+
+      function loadCreatives() {
+        var params = [];
+        if (filterFrom.value) params.push('from=' + filterFrom.value);
+        if (filterTo.value) params.push('to=' + filterTo.value);
+        if (filterProductType.value) params.push('product_type=' + filterProductType.value);
+        var qs = params.length > 0 ? '?' + params.join('&') : '';
+
+        apiFetch('/api/creatives/all' + qs)
+          .then(function (data) {
+            var creatives = data.creatives || [];
+            var strengths = data.strengths || {};
+
+            strengthsArea.innerHTML = '';
+            if (strengths.patterns && strengths.patterns.length > 0) {
+              var patternsHtml = strengths.patterns.map(function (p) { return '<li>' + escapeHtml(p) + '</li>'; }).join('');
+              strengthsArea.innerHTML =
+                '<div class="strengths-card">' +
+                  '<h2>Pontos Positivos Gerais dos Melhores Criativos</h2>' +
+                  '<p style="font-size:12px;opacity:0.8;margin-bottom:12px;">' + escapeHtml(strengths.summary || '') + '</p>' +
+                  '<ul class="strengths-list">' + patternsHtml + '</ul>' +
+                '</div>';
+            }
+
+            creativesList.innerHTML = '';
+            if (creatives.length === 0) {
+              creativesList.innerHTML = '<p class="empty-state" style="padding:40px;text-align:center;">Nenhum criativo cadastrado ainda pelos mentorados.</p>';
+              return;
+            }
+
+            creatives.forEach(function (cr) {
+              var analysis;
+              try { analysis = JSON.parse(cr.analysis_result || '{}'); } catch (e) { analysis = {}; }
+              var points = analysis.points || [];
+
+              var spendStr = typeof formatCurrency === 'function' ? formatCurrency(cr.spend) : 'R$ ' + (cr.spend || 0).toFixed(2);
+              var ctrStr = ((cr.ctr_link || 0) * 100).toFixed(2).replace('.', ',') + '%';
+              var cpaStr = typeof formatCurrency === 'function' ? formatCurrency(cr.cpa) : 'R$ ' + (cr.cpa || 0).toFixed(2);
+              var ptLabel = cr.product_type === 'mid_ticket' ? 'Middle Ticket' : 'Low Ticket';
+              var dateStr = cr.audit_date ? cr.audit_date.split('T')[0].split('-').reverse().join('/') : '—';
+
+              var pointsHtml = points.slice(0, 3).map(function (p) { return '<li>' + escapeHtml(p) + '</li>'; }).join('');
+
+              var div = document.createElement('div');
+              div.className = 'creative-entry';
+              div.innerHTML =
+                '<div class="entry-header">' +
+                  '<div class="entry-mentee">' + escapeHtml(cr.user_name || '—') + '</div>' +
+                  '<div class="entry-date">' + dateStr + ' · ' + ptLabel + '</div>' +
+                '</div>' +
+                '<div class="entry-campaign">' + escapeHtml(cr.campaign_name || '—') + '</div>' +
+                '<div class="metrics-row">' +
+                  '<span class="metric-pill">Gasto: ' + spendStr + '</span>' +
+                  '<span class="metric-pill">CTR: ' + ctrStr + '</span>' +
+                  '<span class="metric-pill">Compras: ' + (cr.purchases || 0) + '</span>' +
+                  '<span class="metric-pill">CPA: ' + cpaStr + '</span>' +
+                  '<span class="metric-pill">Impressões: ' + (cr.impressions || 0).toLocaleString('pt-BR') + '</span>' +
+                  '<span class="metric-pill">Vis. LP: ' + (cr.lp_views || 0).toLocaleString('pt-BR') + '</span>' +
+                '</div>' +
+                (cr.copy_text ? '<div class="copy-preview">' + escapeHtml(cr.copy_text) + '</div>' : '') +
+                (cr.video_link ? '<div class="video-link"><a href="' + escapeHtml(cr.video_link) + '" target="_blank" style="color:var(--primary);font-size:12px;">Ver vídeo do criativo</a></div>' : '') +
+                (pointsHtml ? '<div class="analysis-summary"><strong>Pontos fortes:</strong><ul style="margin:4px 0 0 16px;">' + pointsHtml + '</ul></div>' : '');
+
+              creativesList.appendChild(div);
+            });
+          })
+          .catch(function (err) {
+            creativesList.innerHTML = '<p class="empty-state" style="padding:40px;text-align:center;">Erro ao carregar criativos.</p>';
+          });
+      }
+
+      btnFilter.addEventListener('click', loadCreatives);
+      btnClear.addEventListener('click', function () {
+        filterFrom.value = '';
+        filterTo.value = '';
+        filterProductType.value = '';
+        loadCreatives();
+      });
+
+      loadCreatives();
+    })();
+  </script>
+</body>
+</html>

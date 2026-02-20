@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Fluxer Auditoria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="logo-x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+        fluxer<span>.</span>
+      </div>
+      <p class="auth-subtitle">Crie sua conta para começar a auditar</p>
+
+      <div id="alert" class="alert alert-error"></div>
+
+      <form id="register-form">
+        <div class="form-group">
+          <label for="name">Nome completo</label>
+          <input type="text" id="name" placeholder="Seu nome" required>
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="seu@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" placeholder="Mínimo 6 caracteres" required minlength="6">
+        </div>
+        <div class="form-group">
+          <label for="password2">Confirmar senha</label>
+          <input type="password" id="password2" placeholder="Repita a senha" required>
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <label class="checkbox-label" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text-secondary);line-height:1.5;">
+            <input type="checkbox" id="accept-terms" required style="margin-top:3px;min-width:18px;min-height:18px;accent-color:var(--accent-dark);cursor:pointer;">
+            <span>Declaro que li e aceito os <a href="#" id="open-terms" style="color:var(--accent-dark);text-decoration:underline;">Termos de Uso</a>. Estou ciente de que a equipe de mentoria terá total e livre acesso aos dados inseridos por mim nesta plataforma, incluindo a possibilidade de visualização, análise e manipulação dessas informações para fins de acompanhamento e orientação.</span>
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Criar conta</button>
+      </form>
+
+      <div id="terms-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;justify-content:center;align-items:center;">
+        <div style="background:var(--bg-white);border-radius:var(--radius);max-width:560px;width:90%;max-height:80vh;overflow-y:auto;padding:32px;margin:auto;position:relative;top:50%;transform:translateY(-50%);">
+          <h2 style="font-size:18px;font-weight:700;margin-bottom:16px;">Termos de Uso — Fluxer Auditoria</h2>
+          <div style="font-size:13px;line-height:1.7;color:var(--text-secondary);">
+            <p style="margin-bottom:12px;">Ao criar sua conta e utilizar a plataforma Fluxer Auditoria de Tráfego, você declara estar ciente e de acordo com os seguintes termos:</p>
+            <p style="margin-bottom:12px;"><strong>1. Acesso aos dados:</strong> A equipe de mentoria (perfil Liderança) terá total e livre acesso a todos os dados inseridos por você na plataforma, incluindo informações de campanhas, planilhas enviadas, métricas, resultados de auditorias e quaisquer outros dados preenchidos.</p>
+            <p style="margin-bottom:12px;"><strong>2. Manipulação dos dados:</strong> A equipe de mentoria poderá visualizar, analisar, comparar e utilizar seus dados para fins de acompanhamento, orientação estratégica, geração de relatórios consolidados e melhoria contínua do processo de mentoria.</p>
+            <p style="margin-bottom:12px;"><strong>3. Finalidade:</strong> Os dados coletados serão utilizados exclusivamente para fins pedagógicos e de acompanhamento dentro do programa de mentoria, visando otimizar os resultados das suas campanhas de tráfego pago.</p>
+            <p style="margin-bottom:12px;"><strong>4. Responsabilidade:</strong> Você é responsável pela veracidade e precisão dos dados inseridos na plataforma. A equipe de mentoria não se responsabiliza por decisões tomadas com base em dados incorretos ou incompletos.</p>
+            <p><strong>5. Consentimento:</strong> Ao marcar a caixa de aceite e criar sua conta, você consente de forma livre, informada e inequívoca com todos os termos acima descritos.</p>
+          </div>
+          <button type="button" id="close-terms" class="btn btn-primary" style="margin-top:20px;width:100%;">Entendi e concordo</button>
+        </div>
+      </div>
+
+      <p class="auth-footer">
+        Já tem conta? <a href="/login.html">Fazer login</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    (function () {
+      var termsModal = document.getElementById('terms-modal');
+      var openTerms = document.getElementById('open-terms');
+      var closeTerms = document.getElementById('close-terms');
+      var acceptCheckbox = document.getElementById('accept-terms');
+
+      openTerms.addEventListener('click', function (e) {
+        e.preventDefault();
+        termsModal.style.display = 'block';
+      });
+
+      closeTerms.addEventListener('click', function () {
+        termsModal.style.display = 'none';
+        acceptCheckbox.checked = true;
+      });
+
+      termsModal.addEventListener('click', function (e) {
+        if (e.target === termsModal) termsModal.style.display = 'none';
+      });
+
+      document.getElementById('register-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        hideAlert('alert');
+
+        var name = document.getElementById('name').value;
+        var email = document.getElementById('email').value;
+        var password = document.getElementById('password').value;
+        var password2 = document.getElementById('password2').value;
+
+        if (password !== password2) {
+          showAlert('alert', 'As senhas não coincidem.');
+          return;
+        }
+
+        if (!acceptCheckbox.checked) {
+          showAlert('alert', 'Você precisa aceitar os Termos de Uso para continuar.');
+          return;
+        }
+
+        API.post('/api/auth/register', { name: name, email: email, password: password })
+          .then(function (data) {
+            API.setAuth(data.token, data.user);
+            window.location.href = data.user.role === 'LIDERANCA' ? '/admin/dashboard.html' : '/app/auditoria-upload.html';
+          })
+          .catch(function (err) {
+            showAlert('alert', err.message || 'Erro ao criar conta.');
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

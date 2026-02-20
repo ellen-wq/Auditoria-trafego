@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Liderança — Fluxer Auditoria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    #best-roas-table col.col-pos, #worst-roas-table col.col-pos { width: 6%; }
+    #best-roas-table col.col-name, #worst-roas-table col.col-name { width: 22%; }
+    #best-roas-table col.col-val, #worst-roas-table col.col-val { width: 12%; }
+    #best-roas-table col.col-money, #worst-roas-table col.col-money { width: 18%; }
+    #best-roas-table col.col-num, #worst-roas-table col.col-num { width: 12%; }
+
+    #best-ctr-table col.col-pos, #worst-ctr-table col.col-pos,
+    #best-conv-table col.col-pos, #worst-conv-table col.col-pos { width: 8%; }
+    #best-ctr-table col.col-name, #worst-ctr-table col.col-name,
+    #best-conv-table col.col-name, #worst-conv-table col.col-name { width: 28%; }
+    #best-ctr-table col.col-val, #worst-ctr-table col.col-val,
+    #best-conv-table col.col-val, #worst-conv-table col.col-val { width: 18%; }
+    #best-ctr-table col.col-num, #worst-ctr-table col.col-num,
+    #best-conv-table col.col-num, #worst-conv-table col.col-num { width: 23%; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-x"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+        <div class="logo-text">fluxer<span>.</span></div>
+      </div>
+      <nav class="sidebar-group">
+        <div class="sidebar-group-title">Mentoria</div>
+        <a href="/app/auditoria-upload.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Auditoria de Tráfego
+        </a>
+        <a href="/app/historico.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Histórico
+        </a>
+      </nav>
+      <nav class="sidebar-group" id="sidebar-admin-group" style="display:none">
+        <div class="sidebar-group-title">Gestão</div>
+        <a href="/admin/dashboard.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard Liderança
+        </a>
+        <a href="/admin/mentorados.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          Mentorados
+        </a>
+        <a href="/admin/criativos.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          Criativos
+        </a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">U</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="sidebar-user-name">Usuário</div>
+            <div class="sidebar-user-role" id="sidebar-user-role">Mentorado</div>
+          </div>
+        </div>
+        <a href="#" class="sidebar-link" id="btn-logout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="breadcrumb">
+            <span class="breadcrumb-item">Gestão</span>
+            <span class="breadcrumb-sep">›</span>
+            <span class="breadcrumb-item active">Dashboard Liderança</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <h1 class="page-title">Dashboard Liderança</h1>
+
+        <div class="section-header" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="filter-from" style="font-size:12px;">De</label>
+            <input type="date" id="filter-from" style="padding:8px 12px; font-size:13px;">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="filter-to" style="font-size:12px;">Até</label>
+            <input type="date" id="filter-to" style="padding:8px 12px; font-size:13px;">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="filter-product-type" style="font-size:12px;">Tipo de Produto</label>
+            <select id="filter-product-type" style="padding:8px 12px; font-size:13px;">
+              <option value="">Todos</option>
+              <option value="low_ticket">Low Ticket</option>
+              <option value="mid_ticket">Middle Ticket</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-filter" style="margin-top:18px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filtrar
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-clear" style="margin-top:18px;">Limpar</button>
+        </div>
+
+        <div class="banner-card">
+          <div class="banner-kpis">
+            <div class="banner-kpi">
+              <div class="banner-kpi-value" id="kpi-users">0</div>
+              <div class="banner-kpi-label">Total Mentorados</div>
+            </div>
+            <div class="banner-kpi">
+              <div class="banner-kpi-value" id="kpi-audits">0</div>
+              <div class="banner-kpi-label">Total Auditorias</div>
+            </div>
+            <div class="banner-kpi">
+              <div class="banner-kpi-value" id="kpi-spend">—</div>
+              <div class="banner-kpi-label">Gasto Médio / Mentorado</div>
+            </div>
+            <div class="banner-kpi">
+              <div class="banner-kpi-value" id="kpi-purchases">0</div>
+              <div class="banner-kpi-label">Compras Médias / Mentorado</div>
+            </div>
+            <div class="banner-kpi">
+              <div class="banner-kpi-value" id="kpi-cpa">—</div>
+              <div class="banner-kpi-label">CPA Médio</div>
+            </div>
+            <div class="banner-kpi">
+              <div class="banner-kpi-value" id="kpi-revenue">—</div>
+              <div class="banner-kpi-label">Faturamento Médio / Mentorado</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <section class="card">
+            <h2 class="card-title" style="display:flex;align-items:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              Top 3 — Melhor ROAS
+            </h2>
+            <div class="table-wrapper">
+              <table id="best-roas-table">
+                <colgroup>
+                  <col class="col-pos"><col class="col-name"><col class="col-val"><col class="col-money"><col class="col-money"><col class="col-num"><col class="col-money">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Mentorado</th>
+                    <th>ROAS</th>
+                    <th>Gasto</th>
+                    <th>Faturamento</th>
+                    <th>Compras</th>
+                    <th>CPA</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+          <section class="card">
+            <h2 class="card-title" style="display:flex;align-items:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+              Top 3 — Pior ROAS
+            </h2>
+            <div class="table-wrapper">
+              <table id="worst-roas-table">
+                <colgroup>
+                  <col class="col-pos"><col class="col-name"><col class="col-val"><col class="col-money"><col class="col-money"><col class="col-num"><col class="col-money">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Mentorado</th>
+                    <th>ROAS</th>
+                    <th>Gasto</th>
+                    <th>Faturamento</th>
+                    <th>Compras</th>
+                    <th>CPA</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="grid-2">
+          <section class="card">
+            <h2 class="card-title" style="display:flex;align-items:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              Top 3 — Melhor CTR
+            </h2>
+            <div class="table-wrapper">
+              <table id="best-ctr-table">
+                <colgroup>
+                  <col class="col-pos"><col class="col-name"><col class="col-val"><col class="col-num"><col class="col-num">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Mentorado</th>
+                    <th>CTR</th>
+                    <th>Cliques</th>
+                    <th>Impressões</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+          <section class="card">
+            <h2 class="card-title" style="display:flex;align-items:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+              Top 3 — Pior CTR
+            </h2>
+            <div class="table-wrapper">
+              <table id="worst-ctr-table">
+                <colgroup>
+                  <col class="col-pos"><col class="col-name"><col class="col-val"><col class="col-num"><col class="col-num">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Mentorado</th>
+                    <th>CTR</th>
+                    <th>Cliques</th>
+                    <th>Impressões</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="grid-2">
+          <section class="card">
+            <h2 class="card-title" style="display:flex;align-items:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              Top 3 — Melhor Conversão da Página
+            </h2>
+            <div class="table-wrapper">
+              <table id="best-conv-table">
+                <colgroup>
+                  <col class="col-pos"><col class="col-name"><col class="col-val"><col class="col-num"><col class="col-num">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Mentorado</th>
+                    <th>Conversão</th>
+                    <th>Compras</th>
+                    <th>Vis. LP</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+          <section class="card">
+            <h2 class="card-title" style="display:flex;align-items:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+              Top 3 — Pior Conversão da Página
+            </h2>
+            <div class="table-wrapper">
+              <table id="worst-conv-table">
+                <colgroup>
+                  <col class="col-pos"><col class="col-name"><col class="col-val"><col class="col-num"><col class="col-num">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Mentorado</th>
+                    <th>Conversão</th>
+                    <th>Compras</th>
+                    <th>Vis. LP</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="grid-2">
+          <section class="card" style="grid-column: 1 / -1;">
+            <h2 class="card-title">Últimas Auditorias</h2>
+            <div class="table-wrapper">
+              <table id="recent-table">
+                <thead>
+                  <tr>
+                    <th>Mentorado</th>
+                    <th>Data</th>
+                    <th>Campanhas</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    (function () {
+      if (!API.requireAuth() || !API.requireRole('LIDERANCA')) return;
+      initSidebar();
+
+      function escapeHtml(str) {
+        if (str == null) return '';
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      var kpiUsers = document.getElementById('kpi-users');
+      var kpiAudits = document.getElementById('kpi-audits');
+      var kpiSpend = document.getElementById('kpi-spend');
+      var kpiPurchases = document.getElementById('kpi-purchases');
+      var kpiCpa = document.getElementById('kpi-cpa');
+      var kpiRevenue = document.getElementById('kpi-revenue');
+      var recentTbody = document.querySelector('#recent-table tbody');
+      var bestRoasTbody = document.querySelector('#best-roas-table tbody');
+      var worstRoasTbody = document.querySelector('#worst-roas-table tbody');
+      var bestCtrTbody = document.querySelector('#best-ctr-table tbody');
+      var worstCtrTbody = document.querySelector('#worst-ctr-table tbody');
+      var bestConvTbody = document.querySelector('#best-conv-table tbody');
+      var worstConvTbody = document.querySelector('#worst-conv-table tbody');
+      var filterFrom = document.getElementById('filter-from');
+      var filterTo = document.getElementById('filter-to');
+      var filterProductType = document.getElementById('filter-product-type');
+      var btnFilter = document.getElementById('btn-filter');
+      var btnClear = document.getElementById('btn-clear');
+
+      function renderRoasTable(tbody, list) {
+        tbody.innerHTML = '';
+        if (!list || list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:18px;">Sem dados suficientes</td></tr>';
+          return;
+        }
+        list.forEach(function (u, i) {
+          var tr = document.createElement('tr');
+          var roasVal = (u.roas != null && u.roas > 0) ? parseFloat(u.roas).toFixed(2).replace('.', ',') + 'x' : '0x';
+          var cpaVal = (u.total_purchases > 0) ? (u.total_spend / u.total_purchases) : 0;
+          tr.innerHTML =
+            '<td><strong>' + (i + 1) + 'º</strong></td>' +
+            '<td>' + escapeHtml(u.name) + '</td>' +
+            '<td><strong>' + roasVal + '</strong></td>' +
+            '<td>' + formatCurrency(u.total_spend || 0) + '</td>' +
+            '<td>' + formatCurrency(u.total_revenue || 0) + '</td>' +
+            '<td>' + (u.total_purchases || 0) + '</td>' +
+            '<td>' + formatCurrency(cpaVal) + '</td>';
+          tbody.appendChild(tr);
+        });
+      }
+
+      function renderCtrTable(tbody, list) {
+        tbody.innerHTML = '';
+        if (!list || list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:18px;">Sem dados suficientes</td></tr>';
+          return;
+        }
+        list.forEach(function (u, i) {
+          var tr = document.createElement('tr');
+          var ctrVal = (u.ctr != null && u.ctr > 0) ? (parseFloat(u.ctr) * 100).toFixed(2).replace('.', ',') + '%' : '0%';
+          tr.innerHTML =
+            '<td><strong>' + (i + 1) + 'º</strong></td>' +
+            '<td>' + escapeHtml(u.name) + '</td>' +
+            '<td><strong>' + ctrVal + '</strong></td>' +
+            '<td>' + (u.total_clicks || 0).toLocaleString('pt-BR') + '</td>' +
+            '<td>' + (u.total_impressions || 0).toLocaleString('pt-BR') + '</td>';
+          tbody.appendChild(tr);
+        });
+      }
+
+      function renderConvTable(tbody, list) {
+        tbody.innerHTML = '';
+        if (!list || list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:18px;">Sem dados suficientes</td></tr>';
+          return;
+        }
+        list.forEach(function (u, i) {
+          var tr = document.createElement('tr');
+          var convVal = (u.conv_rate != null && u.conv_rate > 0) ? (parseFloat(u.conv_rate) * 100).toFixed(2).replace('.', ',') + '%' : '0%';
+          tr.innerHTML =
+            '<td><strong>' + (i + 1) + 'º</strong></td>' +
+            '<td>' + escapeHtml(u.name) + '</td>' +
+            '<td><strong>' + convVal + '</strong></td>' +
+            '<td>' + (u.total_purchases || 0).toLocaleString('pt-BR') + '</td>' +
+            '<td>' + (u.total_lp_views || 0).toLocaleString('pt-BR') + '</td>';
+          tbody.appendChild(tr);
+        });
+      }
+
+      function loadDashboard() {
+        var params = [];
+        if (filterFrom.value) params.push('from=' + encodeURIComponent(filterFrom.value));
+        if (filterTo.value) params.push('to=' + encodeURIComponent(filterTo.value));
+        if (filterProductType.value) params.push('product_type=' + encodeURIComponent(filterProductType.value));
+        var qs = params.length ? '?' + params.join('&') : '';
+
+        API.get('/api/admin/summary' + qs)
+          .then(function (data) {
+            data = data || {};
+
+            kpiUsers.textContent = (data.totalUsers != null) ? data.totalUsers : 0;
+            kpiAudits.textContent = (data.totalAudits != null) ? data.totalAudits : 0;
+            var avg = data.avgPerUser || {};
+            kpiSpend.textContent = formatCurrency(avg.avg_spend_per_user || 0);
+            kpiPurchases.textContent = Math.round(avg.avg_purchases_per_user || 0);
+
+            kpiCpa.textContent = formatCurrency(avg.avg_cpa_per_user || 0);
+            kpiRevenue.textContent = formatCurrency(avg.avg_revenue_per_user || 0);
+
+            renderRoasTable(bestRoasTbody, data.bestRoas || []);
+            renderRoasTable(worstRoasTbody, data.worstRoas || []);
+
+            renderCtrTable(bestCtrTbody, data.bestCtr || []);
+            renderCtrTable(worstCtrTbody, data.worstCtr || []);
+
+            renderConvTable(bestConvTbody, data.bestConv || []);
+            renderConvTable(worstConvTbody, data.worstConv || []);
+
+            var recent = (data.recentAudits && Array.isArray(data.recentAudits)) ? data.recentAudits : [];
+            recentTbody.innerHTML = '';
+            if (recent.length === 0) {
+              recentTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:24px;">Nenhuma auditoria recente.</td></tr>';
+            } else {
+              recent.forEach(function (a) {
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                  '<td>' + escapeHtml(a.user_name || '—') + '</td>' +
+                  '<td>' + formatDate(a.created_at) + '</td>' +
+                  '<td>' + (a.campaign_count || '—') + '</td>' +
+                  '<td><a href="/app/auditoria-resultado.html?id=' + (a.id || '') + '" class="btn btn-sm btn-secondary">Ver</a></td>';
+                recentTbody.appendChild(tr);
+              });
+            }
+          })
+          .catch(function () {
+            kpiUsers.textContent = '0';
+            kpiAudits.textContent = '0';
+            kpiSpend.textContent = '—';
+            kpiPurchases.textContent = '0';
+            kpiCpa.textContent = '—';
+            kpiRevenue.textContent = '—';
+            recentTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:24px;">Erro ao carregar resumo.</td></tr>';
+          });
+      }
+
+      btnFilter.addEventListener('click', loadDashboard);
+      btnClear.addEventListener('click', function () {
+        filterFrom.value = '';
+        filterTo.value = '';
+        filterProductType.value = '';
+        loadDashboard();
+      });
+
+      loadDashboard();
+    })();
+  </script>
+</body>
+</html>
