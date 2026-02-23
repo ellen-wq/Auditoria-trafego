@@ -3,3 +3,6 @@ data/
 uploads/
 *.db
 .env
+dist/
+public_dist/
+client/node_modules/

@@ -161,7 +161,14 @@
 
   <script src="/js/api.js"></script>
   <script>
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str || ''));
+      return div.innerHTML;
+    }
+
     (function () {
+      if (!API.requireAuth()) return;
       initSidebar();
 
       var params = new URLSearchParams(window.location.search);
@@ -179,7 +186,7 @@
 
       if (!auditId) {
         loading.textContent = 'Carregando auditorias...';
-        apiFetch('/api/audits')
+        API.get('/api/audits')
           .then(function (data) {
             var audits = data.audits || [];
             if (audits.length === 0) {
@@ -216,7 +223,7 @@
         loading.textContent = 'Carregando campanhas...';
         formSection.style.display = 'none';
 
-      apiFetch('/api/creatives/campaigns/' + auditId)
+      API.get('/api/creatives/campaigns/' + auditId)
         .then(function (data) {
           loading.style.display = 'none';
           formSection.style.display = 'block';
@@ -290,11 +297,7 @@
             btnAnalyze.disabled = true;
             btnAnalyze.textContent = 'Analisando...';
 
-            apiFetch('/api/creatives', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ audit_id: parseInt(auditId), items: items })
-            })
+            API.post('/api/creatives', { audit_id: parseInt(auditId), items: items })
               .then(function (data) {
                 btnAnalyze.textContent = 'Analisar Criativos';
                 btnAnalyze.disabled = false;

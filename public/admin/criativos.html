@@ -148,7 +148,14 @@
 
   <script src="/js/api.js"></script>
   <script>
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str || ''));
+      return div.innerHTML;
+    }
+
     (function () {
+      if (!API.requireAuth()) return;
       initSidebar();
 
       var strengthsArea = document.getElementById('strengths-area');
@@ -166,7 +173,7 @@
         if (filterProductType.value) params.push('product_type=' + filterProductType.value);
         var qs = params.length > 0 ? '?' + params.join('&') : '';
 
-        apiFetch('/api/creatives/all' + qs)
+        API.get('/api/creatives/all' + qs)
           .then(function (data) {
             var creatives = data.creatives || [];
             var strengths = data.strengths || {};

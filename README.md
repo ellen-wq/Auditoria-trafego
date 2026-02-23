@@ -1,49 +1,74 @@
-# Fluxer - Auditoria de Tráfego
+# Fluxer Auditoria de Tráfego
 
-Sistema de auditoria semanal automática de tráfego de Facebook Ads para mentorados.
+Sistema de auditoria semanal automatizada de tráfego Facebook Ads para mentores e mentorados.
 
-## Requisitos
+## Tecnologias
 
-- **Node.js** v18 ou superior — [Download](https://nodejs.org/)
+### Backend
+- **Node.js** + **Express** (TypeScript)
+- **sql.js** (SQLite em memória com persistência)
+- **JWT** para autenticação
+- **Multer** para upload de arquivos
+- **SheetJS** + **PapaParse** para parsing de planilhas
 
-## Instalação
+### Frontend
+- **React 18** + **TypeScript**
+- **Vite** como build tool
+- **React Router** para navegação SPA
+- Design system customizado (Fluxer)
+
+## Estrutura do Projeto
+
+```
+├── src/                    # Backend TypeScript
+│   ├── server.ts           # Entry point
+│   ├── types.ts            # Interfaces e tipos
+│   ├── db/database.ts      # Banco de dados SQLite
+│   ├── middleware/          # Auth e Upload
+│   ├── routes/             # Rotas da API
+│   ├── engine/rules.ts     # Motor de regras
+│   └── utils/parser.ts     # Parser de planilhas
+├── client/                 # Frontend React
+│   ├── src/
+│   │   ├── main.tsx        # Entry point
+│   │   ├── App.tsx         # Rotas
+│   │   ├── components/     # Sidebar, Layout, ProtectedRoute
+│   │   ├── pages/          # Páginas da aplicação
+│   │   ├── services/       # API service
+│   │   ├── utils/          # Formatação
+│   │   └── styles/         # CSS global
+│   ├── vite.config.ts
+│   └── package.json
+├── dist/                   # Backend compilado
+├── public_dist/            # Frontend compilado
+├── tsconfig.json           # Config TS backend
+└── package.json            # Dependências backend
+```
+
+## Scripts
 
 ```bash
+# Instalar dependências
 npm install
+cd client && npm install
+
+# Desenvolvimento
+npm run dev              # Backend com ts-node
+npm run dev:client       # Frontend com Vite (HMR)
+
+# Build de produção
+npm run build            # Compila backend + frontend
+npm start                # Inicia servidor de produção
 ```
 
-## Executar
+## API Endpoints
 
-```bash
-npm start
-```
-
-O sistema estará disponível em **http://localhost:3000**
-
-## Usuários
-
-- **Mentorado**: qualquer email cadastrado
-- **Liderança**: `ellen@vtsd.com.br` ou `fernanda@vtsd.com.br` (detectado automaticamente no cadastro)
-
-## Funcionalidades
-
-### Mentorado
-- Dashboard pessoal com KPIs
-- Upload de planilha do Gerenciador de Anúncios (.xlsx / .csv)
-- Análise automática por campanha (Cenários 1, 2 e 3)
-- Recomendações práticas e didáticas
-- Histórico de auditorias
-
-### Liderança
-- Dashboard consolidado com dados de todos os mentorados
-- Lista de mentorados com métricas
-- Visualização de auditorias de qualquer mentorado (somente leitura)
-- Gráfico de distribuição de cenários
-
-## Stack
-
-- **Frontend**: HTML + CSS + JS vanilla
-- **Backend**: Node.js + Express
-- **Banco**: SQLite (via better-sqlite3)
-- **Auth**: JWT
-- **Parser**: SheetJS (xlsx) + PapaParse (csv)
+- `POST /api/auth/register` - Cadastro
+- `POST /api/auth/login` - Login
+- `GET /api/auth/me` - Dados do usuário
+- `POST /api/audits` - Nova auditoria (upload)
+- `GET /api/audits` - Listar auditorias
+- `GET /api/audits/:id` - Detalhe da auditoria
+- `GET /api/admin/summary` - Dashboard liderança
+- `GET /api/admin/users` - Listar mentorados
+- `GET /api/creatives/*` - Engenharia reversa de criativos
