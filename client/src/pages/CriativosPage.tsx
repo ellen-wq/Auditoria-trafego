@@ -6,31 +6,34 @@ import { formatCurrency, formatPercent } from '../utils/format';
 
 interface AuditOption {
   id: number;
-  original_filename: string;
+  filename: string;
   created_at: string;
 }
 
 interface CampaignData {
+  id: number;
   campaign_name: string;
   spend: number;
-  ctr: number;
+  ctr_link: number;
   purchases: number;
   cpa: number;
   impressions: number;
-  landing_page_views: number;
+  lp_views: number;
 }
 
 interface CreativeItem {
+  campaign_id: number;
   campaign_name: string;
   selected: boolean;
-  copy: string;
-  video_url: string;
+  copy_text: string;
+  video_link: string;
 }
 
 interface AnalysisResult {
+  id: number;
+  campaign_id: number;
   campaign_name: string;
-  pontos_fortes: string[];
-  como_replicar: string[];
+  analysis: string;
 }
 
 const styles = {
@@ -100,7 +103,7 @@ export default function CriativosPage() {
   useEffect(() => {
     if (!auditId) {
       api.get<AuditOption[]>('/api/audits')
-        .then(setAudits)
+        .then((data: any) => setAudits(data?.audits || []))
         .catch(() => {})
         .finally(() => setLoadingAudits(false));
     }
@@ -110,14 +113,16 @@ export default function CriativosPage() {
     if (!auditId) return;
     setLoading(true);
     setResults(null);
-    api.get<CampaignData[]>(`/api/creatives/campaigns/${auditId}`)
+    api.get<{ campaigns: CampaignData[] }>(`/api/creatives/campaigns/${auditId}`)
       .then((data) => {
-        setCampaigns(data);
-        setItems(data.map((c) => ({
+        const list = data?.campaigns || [];
+        setCampaigns(list);
+        setItems(list.map((c) => ({
+          campaign_id: c.id,
           campaign_name: c.campaign_name,
           selected: false,
-          copy: '',
-          video_url: '',
+          copy_text: '',
+          video_link: '',
         })));
       })
       .catch(() => {})
@@ -131,18 +136,20 @@ export default function CriativosPage() {
   const selectedCount = items.filter((i) => i.selected).length;
 
   const handleAnalyze = async () => {
-    const selected = items
-      .filter((i) => i.selected)
-      .map(({ campaign_name, copy, video_url }) => ({ campaign_name, copy, video_url }));
+    const selected = items.filter((i) => i.selected).map((i) => ({
+      campaign_id: i.campaign_id,
+      copy_text: i.copy_text,
+      video_link: i.video_link
+    }));
     if (selected.length === 0) return;
 
     setAnalyzing(true);
     try {
-      const data = await api.post<AnalysisResult[]>('/api/creatives', {
+      const data = await api.post<{ creatives: AnalysisResult[] }>('/api/creatives', {
         audit_id: auditId,
         items: selected,
       });
-      setResults(data);
+      setResults(data.creatives || []);
     } catch {
       alert('Erro ao analisar criativos. Tente novamente.');
     } finally {
@@ -191,7 +198,7 @@ export default function CriativosPage() {
                 <option value="" disabled>Selecione...</option>
                 {audits.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.original_filename} ({new Date(a.created_at).toLocaleDateString('pt-BR')})
+                    {a.filename} ({new Date(a.created_at).toLocaleDateString('pt-BR')})
                   </option>
                 ))}
               </select>
@@ -232,11 +239,11 @@ export default function CriativosPage() {
 
                 <div style={styles.metricPills}>
                   <span style={styles.pill}>Gasto: {formatCurrency(camp.spend)}</span>
-                  <span style={styles.pill}>CTR: {formatPercent(camp.ctr)}</span>
+                  <span style={styles.pill}>CTR: {formatPercent(camp.ctr_link)}</span>
                   <span style={styles.pill}>Compras: {camp.purchases}</span>
                   <span style={styles.pill}>CPA: {camp.cpa > 0 ? formatCurrency(camp.cpa) : '-'}</span>
                   <span style={styles.pill}>Impressões: {camp.impressions?.toLocaleString('pt-BR') ?? 0}</span>
-                  <span style={styles.pill}>Vis. LP: {camp.landing_page_views}</span>
+                  <span style={styles.pill}>Vis. LP: {camp.lp_views}</span>
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 10 }}>
@@ -245,8 +252,8 @@ export default function CriativosPage() {
                     id={`copy-${idx}`}
                     rows={3}
                     placeholder="Cole aqui o texto do anúncio..."
-                    value={items[idx]?.copy ?? ''}
-                    onChange={(e) => updateItem(idx, { copy: e.target.value })}
+                    value={items[idx]?.copy_text ?? ''}
+                    onChange={(e) => updateItem(idx, { copy_text: e.target.value })}
                     style={{
                       width: '100%',
                       padding: '10px 14px',
@@ -265,8 +272,8 @@ export default function CriativosPage() {
                     id={`video-${idx}`}
                     type="url"
                     placeholder="https://..."
-                    value={items[idx]?.video_url ?? ''}
-                    onChange={(e) => updateItem(idx, { video_url: e.target.value })}
+                    value={items[idx]?.video_link ?? ''}
+                    onChange={(e) => updateItem(idx, { video_link: e.target.value })}
                   />
                 </div>
               </div>
@@ -295,7 +302,14 @@ export default function CriativosPage() {
       {results && (
         <div style={{ marginTop: 24 }}>
           <h2 className="section-title">Resultados da Análise</h2>
-          {results.map((r, idx) => (
+          {results.map((r, idx) => {
+            let parsed = { points: [] as string[], replication: [] as string[] };
+            try {
+              parsed = JSON.parse(r.analysis || '{}');
+            } catch {
+              // keep default empty arrays
+            }
+            return (
             <div key={idx} style={styles.analysisCard}>
               <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>
                 {r.campaign_name}
@@ -306,7 +320,7 @@ export default function CriativosPage() {
                   Pontos Fortes
                 </h4>
                 <ul style={styles.analysisList}>
-                  {r.pontos_fortes.map((p, i) => <li key={i}>{p}</li>)}
+                  {(parsed.points || []).map((p, i) => <li key={i}>{p}</li>)}
                 </ul>
               </div>
 
@@ -315,11 +329,11 @@ export default function CriativosPage() {
                   Como Replicar
                 </h4>
                 <ul style={styles.analysisList}>
-                  {r.como_replicar.map((c, i) => <li key={i}>{c}</li>)}
+                  {(parsed.replication || []).map((c, i) => <li key={i}>{c}</li>)}
                 </ul>
               </div>
             </div>
-          ))}
+          )})}
 
           <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
             <button

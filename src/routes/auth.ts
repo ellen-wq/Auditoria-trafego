@@ -1,14 +1,14 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { getDb } from '../db/database';
+import { getSupabase } from '../db/database';
 import { generateToken, requireAuth } from '../middleware/auth';
-import type { User, SafeUser } from '../types';
+import type { SafeUser } from '../types';
 
 const router = Router();
 
 const LIDERANCA_EMAILS = ['ellen@vtsd.com.br', 'fernanda@vtsd.com.br'];
 
-router.post('/register', (req: Request, res: Response): void => {
+router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
@@ -16,8 +16,13 @@ router.post('/register', (req: Request, res: Response): void => {
       return;
     }
 
-    const db = getDb();
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
+    const supabase = getSupabase();
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email.toLowerCase().trim())
+      .maybeSingle();
+
     if (existing) {
       res.status(409).json({ error: 'Email já cadastrado.' });
       return;
@@ -26,14 +31,23 @@ router.post('/register', (req: Request, res: Response): void => {
     const role = LIDERANCA_EMAILS.includes(email.toLowerCase().trim()) ? 'LIDERANCA' : 'MENTORADO';
     const hash = bcrypt.hashSync(password, 10);
 
-    const result = db.prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)').run(
-      name.trim(),
-      email.toLowerCase().trim(),
-      hash,
-      role
-    );
+    const { data: newUser, error } = await supabase
+      .from('users')
+      .insert({
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        password_hash: hash,
+        role
+      })
+      .select('id, name, email, role, created_at')
+      .single();
 
-    const user: SafeUser = { id: result.lastInsertRowid, name: name.trim(), email: email.toLowerCase().trim(), role, created_at: '' };
+    if (error || !newUser) {
+      res.status(500).json({ error: 'Erro ao criar usuário.' });
+      return;
+    }
+
+    const user: SafeUser = newUser as SafeUser;
     const token = generateToken(user);
 
     res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
@@ -44,7 +58,7 @@ router.post('/register', (req: Request, res: Response): void => {
   }
 });
 
-router.post('/login', (req: Request, res: Response): void => {
+router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -52,9 +66,14 @@ router.post('/login', (req: Request, res: Response): void => {
       return;
     }
 
-    const db = getDb();
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim()) as User | null;
-    if (!user) {
+    const supabase = getSupabase();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email.toLowerCase().trim())
+      .single();
+
+    if (error || !user) {
       res.status(401).json({ error: 'Email ou senha inválidos.' });
       return;
     }

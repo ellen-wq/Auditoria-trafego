@@ -136,6 +136,7 @@
                 <tr>
                   <th>Campanha</th>
                   <th>Gasto</th>
+                  <th class="tooltip-trigger" data-tooltip="Retorno sobre o investimento em anúncios nesta campanha.">ROAS</th>
                   <th class="tooltip-trigger" data-tooltip="Porcentagem de pessoas que clicaram no anúncio depois de vê-lo.">CTR</th>
                   <th class="tooltip-trigger" data-tooltip="Quanto custa cada clique no link.">CPC</th>
                   <th class="tooltip-trigger" data-tooltip="Quantas pessoas viram a página de destino após clicar.">Vis. Página</th>
@@ -343,6 +344,9 @@
 
           campaignsTableBody.innerHTML = '';
           campaigns.forEach(function (c) {
+            var campaignSpend = parseFloat(c.spend) || 0;
+            var campaignPurchases = parseInt(c.purchases, 10) || 0;
+            var campaignRoas = campaignSpend > 0 ? ((campaignPurchases * price) / campaignSpend) : 0;
             var spendStr = typeof formatCurrency === 'function' ? formatCurrency(c.spend) : 'R$ ' + (parseFloat(c.spend) || 0).toFixed(2).replace('.', ',');
             var ctrStr = typeof formatPercent === 'function' ? formatPercent(c.ctr_link) : ((parseFloat(c.ctr_link) || 0) * 100).toFixed(2).replace('.', ',') + '%';
             var cpcStr = typeof formatCurrency === 'function' ? formatCurrency(c.cpc) : 'R$ ' + (parseFloat(c.cpc) || 0).toFixed(2).replace('.', ',');
@@ -352,6 +356,7 @@
             tr.innerHTML =
               '<td>' + escapeHtml(c.campaign_name || '—') + '</td>' +
               '<td>' + spendStr + '</td>' +
+              '<td>' + (campaignRoas > 0 ? campaignRoas.toFixed(2).replace('.', ',') + 'x' : '—') + '</td>' +
               '<td>' + ctrStr + '</td>' +
               '<td>' + cpcStr + '</td>' +
               '<td>' + (c.lp_views != null ? c.lp_views : '—') + '</td>' +
@@ -406,6 +411,7 @@
             return {
               'Campanha': c.campaign_name || '',
               'Gasto (R$)': spend,
+              'ROAS': spend > 0 ? ((purchases * price) / spend) : 0,
               'CTR (%)': ((parseFloat(c.ctr_link) || 0) * 100),
               'CPC (R$)': parseFloat(c.cpc) || 0,
               'Vis. Página': c.lp_views || 0,

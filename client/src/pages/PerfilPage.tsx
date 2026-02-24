@@ -21,8 +21,8 @@ export default function PerfilPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<Profile>('/api/auth/me')
-      .then(setProfile)
+    api.get<{ user: Profile }>('/api/auth/me')
+      .then((data) => setProfile(data.user))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

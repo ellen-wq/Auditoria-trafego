@@ -14,12 +14,12 @@ interface UserDetail {
 interface AuditItem {
   id: number;
   created_at: string;
-  original_filename: string;
-  product_value: number;
+  filename: string;
+  product_price: number;
   campaign_count: number;
-  scalable_count: number;
-  optimize_count: number;
-  attention_count: number;
+  scenario1_count: number;
+  scenario2_count: number;
+  scenario3_count: number;
 }
 
 interface UserAuditsResponse {
@@ -107,12 +107,12 @@ export default function MentoradoDetalhePage() {
                     {data.audits.map((a) => (
                       <tr key={a.id}>
                         <td>{formatDate(a.created_at)}</td>
-                        <td>{a.original_filename || '-'}</td>
-                        <td>{formatCurrency(a.product_value || 0)}</td>
+                        <td>{a.filename || '-'}</td>
+                        <td>{formatCurrency(a.product_price || 0)}</td>
                         <td>{a.campaign_count || 0}</td>
-                        <td><span className="badge badge-s1">{a.scalable_count || 0}</span></td>
-                        <td><span className="badge badge-s2">{a.optimize_count || 0}</span></td>
-                        <td><span className="badge badge-s3">{a.attention_count || 0}</span></td>
+                        <td><span className="badge badge-s1">{a.scenario1_count || 0}</span></td>
+                        <td><span className="badge badge-s2">{a.scenario2_count || 0}</span></td>
+                        <td><span className="badge badge-s3">{a.scenario3_count || 0}</span></td>
                         <td>
                           <Link to={`/app/resultado/${a.id}`} className="btn btn-sm btn-outline">
                             Ver resultado

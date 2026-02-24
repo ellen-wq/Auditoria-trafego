@@ -1,148 +1,127 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../db/database';
+import { getSupabase } from '../db/database';
 import { requireAuth, requireRole } from '../middleware/auth';
-import type { Audit } from '../types';
 
 const router = Router();
 
 router.use(requireAuth);
 router.use(requireRole('LIDERANCA'));
 
-router.get('/summary', (req: Request, res: Response): void => {
+router.get('/summary', async (req: Request, res: Response): Promise<void> => {
   try {
-    const db = getDb();
-    const { from, to, product_type } = req.query;
+    const supabase = getSupabase();
+    const { from, to, product_type } = req.query as { from?: string; to?: string; product_type?: string };
 
-    let dateFilter = '';
-    const params: unknown[] = [];
-    if (from) {
-      dateFilter += ' AND a.created_at >= ?';
-      params.push(from);
+    const { count: totalUsers } = await supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'MENTORADO');
+
+    let auditsQuery = supabase.from('audits').select('id', { count: 'exact', head: true });
+    if (from) auditsQuery = auditsQuery.gte('created_at', from);
+    if (to) auditsQuery = auditsQuery.lte('created_at', to);
+    if (product_type) auditsQuery = auditsQuery.eq('product_type', product_type);
+    const { count: totalAudits } = await auditsQuery;
+
+    let campaignsQuery = supabase
+      .from('campaigns')
+      .select('spend, cpa, ctr_link, purchases, scenario, audit_id, audits!inner(created_at, product_price, product_type, user_id)');
+    if (from) campaignsQuery = campaignsQuery.gte('audits.created_at', from);
+    if (to) campaignsQuery = campaignsQuery.lte('audits.created_at', to);
+    if (product_type) campaignsQuery = campaignsQuery.eq('audits.product_type', product_type);
+    const { data: allCampaigns } = await campaignsQuery;
+
+    const campaigns = allCampaigns || [];
+    let s1 = 0, s2 = 0, s3 = 0, totalSpend = 0, totalPurchases = 0, totalCpa = 0, totalCtr = 0;
+    campaigns.forEach(c => {
+      if (c.scenario === 1) s1++;
+      if (c.scenario === 2) s2++;
+      if (c.scenario === 3) s3++;
+      totalSpend += c.spend || 0;
+      totalPurchases += c.purchases || 0;
+      totalCpa += c.cpa || 0;
+      totalCtr += c.ctr_link || 0;
+    });
+    const total = campaigns.length;
+    const scenarioCounts = {
+      s1, s2, s3, total,
+      avg_spend: total > 0 ? totalSpend / total : 0,
+      avg_cpa: total > 0 ? totalCpa / total : 0,
+      avg_ctr: total > 0 ? totalCtr / total : 0,
+      total_spend: totalSpend,
+      total_purchases: totalPurchases
+    };
+
+    const rpcParams: Record<string, string | null> = {
+      p_from: from || null,
+      p_to: to || null,
+      p_product_type: product_type || null
+    };
+
+    const { data: perUserAvgData } = await supabase.rpc('admin_per_user_avg', rpcParams);
+    const perUserAvg = perUserAvgData && perUserAvgData.length > 0 ? perUserAvgData[0] : {
+      avg_spend_per_user: 0, avg_purchases_per_user: 0, avg_cpa_per_user: 0, avg_revenue_per_user: 0
+    };
+
+    let recentQuery = supabase
+      .from('audits')
+      .select('*, users!inner(name, email)')
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (from) recentQuery = recentQuery.gte('created_at', from);
+    if (to) recentQuery = recentQuery.lte('created_at', to);
+    if (product_type) recentQuery = recentQuery.eq('product_type', product_type);
+    const { data: recentRaw } = await recentQuery;
+
+    const recentAuditIds = (recentRaw || []).map(a => a.id);
+    let recentCampCounts: Record<number, number> = {};
+    if (recentAuditIds.length > 0) {
+      const { data: rcamps } = await supabase
+        .from('campaigns')
+        .select('audit_id')
+        .in('audit_id', recentAuditIds);
+      if (rcamps) {
+        rcamps.forEach(c => { recentCampCounts[c.audit_id] = (recentCampCounts[c.audit_id] || 0) + 1; });
+      }
     }
-    if (to) {
-      dateFilter += ' AND a.created_at <= ?';
-      params.push(to);
-    }
-    if (product_type) {
-      dateFilter += ' AND a.product_type = ?';
-      params.push(product_type);
-    }
 
-    const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = ?').get('MENTORADO') as { count: number };
-    const totalAudits = db.prepare(`SELECT COUNT(*) as count FROM audits a WHERE 1=1 ${dateFilter}`).get(...params) as { count: number };
+    const recentAudits = (recentRaw || []).map(a => {
+      const u = a.users as unknown as { name: string; email: string };
+      return {
+        ...a,
+        users: undefined,
+        user_name: u?.name || '',
+        user_email: u?.email || '',
+        campaign_count: recentCampCounts[a.id] || 0
+      };
+    });
 
-    const scenarioCounts = db.prepare(`
-      SELECT 
-        SUM(CASE WHEN c.scenario = 1 THEN 1 ELSE 0 END) as s1,
-        SUM(CASE WHEN c.scenario = 2 THEN 1 ELSE 0 END) as s2,
-        SUM(CASE WHEN c.scenario = 3 THEN 1 ELSE 0 END) as s3,
-        COUNT(*) as total,
-        AVG(c.spend) as avg_spend,
-        AVG(c.cpa) as avg_cpa,
-        AVG(c.ctr_link) as avg_ctr,
-        SUM(c.spend) as total_spend,
-        SUM(c.purchases) as total_purchases
-      FROM campaigns c 
-      JOIN audits a ON c.audit_id = a.id 
-      WHERE 1=1 ${dateFilter}
-    `).get(...params);
+    const { data: roasRanking } = await supabase.rpc('admin_roas_ranking', rpcParams);
+    const roasAll = roasRanking || [];
+    const halfRoas = Math.ceil(roasAll.length / 2);
+    const bestRoas = roasAll.slice(0, Math.min(3, halfRoas));
+    const worstRoas = roasAll.slice(Math.max(roasAll.length - 3, halfRoas)).reverse();
 
-    const perUserAvg = db.prepare(`
-      SELECT 
-        AVG(user_spend) as avg_spend_per_user,
-        AVG(user_purchases) as avg_purchases_per_user,
-        AVG(CASE WHEN user_purchases > 0 THEN user_spend / user_purchases ELSE 0 END) as avg_cpa_per_user,
-        AVG(user_revenue) as avg_revenue_per_user
-      FROM (
-        SELECT a.user_id, SUM(c.spend) as user_spend, SUM(c.purchases) as user_purchases,
-          SUM(c.purchases * a.product_price) as user_revenue
-        FROM campaigns c
-        JOIN audits a ON c.audit_id = a.id
-        WHERE a.id IN (
-          SELECT MAX(a2.id) FROM audits a2 WHERE 1=1 ${dateFilter} GROUP BY a2.user_id
-        )
-        GROUP BY a.user_id
-      )
-    `).get(...params);
+    const { data: ctrRanking } = await supabase.rpc('admin_ctr_ranking', rpcParams);
+    const ctrAll = ctrRanking || [];
+    const halfCtr = Math.ceil(ctrAll.length / 2);
+    const bestCtr = ctrAll.slice(0, Math.min(3, halfCtr));
+    const worstCtr = ctrAll.slice(Math.max(ctrAll.length - 3, halfCtr)).reverse();
 
-    const recentAudits = db.prepare(`
-      SELECT a.*, u.name as user_name, u.email as user_email,
-        (SELECT COUNT(*) FROM campaigns WHERE audit_id = a.id) as campaign_count
-      FROM audits a 
-      JOIN users u ON a.user_id = u.id 
-      WHERE 1=1 ${dateFilter}
-      ORDER BY a.created_at DESC LIMIT 10
-    `).all(...params);
-
-    const roasRanking = db.prepare(`
-      SELECT u.id, u.name, u.email,
-        SUM(c.spend) as total_spend,
-        SUM(c.purchases) as total_purchases,
-        SUM(c.purchases * a.product_price) as total_revenue,
-        COALESCE(
-          (SUM(c.purchases * a.product_price) * 1.0) / NULLIF(SUM(c.spend), 0),
-          0
-        ) as roas
-      FROM users u
-      JOIN audits a ON a.user_id = u.id
-      JOIN campaigns c ON c.audit_id = a.id
-      WHERE u.role = 'MENTORADO' ${dateFilter}
-      GROUP BY u.id
-      HAVING SUM(c.spend) > 0
-      ORDER BY roas DESC
-    `).all(...params) as Record<string, unknown>[];
-
-    const half = Math.ceil(roasRanking.length / 2);
-    const bestRoas = roasRanking.slice(0, Math.min(3, half));
-    const worstRoas = roasRanking.slice(Math.max(roasRanking.length - 3, half)).reverse();
-
-    const ctrRanking = db.prepare(`
-      SELECT u.id, u.name, u.email,
-        SUM(c.link_clicks) as total_clicks,
-        SUM(c.impressions) as total_impressions,
-        CASE WHEN SUM(c.impressions) > 0 THEN (SUM(c.link_clicks) * 1.0) / SUM(c.impressions) ELSE 0 END as ctr
-      FROM users u
-      JOIN audits a ON a.user_id = u.id
-      JOIN campaigns c ON c.audit_id = a.id
-      WHERE u.role = 'MENTORADO' ${dateFilter}
-      GROUP BY u.id
-      HAVING SUM(c.impressions) > 0
-      ORDER BY ctr DESC
-    `).all(...params) as Record<string, unknown>[];
-
-    const halfCtr = Math.ceil(ctrRanking.length / 2);
-    const bestCtr = ctrRanking.slice(0, Math.min(3, halfCtr));
-    const worstCtr = ctrRanking.slice(Math.max(ctrRanking.length - 3, halfCtr)).reverse();
-
-    const convRanking = db.prepare(`
-      SELECT u.id, u.name, u.email,
-        SUM(c.purchases) as total_purchases,
-        SUM(c.lp_views) as total_lp_views,
-        CASE WHEN SUM(c.lp_views) > 0 THEN (SUM(c.purchases) * 1.0) / SUM(c.lp_views) ELSE 0 END as conv_rate
-      FROM users u
-      JOIN audits a ON a.user_id = u.id
-      JOIN campaigns c ON c.audit_id = a.id
-      WHERE u.role = 'MENTORADO' ${dateFilter}
-      GROUP BY u.id
-      HAVING SUM(c.lp_views) > 0
-      ORDER BY conv_rate DESC
-    `).all(...params) as Record<string, unknown>[];
-
-    const halfConv = Math.ceil(convRanking.length / 2);
-    const bestConv = convRanking.slice(0, Math.min(3, halfConv));
-    const worstConv = convRanking.slice(Math.max(convRanking.length - 3, halfConv)).reverse();
+    const { data: convRanking } = await supabase.rpc('admin_conv_ranking', rpcParams);
+    const convAll = convRanking || [];
+    const halfConv = Math.ceil(convAll.length / 2);
+    const bestConv = convAll.slice(0, Math.min(3, halfConv));
+    const worstConv = convAll.slice(Math.max(convAll.length - 3, halfConv)).reverse();
 
     res.json({
-      totalUsers: totalUsers.count,
-      totalAudits: totalAudits.count,
+      totalUsers: totalUsers || 0,
+      totalAudits: totalAudits || 0,
       scenarios: scenarioCounts,
       avgPerUser: perUserAvg,
-      bestRoas,
-      worstRoas,
-      bestCtr,
-      worstCtr,
-      bestConv,
-      worstConv,
+      bestRoas, worstRoas,
+      bestCtr, worstCtr,
+      bestConv, worstConv,
       recentAudits
     });
   } catch (err) {
@@ -151,17 +130,41 @@ router.get('/summary', (req: Request, res: Response): void => {
   }
 });
 
-router.get('/users', (_req: Request, res: Response): void => {
+router.get('/users', async (_req: Request, res: Response): Promise<void> => {
   try {
-    const db = getDb();
-    const users = db.prepare(`
-      SELECT u.id, u.name, u.email, u.role, u.created_at,
-        (SELECT COUNT(*) FROM audits WHERE user_id = u.id) as audit_count,
-        (SELECT MAX(created_at) FROM audits WHERE user_id = u.id) as last_audit
-      FROM users u 
-      WHERE u.role = 'MENTORADO'
-      ORDER BY u.name
-    `).all();
+    const supabase = getSupabase();
+
+    const { data: usersRaw } = await supabase
+      .from('users')
+      .select('id, name, email, role, created_at')
+      .eq('role', 'MENTORADO')
+      .order('name');
+
+    const userIds = (usersRaw || []).map(u => u.id);
+    let auditStats: Record<number, { count: number; last: string | null }> = {};
+
+    if (userIds.length > 0) {
+      const { data: audits } = await supabase
+        .from('audits')
+        .select('user_id, created_at')
+        .in('user_id', userIds)
+        .order('created_at', { ascending: false });
+
+      if (audits) {
+        audits.forEach(a => {
+          if (!auditStats[a.user_id]) {
+            auditStats[a.user_id] = { count: 0, last: a.created_at };
+          }
+          auditStats[a.user_id].count++;
+        });
+      }
+    }
+
+    const users = (usersRaw || []).map(u => ({
+      ...u,
+      audit_count: auditStats[u.id]?.count || 0,
+      last_audit: auditStats[u.id]?.last || null
+    }));
 
     res.json({ users });
   } catch (err) {
@@ -170,25 +173,54 @@ router.get('/users', (_req: Request, res: Response): void => {
   }
 });
 
-router.get('/users/:id/audits', (req: Request, res: Response): void => {
+router.get('/users/:id/audits', async (req: Request, res: Response): Promise<void> => {
   try {
-    const db = getDb();
-    const user = db.prepare('SELECT id, name, email, role, created_at FROM users WHERE id = ?').get(req.params.id);
-    if (!user) {
+    const supabase = getSupabase();
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, name, email, role, created_at')
+      .eq('id', req.params.id)
+      .single();
+
+    if (userError || !user) {
       res.status(404).json({ error: 'Usuário não encontrado.' });
       return;
     }
 
-    const audits = db.prepare(`
-      SELECT a.*,
-        (SELECT COUNT(*) FROM campaigns WHERE audit_id = a.id) as campaign_count,
-        (SELECT COUNT(*) FROM campaigns WHERE audit_id = a.id AND scenario = 1) as scenario1_count,
-        (SELECT COUNT(*) FROM campaigns WHERE audit_id = a.id AND scenario = 2) as scenario2_count,
-        (SELECT COUNT(*) FROM campaigns WHERE audit_id = a.id AND scenario = 3) as scenario3_count
-      FROM audits a 
-      WHERE a.user_id = ? 
-      ORDER BY a.created_at DESC
-    `).all(req.params.id);
+    const { data: auditsRaw } = await supabase
+      .from('audits')
+      .select('*')
+      .eq('user_id', req.params.id)
+      .order('created_at', { ascending: false });
+
+    const auditIds = (auditsRaw || []).map(a => a.id);
+    let campaignCounts: Record<number, { total: number; s1: number; s2: number; s3: number }> = {};
+
+    if (auditIds.length > 0) {
+      const { data: camps } = await supabase
+        .from('campaigns')
+        .select('audit_id, scenario')
+        .in('audit_id', auditIds);
+
+      if (camps) {
+        camps.forEach(c => {
+          if (!campaignCounts[c.audit_id]) campaignCounts[c.audit_id] = { total: 0, s1: 0, s2: 0, s3: 0 };
+          campaignCounts[c.audit_id].total++;
+          if (c.scenario === 1) campaignCounts[c.audit_id].s1++;
+          if (c.scenario === 2) campaignCounts[c.audit_id].s2++;
+          if (c.scenario === 3) campaignCounts[c.audit_id].s3++;
+        });
+      }
+    }
+
+    const audits = (auditsRaw || []).map(a => ({
+      ...a,
+      campaign_count: campaignCounts[a.id]?.total || 0,
+      scenario1_count: campaignCounts[a.id]?.s1 || 0,
+      scenario2_count: campaignCounts[a.id]?.s2 || 0,
+      scenario3_count: campaignCounts[a.id]?.s3 || 0
+    }));
 
     res.json({ user, audits });
   } catch (err) {
@@ -197,25 +229,51 @@ router.get('/users/:id/audits', (req: Request, res: Response): void => {
   }
 });
 
-router.get('/audits/:id', (req: Request, res: Response): void => {
+router.get('/audits/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const db = getDb();
-    const audit = db.prepare(`
-      SELECT a.*, u.name as user_name, u.email as user_email 
-      FROM audits a JOIN users u ON a.user_id = u.id 
-      WHERE a.id = ?
-    `).get(req.params.id) as (Audit & { user_name: string; user_email: string }) | null;
+    const supabase = getSupabase();
 
-    if (!audit) {
+    const { data: auditRaw, error: auditError } = await supabase
+      .from('audits')
+      .select('*, users!inner(name, email)')
+      .eq('id', req.params.id)
+      .single();
+
+    if (auditError || !auditRaw) {
       res.status(404).json({ error: 'Auditoria não encontrada.' });
       return;
     }
 
-    const campaigns = db.prepare('SELECT * FROM campaigns WHERE audit_id = ? ORDER BY spend DESC').all(audit.id);
-    const campaignsWithRecs = campaigns.map(c => {
-      const recs = db.prepare('SELECT * FROM recommendations WHERE campaign_id = ?').all(c.id as number);
-      return { ...c, recommendations: recs };
-    });
+    const u = auditRaw.users as unknown as { name: string; email: string };
+    const audit = { ...auditRaw, users: undefined, user_name: u?.name || '', user_email: u?.email || '' };
+
+    const { data: campaigns } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('audit_id', audit.id)
+      .order('spend', { ascending: false });
+
+    const campaignIds = (campaigns || []).map(c => c.id);
+    let recsMap: Record<number, unknown[]> = {};
+
+    if (campaignIds.length > 0) {
+      const { data: recs } = await supabase
+        .from('recommendations')
+        .select('*')
+        .in('campaign_id', campaignIds);
+
+      if (recs) {
+        recs.forEach(r => {
+          if (!recsMap[r.campaign_id]) recsMap[r.campaign_id] = [];
+          recsMap[r.campaign_id].push(r);
+        });
+      }
+    }
+
+    const campaignsWithRecs = (campaigns || []).map(c => ({
+      ...c,
+      recommendations: recsMap[c.id] || []
+    }));
 
     res.json({ audit, campaigns: campaignsWithRecs });
   } catch (err) {

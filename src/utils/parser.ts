@@ -1,6 +1,5 @@
 import XLSX from 'xlsx';
 import Papa from 'papaparse';
-import fs from 'fs';
 import path from 'path';
 import type { ParsedCampaign, ParseResult } from '../types';
 
@@ -67,16 +66,16 @@ function parseNumber(val: unknown): number {
   return isNaN(n) ? 0 : n;
 }
 
-function parseFile(filePath: string): ParseResult {
-  const ext = path.extname(filePath).toLowerCase();
+function parseSpreadsheetBuffer(fileBuffer: Buffer, originalName: string): ParseResult {
+  const ext = path.extname(originalName).toLowerCase();
   let rawRows: Record<string, unknown>[];
 
   if (ext === '.xlsx') {
-    const workbook = XLSX.readFile(filePath);
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
   } else {
-    const content = fs.readFileSync(filePath, 'utf-8');
+    const content = fileBuffer.toString('utf-8');
     const result = Papa.parse<Record<string, unknown>>(content, { header: true, skipEmptyLines: true });
     rawRows = result.data;
   }
@@ -185,4 +184,4 @@ function parseFile(filePath: string): ParseResult {
   return { campaigns: result, hasPurchases };
 }
 
-export { parseFile };
+export { parseSpreadsheetBuffer };

@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-import { getDb } from '../db/database';
+import { getSupabase } from '../db/database';
 import type { JwtPayload, SafeUser } from '../types';
 
 const JWT_SECRET: string = process.env.JWT_SECRET || 'fluxer_auditoria_secret_2024';
@@ -13,7 +13,7 @@ function generateToken(user: { id: number; email: string; role: string }): strin
   );
 }
 
-function requireAuth(req: Request, res: Response, next: NextFunction): void {
+async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
   if (!token) {
     res.status(401).json({ error: 'Não autenticado' });
@@ -21,13 +21,18 @@ function requireAuth(req: Request, res: Response, next: NextFunction): void {
   }
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    const db = getDb();
-    const user = db.prepare('SELECT id, name, email, role, created_at FROM users WHERE id = ?').get(decoded.id) as SafeUser | null;
-    if (!user) {
+    const supabase = getSupabase();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, name, email, role, created_at')
+      .eq('id', decoded.id)
+      .single();
+
+    if (error || !user) {
       res.status(401).json({ error: 'Usuário não encontrado' });
       return;
     }
-    req.user = user;
+    req.user = user as SafeUser;
     next();
   } catch {
     res.status(401).json({ error: 'Token inválido' });

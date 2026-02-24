@@ -29,7 +29,7 @@ export default function RegisterPage() {
     try {
       const data = await api.post('/api/auth/register', { name, email, password });
       api.setAuth(data.token, data.user);
-      navigate(data.user.role === 'LIDERANCA' ? '/admin/dashboard' : '/app/auditoria-upload', { replace: true });
+      navigate(data.user.role === 'LIDERANCA' ? '/admin/dashboard' : '/app/upload', { replace: true });
     } catch (err: any) {
       setError(err.message || 'Erro ao criar conta.');
     }

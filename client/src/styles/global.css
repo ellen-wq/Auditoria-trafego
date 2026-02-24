@@ -666,12 +666,31 @@ button { font-family: inherit; }
 .stat-change.down { color: var(--red); }
 
 /* ===================== TABLE ===================== */
-.table-wrapper { overflow-x: hidden; }
+.table-wrapper { overflow-x: auto; }
 
 table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+}
+
+/* Tabela de métricas da auditoria com colunas compactas */
+.metrics-table {
+  table-layout: fixed;
+}
+
+.metrics-table thead th,
+.metrics-table tbody td {
+  padding: 10px 8px;
+  font-size: 12px;
+}
+
+.metrics-table thead th:first-child,
+.metrics-table tbody td:first-child {
+  width: 28%;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 thead th {

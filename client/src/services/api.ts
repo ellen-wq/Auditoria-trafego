@@ -18,7 +18,13 @@ class ApiService {
       headers['Content-Type'] = 'application/json';
     }
     const res = await fetch(API_BASE + url, { ...options, headers, credentials: 'include' });
-    const data = await res.json();
+    const raw = await res.text();
+    let data: any = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      data = { error: raw || 'Resposta inválida do servidor.' };
+    }
     if (!res.ok) {
       if (res.status === 401) {
         localStorage.removeItem('token');

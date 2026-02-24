@@ -9,7 +9,7 @@ interface MentoradoUser {
   name: string;
   email: string;
   audit_count: number;
-  last_audit_date: string | null;
+  last_audit: string | null;
 }
 
 export default function MentoradosPage() {
@@ -19,8 +19,8 @@ export default function MentoradosPage() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await api.get<MentoradoUser[]>('/api/admin/users');
-        setUsers(data);
+        const data = await api.get<{ users: MentoradoUser[] }>('/api/admin/users');
+        setUsers(data.users || []);
       } catch (err) {
         console.error('Erro ao carregar mentorados:', err);
       } finally {
@@ -73,7 +73,7 @@ export default function MentoradosPage() {
                     <td><strong>{u.name}</strong></td>
                     <td>{u.email}</td>
                     <td>{u.audit_count}</td>
-                    <td>{formatDate(u.last_audit_date)}</td>
+                    <td>{formatDate(u.last_audit)}</td>
                     <td>
                       <Link to={`/admin/mentorados/${u.id}`} className="btn btn-sm btn-outline">
                         Ver auditorias

@@ -39,8 +39,23 @@ export default function AdminDashboardPage() {
     setLoading(true);
     try {
       const qs = buildQueryString();
-      const result = await api.get<SummaryData>('/api/admin/summary' + qs);
-      setData(result);
+      const result = await api.get<any>('/api/admin/summary' + qs);
+      const mapped: SummaryData = {
+        totalMentorados: result.totalUsers || 0,
+        totalAuditorias: result.totalAudits || 0,
+        avgSpend: result.avgPerUser?.avg_spend_per_user || 0,
+        avgPurchases: result.avgPerUser?.avg_purchases_per_user || 0,
+        avgCPA: result.avgPerUser?.avg_cpa_per_user || 0,
+        avgRevenue: result.avgPerUser?.avg_revenue_per_user || 0,
+        bestRoas: result.bestRoas || [],
+        worstRoas: result.worstRoas || [],
+        bestCtr: result.bestCtr || [],
+        worstCtr: result.worstCtr || [],
+        bestConv: result.bestConv || [],
+        worstConv: result.worstConv || [],
+        recentAudits: result.recentAudits || [],
+      };
+      setData(mapped);
     } catch (err) {
       console.error('Erro ao carregar dashboard:', err);
     } finally {
@@ -178,9 +193,8 @@ export default function AdminDashboardPage() {
               onChange={(e) => setFilterProductType(e.target.value)}
             >
               <option value="">Todos</option>
-              <option value="infoproduto">Infoproduto</option>
-              <option value="ecommerce">E-commerce</option>
-              <option value="servico">Serviço</option>
+              <option value="low_ticket">Low Ticket</option>
+              <option value="mid_ticket">Middle Ticket</option>
             </select>
           </div>
           <button className="btn btn-primary" style={{ width: 'auto' }} onClick={handleFilter}>Filtrar</button>

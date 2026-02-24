@@ -1,15 +1,21 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../db/database';
+import { getSupabase } from '../db/database';
 import { requireAuth, requireRole } from '../middleware/auth';
-import type { Audit, Campaign } from '../types';
+import type { Campaign } from '../types';
 
 const router = Router();
 
-router.get('/campaigns/:auditId', requireAuth, (req: Request, res: Response): void => {
+router.get('/campaigns/:auditId', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const db = getDb();
-    const audit = db.prepare('SELECT * FROM audits WHERE id = ?').get(req.params.auditId) as Audit | null;
-    if (!audit) {
+    const supabase = getSupabase();
+
+    const { data: audit, error: auditError } = await supabase
+      .from('audits')
+      .select('*')
+      .eq('id', req.params.auditId)
+      .single();
+
+    if (auditError || !audit) {
       res.status(404).json({ error: 'Auditoria não encontrada.' });
       return;
     }
@@ -18,24 +24,33 @@ router.get('/campaigns/:auditId', requireAuth, (req: Request, res: Response): vo
       return;
     }
 
-    const campaigns = db.prepare(`
-      SELECT c.*, r.title as rec_title, r.steps_json
-      FROM campaigns c
-      LEFT JOIN recommendations r ON r.campaign_id = c.id
-      WHERE c.audit_id = ?
-      ORDER BY c.spend DESC
-    `).all(req.params.auditId);
+    const { data: campaigns } = await supabase
+      .from('campaigns')
+      .select('*, recommendations(title, steps_json)')
+      .eq('audit_id', req.params.auditId)
+      .eq('scenario', 1)
+      .order('spend', { ascending: false });
 
-    res.json({ audit, campaigns });
+    const mapped = (campaigns || []).map(c => {
+      const rec = c.recommendations as unknown as { title: string; steps_json: string }[] | null;
+      return {
+        ...c,
+        recommendations: undefined,
+        rec_title: rec && rec.length > 0 ? rec[0].title : null,
+        steps_json: rec && rec.length > 0 ? rec[0].steps_json : null
+      };
+    });
+
+    res.json({ audit, campaigns: mapped });
   } catch (err) {
     console.error('Creatives campaigns error:', err);
     res.status(500).json({ error: 'Erro interno.' });
   }
 });
 
-router.post('/', requireAuth, (req: Request, res: Response): void => {
+router.post('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const db = getDb();
+    const supabase = getSupabase();
     const { audit_id, items } = req.body;
 
     if (!audit_id || !items || !Array.isArray(items) || items.length === 0) {
@@ -43,8 +58,13 @@ router.post('/', requireAuth, (req: Request, res: Response): void => {
       return;
     }
 
-    const audit = db.prepare('SELECT * FROM audits WHERE id = ?').get(audit_id) as Audit | null;
-    if (!audit) {
+    const { data: audit, error: auditError } = await supabase
+      .from('audits')
+      .select('*')
+      .eq('id', audit_id)
+      .single();
+
+    if (auditError || !audit) {
       res.status(404).json({ error: 'Auditoria não encontrada.' });
       return;
     }
@@ -53,34 +73,43 @@ router.post('/', requireAuth, (req: Request, res: Response): void => {
       return;
     }
 
-    const insert = db.prepare(
-      'INSERT INTO creatives (user_id, audit_id, campaign_id, copy_text, video_link, analysis_result) VALUES (?, ?, ?, ?, ?, ?)'
-    );
-
     const results: Record<string, unknown>[] = [];
 
-    const transaction = db.transaction(() => {
-      for (const item of items as { campaign_id: number; copy_text?: string; video_link?: string }[]) {
-        const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ? AND audit_id = ?').get(item.campaign_id, audit_id) as Campaign | null;
-        if (!campaign) continue;
+    for (const item of items as { campaign_id: number; copy_text?: string; video_link?: string }[]) {
+      const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', item.campaign_id)
+        .eq('audit_id', audit_id)
+        .single();
 
-        const analysis = generateCreativeAnalysis(campaign, item.copy_text || '', item.video_link || '', audit.product_price);
+      if (!campaign) continue;
 
-        const result = insert.run(req.user!.id, audit_id, item.campaign_id, item.copy_text || '', item.video_link || '', analysis);
+      const analysis = generateCreativeAnalysis(campaign as Campaign, item.copy_text || '', item.video_link || '', audit.product_price);
 
-        results.push({
-          id: result.lastInsertRowid,
+      const { data: inserted } = await supabase
+        .from('creatives')
+        .insert({
+          user_id: req.user!.id,
+          audit_id,
           campaign_id: item.campaign_id,
-          campaign_name: campaign.campaign_name,
-          copy_text: item.copy_text,
-          video_link: item.video_link,
-          analysis,
-          campaign
-        });
-      }
-    });
+          copy_text: item.copy_text || '',
+          video_link: item.video_link || '',
+          analysis_result: analysis
+        })
+        .select('id')
+        .single();
 
-    transaction();
+      results.push({
+        id: inserted?.id,
+        campaign_id: item.campaign_id,
+        campaign_name: campaign.campaign_name,
+        copy_text: item.copy_text,
+        video_link: item.video_link,
+        analysis,
+        campaign
+      });
+    }
 
     res.json({ creatives: results });
   } catch (err: unknown) {
@@ -90,19 +119,37 @@ router.post('/', requireAuth, (req: Request, res: Response): void => {
   }
 });
 
-router.get('/my', requireAuth, (req: Request, res: Response): void => {
+router.get('/my', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const db = getDb();
-    const creatives = db.prepare(`
-      SELECT cr.*, c.campaign_name, c.spend, c.ctr_link, c.link_clicks,
-        c.impressions, c.lp_views, c.purchases, c.cpa, c.scenario,
-        a.product_price, a.product_type, a.created_at as audit_date
-      FROM creatives cr
-      JOIN campaigns c ON cr.campaign_id = c.id
-      JOIN audits a ON cr.audit_id = a.id
-      WHERE cr.user_id = ?
-      ORDER BY cr.created_at DESC
-    `).all(req.user!.id);
+    const supabase = getSupabase();
+
+    const { data: creativesRaw } = await supabase
+      .from('creatives')
+      .select('*, campaigns!inner(campaign_name, spend, ctr_link, link_clicks, impressions, lp_views, purchases, cpa, scenario), audits!inner(product_price, product_type, created_at)')
+      .eq('user_id', req.user!.id)
+      .order('created_at', { ascending: false });
+
+    const creatives = (creativesRaw || []).map(cr => {
+      const c = cr.campaigns as unknown as Record<string, unknown>;
+      const a = cr.audits as unknown as Record<string, unknown>;
+      return {
+        ...cr,
+        campaigns: undefined,
+        audits: undefined,
+        campaign_name: c?.campaign_name,
+        spend: c?.spend,
+        ctr_link: c?.ctr_link,
+        link_clicks: c?.link_clicks,
+        impressions: c?.impressions,
+        lp_views: c?.lp_views,
+        purchases: c?.purchases,
+        cpa: c?.cpa,
+        scenario: c?.scenario,
+        product_price: a?.product_price,
+        product_type: a?.product_type,
+        audit_date: a?.created_at
+      };
+    });
 
     res.json({ creatives });
   } catch (err) {
@@ -111,31 +158,50 @@ router.get('/my', requireAuth, (req: Request, res: Response): void => {
   }
 });
 
-router.get('/all', requireAuth, requireRole('LIDERANCA'), (req: Request, res: Response): void => {
+router.get('/all', requireAuth, requireRole('LIDERANCA'), async (req: Request, res: Response): Promise<void> => {
   try {
-    const db = getDb();
-    const { from, to, product_type } = req.query;
+    const supabase = getSupabase();
+    const { from, to, product_type } = req.query as { from?: string; to?: string; product_type?: string };
 
-    let filters = '';
-    const params: unknown[] = [];
-    if (from) { filters += ' AND a.created_at >= ?'; params.push(from); }
-    if (to) { filters += ' AND a.created_at <= ?'; params.push(to); }
-    if (product_type) { filters += ' AND a.product_type = ?'; params.push(product_type); }
+    let query = supabase
+      .from('creatives')
+      .select('*, campaigns!inner(campaign_name, spend, ctr_link, link_clicks, impressions, lp_views, purchases, cpa, scenario), audits!inner(product_price, product_type, created_at), users!inner(name, email)')
+      .order('created_at', { ascending: false });
 
-    const creatives = db.prepare(`
-      SELECT cr.*, c.campaign_name, c.spend, c.ctr_link, c.link_clicks,
-        c.impressions, c.lp_views, c.purchases, c.cpa, c.scenario,
-        a.product_price, a.product_type, a.created_at as audit_date,
-        u.name as user_name, u.email as user_email
-      FROM creatives cr
-      JOIN campaigns c ON cr.campaign_id = c.id
-      JOIN audits a ON cr.audit_id = a.id
-      JOIN users u ON cr.user_id = u.id
-      WHERE 1=1 ${filters}
-      ORDER BY cr.created_at DESC
-    `).all(...params) as (Record<string, unknown> & { ctr_link: number; purchases: number; lp_views: number; cpa: number; product_price: number; copy_text: string })[];
+    if (from) query = query.gte('audits.created_at', from);
+    if (to) query = query.lte('audits.created_at', to);
+    if (product_type) query = query.eq('audits.product_type', product_type);
 
-    const strengths = generateOverallStrengths(creatives);
+    const { data: creativesRaw } = await query;
+
+    const creatives = (creativesRaw || []).map(cr => {
+      const c = cr.campaigns as unknown as Record<string, unknown>;
+      const a = cr.audits as unknown as Record<string, unknown>;
+      const u = cr.users as unknown as { name: string; email: string };
+      return {
+        ...cr,
+        campaigns: undefined,
+        audits: undefined,
+        users: undefined,
+        campaign_name: c?.campaign_name,
+        spend: c?.spend,
+        ctr_link: c?.ctr_link as number,
+        link_clicks: c?.link_clicks,
+        impressions: c?.impressions,
+        lp_views: c?.lp_views as number,
+        purchases: c?.purchases as number,
+        cpa: c?.cpa as number,
+        scenario: c?.scenario,
+        product_price: a?.product_price as number,
+        product_type: a?.product_type,
+        audit_date: a?.created_at,
+        user_name: u?.name || '',
+        user_email: u?.email || '',
+        copy_text: cr.copy_text as string
+      };
+    });
+
+    const strengths = generateOverallStrengths(creatives as CreativeRow[]);
 
     res.json({ creatives, strengths });
   } catch (err) {
@@ -143,11 +209,6 @@ router.get('/all', requireAuth, requireRole('LIDERANCA'), (req: Request, res: Re
     res.status(500).json({ error: 'Erro interno.' });
   }
 });
-
-interface CreativeAnalysisOutput {
-  points: string[];
-  replication: string[];
-}
 
 function generateCreativeAnalysis(campaign: Campaign, copyText: string, videoLink: string, productPrice: number): string {
   const points: string[] = [];
@@ -230,12 +291,8 @@ function generateOverallStrengths(creatives: CreativeRow[]): { summary: string; 
   }
 
   const patterns: string[] = [];
-  let highCtrCount = 0;
-  let lowCpaCount = 0;
-  let highConvCount = 0;
-  let totalCtr = 0;
-  let totalConv = 0;
-  let count = 0;
+  let highCtrCount = 0, lowCpaCount = 0, highConvCount = 0;
+  let totalCtr = 0, totalConv = 0, count = 0;
 
   creatives.forEach(cr => {
     count++;
@@ -271,14 +328,13 @@ function generateOverallStrengths(creatives: CreativeRow[]): { summary: string; 
     if (copy.includes('como') || copy.includes('passo') || copy.includes('método')) curiosityCount++;
   });
 
-  const copyPatterns: string[] = [];
-  if (proofCount > creatives.length * 0.3) copyPatterns.push('Prova social é o gatilho mais usado nos melhores criativos.');
-  if (offerCount > creatives.length * 0.3) copyPatterns.push('Ofertas e incentivos aparecem frequentemente nos melhores criativos.');
-  if (curiosityCount > creatives.length * 0.3) copyPatterns.push('Curiosidade e método são abordagens recorrentes nos melhores criativos.');
+  if (proofCount > creatives.length * 0.3) patterns.push('Prova social é o gatilho mais usado nos melhores criativos.');
+  if (offerCount > creatives.length * 0.3) patterns.push('Ofertas e incentivos aparecem frequentemente nos melhores criativos.');
+  if (curiosityCount > creatives.length * 0.3) patterns.push('Curiosidade e método são abordagens recorrentes nos melhores criativos.');
 
   return {
     summary: 'Análise geral de ' + creatives.length + ' criativos dos mentorados.',
-    patterns: patterns.concat(copyPatterns)
+    patterns: patterns
   };
 }
 

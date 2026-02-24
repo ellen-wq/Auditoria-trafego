@@ -1,20 +1,26 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 import { formatCurrency, formatPercent, formatDate } from '../utils/format';
 
 interface Campaign {
+  id: number;
   campaign_name: string;
   spend: number;
-  ctr: number;
+  ctr_link: number;
   cpc: number;
-  landing_page_views: number;
-  lp_view_rate: number;
+  lp_views: number;
+  lp_rate: number;
   checkouts: number;
   purchases: number;
   cpa: number;
   scenario: number;
+  recommendations?: Array<{
+    title: string;
+    message: string;
+    steps_json: string;
+  }>;
 }
 
 interface Recommendation {
@@ -26,7 +32,7 @@ interface Recommendation {
 
 interface AuditData {
   id: number;
-  original_filename: string;
+  filename: string;
   product_price: number;
   product_type: string;
   created_at: string;
@@ -45,23 +51,58 @@ const SCENARIO_CONFIG: Record<number, { label: string; badge: string; cardClass:
   3: { label: 'Atenção', badge: 'badge-s3', cardClass: 'scenario-3' },
 };
 
-const CREATIVE_TRIGGER_PHRASES = [
-  'Analise quais anúncios têm melhor performance',
-  'Identifique públicos e criativos vencedores',
-];
-
 export default function AuditoriaResultadoPage() {
+  const { id: routeId } = useParams<{ id?: string }>();
   const [searchParams] = useSearchParams();
-  const id = searchParams.get('id');
+  const id = routeId ?? searchParams.get('id');
 
   const [audit, setAudit] = useState<AuditData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'recomendacoes' | 'metricas'>('recomendacoes');
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      setLoading(false);
+      return;
+    }
     api.get<AuditData>(`/api/audits/${id}`)
-      .then(setAudit)
+      .then((data: any) => {
+        const apiAudit = data?.audit || {};
+        const apiCampaigns: Campaign[] = data?.campaigns || [];
+
+        const grouped = new Map<number, Recommendation>();
+        for (const c of apiCampaigns) {
+          const firstRec = c.recommendations?.[0];
+          if (!firstRec) continue;
+
+          if (!grouped.has(c.scenario)) {
+            let steps: string[] = [];
+            try {
+              steps = JSON.parse(firstRec.steps_json || '[]');
+            } catch {
+              steps = [];
+            }
+            grouped.set(c.scenario, {
+              scenario: c.scenario,
+              title: firstRec.title,
+              campaigns: [c.campaign_name],
+              steps
+            });
+          } else {
+            grouped.get(c.scenario)!.campaigns.push(c.campaign_name);
+          }
+        }
+
+        setAudit({
+          id: apiAudit.id,
+          filename: apiAudit.filename,
+          product_price: apiAudit.product_price,
+          product_type: apiAudit.product_type,
+          created_at: apiAudit.created_at,
+          campaigns: apiCampaigns,
+          recommendations: Array.from(grouped.values())
+        });
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [id]);
@@ -74,7 +115,7 @@ export default function AuditoriaResultadoPage() {
     const revenue = totalPurchases * audit.product_price;
     const roas = totalSpend > 0 ? revenue / totalSpend : 0;
     const avgCtr = campaigns.length > 0
-      ? campaigns.reduce((s, c) => s + (c.ctr || 0), 0) / campaigns.length
+      ? campaigns.reduce((s, c) => s + (c.ctr_link || 0), 0) / campaigns.length
       : 0;
     const withPurchases = campaigns.filter((c) => c.purchases > 0);
     const avgCpa = withPurchases.length > 0
@@ -99,13 +140,14 @@ export default function AuditoriaResultadoPage() {
     };
 
     loadXlsx().then((XLSX) => {
-      const rows = audit.campaigns.map((c) => ({
+      const rows = audit.campaigns.map((c: Campaign) => ({
+        ROAS: c.spend > 0 ? ((c.purchases || 0) * (audit.product_price || 0)) / c.spend : 0,
         Campanha: c.campaign_name,
         Gasto: c.spend,
-        CTR: c.ctr,
+        CTR: c.ctr_link,
         CPC: c.cpc,
-        'Vis. Página': c.landing_page_views,
-        'Taxa Vis. Página': c.lp_view_rate,
+        'Vis. Página': c.lp_views,
+        'Taxa Vis. Página': c.lp_rate,
         Checkouts: c.checkouts,
         Compras: c.purchases,
         CPA: c.cpa,
@@ -162,7 +204,7 @@ export default function AuditoriaResultadoPage() {
         {formatDate(audit.created_at)} — {PRODUCT_TYPE_LABELS[audit.product_type] ?? audit.product_type}
       </p>
       <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24, marginTop: -16 }}>
-        Arquivo: {audit.original_filename}
+        Arquivo: {audit.filename}
       </p>
 
       {/* Banner KPIs */}
@@ -235,22 +277,16 @@ export default function AuditoriaResultadoPage() {
                   {rec.title}
                 </div>
                 <div className="rec-message">
-                  Campanhas: {rec.campaigns.join(', ')}
+                  <strong>Campanhas:</strong>
+                  <div style={{ marginTop: 8 }}>
+                    {rec.campaigns.map((campaign, campaignIdx) => (
+                      <div key={`${campaign}-${campaignIdx}`}>{campaign}</div>
+                    ))}
+                  </div>
                 </div>
                 <ol className="rec-steps">
                   {rec.steps.map((step, si) => (
-                    <li key={si}>
-                      {step}
-                      {CREATIVE_TRIGGER_PHRASES.some((phrase) => step.includes(phrase)) && (
-                        <Link
-                          to={`/app/criativos?audit_id=${id}`}
-                          className="btn btn-sm btn-outline"
-                          style={{ marginLeft: 10, marginTop: 4 }}
-                        >
-                          Engenharia Reversa dos melhores criativos
-                        </Link>
-                      )}
-                    </li>
+                    <li key={si}>{step}</li>
                   ))}
                 </ol>
               </div>
@@ -269,7 +305,7 @@ export default function AuditoriaResultadoPage() {
       {activeTab === 'metricas' && (
         <div className="card" style={{ padding: 0 }}>
           <div className="table-wrapper">
-            <table>
+            <table className="metrics-table">
               <thead>
                 <tr>
                   <th>Campanha</th>
@@ -281,23 +317,26 @@ export default function AuditoriaResultadoPage() {
                   <th>Checkouts</th>
                   <th>Compras</th>
                   <th>CPA</th>
+                  <th>ROAS</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {audit.campaigns.map((c, i) => {
                   const cfg = SCENARIO_CONFIG[c.scenario] ?? SCENARIO_CONFIG[3];
+                  const roas = c.spend > 0 ? ((c.purchases || 0) * (audit.product_price || 0)) / c.spend : 0;
                   return (
                     <tr key={i}>
                       <td>{c.campaign_name}</td>
                       <td>{formatCurrency(c.spend)}</td>
-                      <td>{formatPercent(c.ctr)}</td>
+                      <td>{formatPercent(c.ctr_link)}</td>
                       <td>{formatCurrency(c.cpc)}</td>
-                      <td>{c.landing_page_views}</td>
-                      <td>{formatPercent(c.lp_view_rate)}</td>
+                      <td>{c.lp_views}</td>
+                      <td>{formatPercent(c.lp_rate)}</td>
                       <td>{c.checkouts}</td>
                       <td>{c.purchases}</td>
                       <td>{c.cpa > 0 ? formatCurrency(c.cpa) : '-'}</td>
+                      <td>{roas > 0 ? `${roas.toFixed(2)}x` : '-'}</td>
                       <td><span className={`badge ${cfg.badge}`}>{cfg.label}</span></td>
                     </tr>
                   );

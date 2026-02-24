@@ -6,7 +6,7 @@ Sistema de auditoria semanal automatizada de tráfego Facebook Ads para mentores
 
 ### Backend
 - **Node.js** + **Express** (TypeScript)
-- **sql.js** (SQLite em memória com persistência)
+- **Supabase** (PostgreSQL) via `@supabase/supabase-js`
 - **JWT** para autenticação
 - **Multer** para upload de arquivos
 - **SheetJS** + **PapaParse** para parsing de planilhas
@@ -23,7 +23,7 @@ Sistema de auditoria semanal automatizada de tráfego Facebook Ads para mentores
 ├── src/                    # Backend TypeScript
 │   ├── server.ts           # Entry point
 │   ├── types.ts            # Interfaces e tipos
-│   ├── db/database.ts      # Banco de dados SQLite
+│   ├── db/database.ts      # Cliente Supabase
 │   ├── middleware/          # Auth e Upload
 │   ├── routes/             # Rotas da API
 │   ├── engine/rules.ts     # Motor de regras
@@ -72,3 +72,33 @@ npm start                # Inicia servidor de produção
 - `GET /api/admin/summary` - Dashboard liderança
 - `GET /api/admin/users` - Listar mentorados
 - `GET /api/creatives/*` - Engenharia reversa de criativos
+
+## Rotas Frontend (SPA)
+
+- `/login` - Login
+- `/register` - Cadastro
+- `/app/upload` - Nova auditoria
+- `/app/resultado/:id` (ou `/app/resultado?id=...`) - Resultado da auditoria
+- `/app/historico` - Histórico de auditorias
+- `/app/criativos` - Engenharia reversa (mentorado)
+- `/app/perfil` - Perfil
+- `/admin/dashboard` - Dashboard liderança
+- `/admin/mentorados` - Lista de mentorados
+- `/admin/mentorados/:id` - Detalhe do mentorado
+- `/admin/criativos` - Criativos consolidados da liderança
+
+## Mapeamento Legado -> React
+
+- `/index.html` -> `/login`
+- `/login.html` -> `/login`
+- `/register.html` -> `/register`
+- `/app/dashboard.html` -> `/app/upload`
+- `/app/auditoria-upload.html` -> `/app/upload`
+- `/app/auditoria-resultado.html?id=123` -> `/app/resultado/123` (compatível também com querystring)
+- `/app/historico.html` -> `/app/historico`
+- `/app/criativos.html` -> `/app/criativos`
+- `/app/perfil.html` -> `/app/perfil`
+- `/admin/dashboard.html` -> `/admin/dashboard`
+- `/admin/mentorados.html` -> `/admin/mentorados`
+- `/admin/mentorados-detalhe.html?id=7` -> `/admin/mentorados/7`
+- `/admin/criativos.html` -> `/admin/criativos`

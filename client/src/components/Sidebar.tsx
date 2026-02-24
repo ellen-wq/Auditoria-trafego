@@ -40,12 +40,14 @@ export default function Sidebar({ user }: SidebarProps) {
           </svg>
           Histórico
         </NavLink>
-        <NavLink to="/app/criativos" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-          Engenharia Reversa
-        </NavLink>
+        {user.role !== 'LIDERANCA' && (
+          <NavLink to="/app/criativos" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            Engenharia Reversa
+          </NavLink>
+        )}
       </nav>
 
       {user.role === 'LIDERANCA' && (
@@ -68,12 +70,6 @@ export default function Sidebar({ user }: SidebarProps) {
               <path d="M16 3.13a4 4 0 010 7.75" />
             </svg>
             Mentorados
-          </NavLink>
-          <NavLink to="/admin/criativos" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            Criativos
           </NavLink>
         </nav>
       )}

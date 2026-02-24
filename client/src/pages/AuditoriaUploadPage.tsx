@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
@@ -10,6 +10,11 @@ export default function AuditoriaUploadPage() {
   const [productPrice, setProductPrice] = useState('');
   const [productType, setProductType] = useState('low_ticket');
   const [hasFunnelStep, setHasFunnelStep] = useState(false);
+  const [hasMoreThan50Sales28d, setHasMoreThan50Sales28d] = useState(false);
+  const [hasAnyAdvantagePlus, setHasAnyAdvantagePlus] = useState(false);
+  const [previewCampaigns, setPreviewCampaigns] = useState<string[]>([]);
+  const [selectedAdvantageCampaigns, setSelectedAdvantageCampaigns] = useState<string[]>([]);
+  const [selectionStepReady, setSelectionStepReady] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
@@ -28,6 +33,25 @@ export default function AuditoriaUploadPage() {
     }
     setError('');
     setFile(f);
+    setSelectionStepReady(false);
+    setPreviewCampaigns([]);
+    setSelectedAdvantageCampaigns([]);
+  }, []);
+
+  useEffect(() => {
+    if (productType !== 'low_ticket') {
+      setHasAnyAdvantagePlus(false);
+      setSelectionStepReady(false);
+      setPreviewCampaigns([]);
+      setSelectedAdvantageCampaigns([]);
+    }
+  }, [productType]);
+
+  const toggleAdvantageCampaign = useCallback((campaignName: string, checked: boolean) => {
+    setSelectedAdvantageCampaigns((prev) => {
+      if (checked) return Array.from(new Set([...prev, campaignName]));
+      return prev.filter((name) => name !== campaignName);
+    });
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -51,20 +75,55 @@ export default function AuditoriaUploadPage() {
 
     setLoading(true);
     try {
+      if (productType === 'low_ticket' && !selectionStepReady) {
+        if (hasAnyAdvantagePlus) {
+          const previewFormData = new FormData();
+          previewFormData.append('file', file);
+          const preview = await api.post<{ campaigns: string[] }>('/api/audits/preview-campaigns', previewFormData);
+          setPreviewCampaigns(preview.campaigns || []);
+          setSelectionStepReady(true);
+          return;
+        }
+      }
+
+      if (productType === 'low_ticket' && hasAnyAdvantagePlus && selectionStepReady && selectedAdvantageCampaigns.length === 0) {
+        setError('Selecione pelo menos uma campanha Advantage+ para continuar.');
+        return;
+      }
+
+      if (productType === 'low_ticket' && !hasAnyAdvantagePlus) {
+        setSelectedAdvantageCampaigns([]);
+        setSelectionStepReady(false);
+        setPreviewCampaigns([]);
+      }
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('product_price', productPrice);
       formData.append('product_type', productType);
       formData.append('has_funnel_step', String(hasFunnelStep));
+      formData.append('has_pre_checkout', String(hasFunnelStep));
+      formData.append('has_more_than_50_sales_28d', String(hasMoreThan50Sales28d));
+      formData.append('has_any_advantage_plus', String(hasAnyAdvantagePlus));
+      formData.append('advantage_plus_campaigns', JSON.stringify(selectedAdvantageCampaigns));
 
       const result = await api.post<{ id: number }>('/api/audits', formData);
-      navigate(`/app/resultado?id=${result.id}`);
+      navigate(`/app/resultado/${result.id}`);
     } catch (err: any) {
       setError(err.message || 'Erro ao processar auditoria');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleAnyAdvantagePlus = useCallback((checked: boolean) => {
+    setHasAnyAdvantagePlus(checked);
+    if (!checked) {
+      setSelectionStepReady(false);
+      setPreviewCampaigns([]);
+      setSelectedAdvantageCampaigns([]);
+    }
+  }, []);
 
   return (
     <AppLayout breadcrumbs={[
@@ -112,19 +171,77 @@ export default function AuditoriaUploadPage() {
             </div>
           </div>
 
-          <div className="switch-group" style={{ marginTop: 8 }}>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={hasFunnelStep}
-                onChange={(e) => setHasFunnelStep(e.target.checked)}
-              />
-              <span className="switch-slider" />
-            </label>
-            <span style={{ fontSize: 13 }}>
-              Sim, meu funil tem uma etapa antes do checkout
-            </span>
-          </div>
+          {productType === 'low_ticket' ? (
+            <div style={{ display: 'grid', gap: 12, marginTop: 8 }}>
+              <div className="switch-group">
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={hasMoreThan50Sales28d}
+                    onChange={(e) => setHasMoreThan50Sales28d(e.target.checked)}
+                  />
+                  <span className="switch-slider" />
+                </label>
+                <span style={{ fontSize: 13 }}>
+                  Teve mais de 50 vendas nos ultimos 28 dias no Gerenciador de Anúncios
+                </span>
+              </div>
+
+              <div className="switch-group">
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={hasAnyAdvantagePlus}
+                    onChange={(e) => handleAnyAdvantagePlus(e.target.checked)}
+                  />
+                  <span className="switch-slider" />
+                </label>
+                <span style={{ fontSize: 13 }}>
+                  Você já possui alguma campanha Advantage+ ativa?
+                </span>
+              </div>
+
+              {hasAnyAdvantagePlus && selectionStepReady && (
+                <div className="card" style={{ marginTop: 6, padding: 16 }}>
+                  <div className="card-header" style={{ marginBottom: 10 }}>
+                    <span className="card-title">Selecione as campanhas Advantage+</span>
+                  </div>
+                  {previewCampaigns.length === 0 ? (
+                    <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                      Nenhuma campanha encontrada na planilha.
+                    </p>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 8, maxHeight: 240, overflowY: 'auto' }}>
+                      {previewCampaigns.map((campaignName) => (
+                        <label key={campaignName} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedAdvantageCampaigns.includes(campaignName)}
+                            onChange={(e) => toggleAdvantageCampaign(campaignName, e.target.checked)}
+                          />
+                          <span>{campaignName}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="switch-group" style={{ marginTop: 8 }}>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={hasFunnelStep}
+                  onChange={(e) => setHasFunnelStep(e.target.checked)}
+                />
+                <span className="switch-slider" />
+              </label>
+              <span style={{ fontSize: 13 }}>
+                Sim, meu funil tem uma etapa antes do checkout
+              </span>
+            </div>
+          )}
         </div>
 
         <div
@@ -160,7 +277,9 @@ export default function AuditoriaUploadPage() {
         )}
 
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          Processar Auditoria
+          {productType === 'low_ticket' && hasAnyAdvantagePlus && !selectionStepReady
+            ? 'Continuar para selecionar Advantage+'
+            : 'Processar Auditoria'}
         </button>
       </form>
 

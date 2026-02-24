@@ -1,5 +1,3 @@
-import { Request } from 'express';
-
 export interface User {
   id: number;
   name: string;
@@ -68,7 +66,21 @@ export interface AnalysisResult {
   steps: string[];
 }
 
-export interface AnalyzedCampaign extends Campaign {
+export interface AnalyzedCampaign {
+  campaign_name: string;
+  spend: number;
+  ctr_link: number;
+  link_clicks: number;
+  lp_views: number;
+  lp_rate: number;
+  checkouts: number;
+  purchases: number;
+  cpa: number;
+  cpc: number;
+  impressions: number;
+  reach: number;
+  hook_rate: number;
+  scenario: number;
   recommendation: AnalysisResult;
 }
 
@@ -97,18 +109,6 @@ export interface ParseResult {
   campaigns?: ParsedCampaign[];
   hasPurchases?: boolean;
   error?: string;
-}
-
-export interface PreparedStatement {
-  run(...params: unknown[]): { lastInsertRowid: number; changes: number };
-  get(...params: unknown[]): Record<string, unknown> | null;
-  all(...params: unknown[]): Record<string, unknown>[];
-}
-
-export interface DbWrapper {
-  prepare(sql: string): PreparedStatement;
-  exec(sql: string): void;
-  transaction<T>(fn: (...args: unknown[]) => T): (...args: unknown[]) => T;
 }
 
 export interface JwtPayload {

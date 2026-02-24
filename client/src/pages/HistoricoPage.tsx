@@ -6,15 +6,14 @@ import { formatDate, formatCurrency } from '../utils/format';
 
 interface AuditSummary {
   id: number;
-  original_filename: string;
+  filename: string;
   product_price: number;
   product_type: string;
   created_at: string;
-  campaigns: Campaign[];
-}
-
-interface Campaign {
-  scenario: number;
+  campaign_count: number;
+  scenario1_count: number;
+  scenario2_count: number;
+  scenario3_count: number;
 }
 
 const PRODUCT_TYPE_LABELS: Record<string, string> = {
@@ -31,8 +30,8 @@ export default function HistoricoPage() {
   const [filterType, setFilterType] = useState('');
 
   useEffect(() => {
-    api.get<AuditSummary[]>('/api/audits')
-      .then(setAudits)
+    api.get<{ audits: AuditSummary[] }>('/api/audits')
+      .then((data) => setAudits(data.audits || []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -55,9 +54,6 @@ export default function HistoricoPage() {
     setDateTo('');
     setFilterType('');
   };
-
-  const countByScenario = (campaigns: Campaign[], scenario: number) =>
-    campaigns.filter((c) => c.scenario === scenario).length;
 
   return (
     <AppLayout breadcrumbs={[
@@ -140,27 +136,21 @@ export default function HistoricoPage() {
                 {filtered.map((a) => (
                   <tr key={a.id}>
                     <td>{formatDate(a.created_at)}</td>
-                    <td>{a.original_filename}</td>
+                    <td>{a.filename}</td>
                     <td>{formatCurrency(a.product_price)}</td>
-                    <td>{a.campaigns?.length ?? 0}</td>
+                    <td>{a.campaign_count ?? 0}</td>
                     <td>
-                      <span className="badge badge-s1">
-                        {countByScenario(a.campaigns ?? [], 1)}
-                      </span>
+                      <span className="badge badge-s1">{a.scenario1_count ?? 0}</span>
                     </td>
                     <td>
-                      <span className="badge badge-s2">
-                        {countByScenario(a.campaigns ?? [], 2)}
-                      </span>
+                      <span className="badge badge-s2">{a.scenario2_count ?? 0}</span>
                     </td>
                     <td>
-                      <span className="badge badge-s3">
-                        {countByScenario(a.campaigns ?? [], 3)}
-                      </span>
+                      <span className="badge badge-s3">{a.scenario3_count ?? 0}</span>
                     </td>
                     <td>
                       <Link
-                        to={`/app/resultado?id=${a.id}`}
+                        to={`/app/resultado/${a.id}`}
                         className="btn btn-outline btn-sm"
                       >
                         Ver
