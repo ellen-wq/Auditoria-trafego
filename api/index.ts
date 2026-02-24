@@ -6,7 +6,7 @@ let initPromise: Promise<void> | null = null;
 
 function ensureDbInit(): Promise<void> {
   if (!initPromise) {
-    initPromise = initDb().catch((err) => {
+    initPromise = initDb({ seedUsers: false, ensureStorageBucket: false }).catch((err) => {
       initPromise = null;
       throw err;
     });

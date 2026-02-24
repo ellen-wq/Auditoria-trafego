@@ -3,7 +3,7 @@ import app from './app';
 const PORT = process.env.PORT || 3000;
 
 async function start(): Promise<void> {
-  await initDb();
+  await initDb({ seedUsers: true, ensureStorageBucket: true });
   app.listen(PORT, () => {
     console.log(`Fluxer Auditoria rodando em http://localhost:${PORT}`);
   });
