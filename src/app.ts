@@ -12,13 +12,14 @@ import './types';
 dotenv.config();
 
 const app = express();
+const rootDir = process.cwd();
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(express.static(path.join(__dirname, '..', 'public_dist')));
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(rootDir, 'public_dist')));
+app.use(express.static(path.join(rootDir, 'public')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/audits', auditRoutes);
@@ -26,16 +27,16 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/creatives', creativesRoutes);
 
 app.get('/app/*', (req, res) => {
-  const builtIndex = path.join(__dirname, '..', 'public_dist', 'index.html');
-  const fallback = path.join(__dirname, '..', 'public', req.path);
+  const builtIndex = path.join(rootDir, 'public_dist', 'index.html');
+  const fallback = path.join(rootDir, 'public', req.path);
   res.sendFile(builtIndex, (err) => {
     if (err) res.sendFile(fallback);
   });
 });
 
 app.get('/admin/*', (req, res) => {
-  const builtIndex = path.join(__dirname, '..', 'public_dist', 'index.html');
-  const fallback = path.join(__dirname, '..', 'public', req.path);
+  const builtIndex = path.join(rootDir, 'public_dist', 'index.html');
+  const fallback = path.join(rootDir, 'public', req.path);
   res.sendFile(builtIndex, (err) => {
     if (err) res.sendFile(fallback);
   });
@@ -43,7 +44,7 @@ app.get('/admin/*', (req, res) => {
 
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
-  const indexPath = path.join(__dirname, '..', 'public_dist', 'index.html');
+  const indexPath = path.join(rootDir, 'public_dist', 'index.html');
   res.sendFile(indexPath, (err) => {
     if (err) next();
   });
