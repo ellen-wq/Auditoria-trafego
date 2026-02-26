@@ -449,25 +449,87 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
 
 // Services
 router.get('/services', async (req: Request, res: Response): Promise<void> => {
-  const supabase = getSupabase();
-  const { specialty, certification, city, query } = req.query;
-  let q = supabase
-    .from('tinder_service_profiles')
-    .select('*, users(id, name, email, role)')
-    .order('rating_avg', { ascending: false })
-    .order('rating_count', { ascending: false });
+  try {
+    const supabase = getSupabase();
+    const { specialty, certification, city, query } = req.query;
+    console.log('[Services] Iniciando busca de prestadores...', { specialty, certification, city, query });
+    
+    let q = supabase
+      .from('tinder_service_profiles')
+      .select('*')
+      .order('rating_avg', { ascending: false })
+      .order('rating_count', { ascending: false });
 
-  if (specialty) q = q.eq('specialty', cleanString(specialty, 60));
-  if (certification) q = q.eq('certification', cleanString(certification, 100));
-  if (city) q = q.ilike('city', `%${cleanString(city, 120)}%`);
-  if (query) q = q.or(`bio.ilike.%${cleanString(query, 120)}%,experience.ilike.%${cleanString(query, 120)}%`);
+    if (specialty) q = q.eq('specialty', cleanString(specialty, 60));
+    if (certification) q = q.eq('certification', cleanString(certification, 100));
+    if (city) q = q.ilike('city', `%${cleanString(city, 120)}%`);
+    if (query) q = q.or(`bio.ilike.%${cleanString(query, 120)}%,experience.ilike.%${cleanString(query, 120)}%`);
 
-  const { data, error } = await q.limit(120);
-  if (error) {
-    res.status(500).json({ error: 'Erro ao buscar prestadores.' });
-    return;
+    const { data: services, error } = await q.limit(120);
+    
+    console.log('[Services] Query resultado:', { 
+      dataCount: services?.length || 0, 
+      error: error,
+      errorCode: error?.code,
+      errorMessage: error?.message,
+      errorDetails: error?.details,
+      errorHint: error?.hint
+    });
+    
+    if (error) {
+      console.error('[Services] Erro na query:', error);
+      res.status(500).json({ 
+        error: 'Erro ao buscar prestadores.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        code: error.code
+      });
+      return;
+    }
+    
+    // Buscar dados dos usuários (user_roles) e emails (auth.users)
+    const userIds = (services || []).map((s: any) => s.user_id);
+    console.log('[Services] Buscando dados de', userIds.length, 'usuários prestadores');
+    
+    const { data: userRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('user_id, name, role')
+      .in('user_id', userIds);
+    
+    if (rolesError) {
+      console.error('[Services] Erro ao buscar user_roles:', rolesError);
+    }
+    
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+    if (authError) {
+      console.error('[Services] Erro ao buscar auth.users:', authError);
+    }
+    
+    const userMap = new Map((userRoles || []).map((u: any) => [u.user_id, u]));
+    const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) || []);
+    
+    const servicesWithUsers = (services || []).map((s: any) => {
+      const user = userMap.get(s.user_id);
+      return {
+        ...s,
+        users: user ? {
+          id: user.user_id,
+          name: user.name,
+          email: emailMap.get(user.user_id) || '',
+          role: user.role
+        } : null
+      };
+    });
+    
+    console.log('[Services] Retornando', servicesWithUsers.length, 'prestadores');
+    res.json({ services: servicesWithUsers });
+  } catch (err: any) {
+    console.error('[Services] Erro geral:', err);
+    console.error('[Services] Stack:', err?.stack);
+    res.status(500).json({ 
+      error: 'Erro interno.',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
-  res.json({ services: data || [] });
 });
 
 router.get('/services/:id', async (req: Request, res: Response): Promise<void> => {
