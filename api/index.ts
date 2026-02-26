@@ -67,14 +67,24 @@ async function ensureDbInit(): Promise<void> {
 
 export default async function handler(req: any, res: any): Promise<void> {
   try {
+    // Log request details
+    console.log('Request received:', {
+      url: req.url,
+      method: req.method,
+      path: req.path,
+      originalUrl: req.originalUrl,
+      headers: req.headers ? Object.keys(req.headers) : 'no headers'
+    });
+    
     // Health check endpoint
-    if (req.url === '/api/health' || req.url === '/health') {
+    const url = req.url || req.path || req.originalUrl || '';
+    if (url === '/api/health' || url === '/health' || url.endsWith('/health')) {
       res.status(200).json({ ok: true, env: !!process.env.SUPABASE_URL });
       return;
     }
 
     // Debug endpoint
-    if (req.url === '/api/debug') {
+    if (url === '/api/debug' || url.endsWith('/api/debug')) {
       const cwd = process.cwd();
       const fs = await import('fs');
       const path = await import('path');
@@ -102,7 +112,7 @@ export default async function handler(req: any, res: any): Promise<void> {
     }
     
     // Test import endpoint
-    if (req.url === '/api/test-import') {
+    if (url === '/api/test-import' || url.endsWith('/api/test-import')) {
       try {
         const path = await import('path');
         const cwd = process.cwd();
@@ -125,7 +135,7 @@ export default async function handler(req: any, res: any): Promise<void> {
     }
     
     // Test DB init endpoint
-    if (req.url === '/api/test-db') {
+    if (url === '/api/test-db' || url.endsWith('/api/test-db')) {
       try {
         await ensureDbInit();
         res.status(200).json({ success: true, message: 'DB initialized' });
@@ -146,33 +156,60 @@ export default async function handler(req: any, res: any): Promise<void> {
     const app = await getAppInstance();
     console.log('App instance obtained, calling Express app...');
     
+    // Ensure req.url is set correctly for Express
+    if (!req.url && url) {
+      req.url = url;
+    }
+    if (!req.path && url) {
+      req.path = url.split('?')[0];
+    }
+    
     // Call Express app directly - Vercel req/res should be compatible
     return new Promise<void>((resolve, reject) => {
+      let resolved = false;
+      
       // Ensure response ends properly
-      const originalEnd = res.end;
+      const originalEnd = res.end.bind(res);
       res.end = function(...args: any[]) {
-        originalEnd.apply(this, args);
-        resolve();
+        if (!resolved) {
+          resolved = true;
+          originalEnd.apply(this, args);
+          resolve();
+        }
       };
       
       // Call Express app
-      app(req, res, (err?: any) => {
-        if (err) {
-          console.error('Express app error:', err);
-          reject(err);
-        } else if (!res.headersSent) {
-          // If Express didn't send a response, resolve anyway
-          resolve();
+      try {
+        app(req, res, (err?: any) => {
+          if (err) {
+            console.error('Express app error:', err);
+            if (!resolved) {
+              resolved = true;
+              reject(err);
+            }
+          } else if (!res.headersSent && !resolved) {
+            // If Express didn't send a response, resolve anyway
+            resolved = true;
+            resolve();
+          }
+        });
+      } catch (callErr: any) {
+        console.error('Error calling Express app:', callErr);
+        if (!resolved) {
+          resolved = true;
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Error calling app: ' + callErr.message });
+          }
+          reject(callErr);
         }
-      });
+      }
       
       // Timeout safety
       setTimeout(() => {
-        if (!res.headersSent) {
+        if (!resolved && !res.headersSent) {
           console.warn('Request timeout - response not sent');
-          if (!res.headersSent) {
-            res.status(500).json({ error: 'Request timeout' });
-          }
+          resolved = true;
+          res.status(500).json({ error: 'Request timeout' });
           resolve();
         }
       }, 25000);
