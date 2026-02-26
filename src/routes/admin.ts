@@ -13,8 +13,8 @@ router.get('/summary', async (req: Request, res: Response): Promise<void> => {
     const { from, to, product_type } = req.query as { from?: string; to?: string; product_type?: string };
 
     const { count: totalUsers } = await supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
+      .from('user_roles')
+      .select('user_id', { count: 'exact', head: true })
       .eq('role', 'MENTORADO');
 
     let auditsQuery = supabase.from('audits').select('id', { count: 'exact', head: true });
@@ -135,13 +135,13 @@ router.get('/users', async (_req: Request, res: Response): Promise<void> => {
     const supabase = getSupabase();
 
     const { data: usersRaw } = await supabase
-      .from('users')
-      .select('id, name, email, role, created_at')
+      .from('user_roles')
+      .select('user_id, name, role, created_at')
       .eq('role', 'MENTORADO')
       .order('name');
 
-    const userIds = (usersRaw || []).map(u => u.id);
-    let auditStats: Record<number, { count: number; last: string | null }> = {};
+    const userIds = (usersRaw || []).map((u: any) => u.user_id);
+    let auditStats: Record<string, { count: number; last: string | null }> = {};
 
     if (userIds.length > 0) {
       const { data: audits } = await supabase
@@ -160,11 +160,22 @@ router.get('/users', async (_req: Request, res: Response): Promise<void> => {
       }
     }
 
-    const users = (usersRaw || []).map(u => ({
-      ...u,
-      audit_count: auditStats[u.id]?.count || 0,
-      last_audit: auditStats[u.id]?.last || null
-    }));
+    // Buscar emails do auth.users
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) || []);
+    
+    const users = (usersRaw || []).map((u: any) => {
+      const userId = u.user_id;
+      return {
+        id: userId,
+        name: u.name,
+        email: emailMap.get(userId) || '',
+        role: u.role,
+        created_at: u.created_at,
+        audit_count: auditStats[userId]?.count || 0,
+        last_audit: auditStats[userId]?.last || null
+      };
+    });
 
     res.json({ users });
   } catch (err) {
@@ -176,17 +187,36 @@ router.get('/users', async (_req: Request, res: Response): Promise<void> => {
 router.get('/users/:id/audits', async (req: Request, res: Response): Promise<void> => {
   try {
     const supabase = getSupabase();
+    const userId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    
+    // Validar UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!userId || !uuidRegex.test(userId)) {
+      res.status(400).json({ error: 'ID inválido. Deve ser um UUID.' });
+      return;
+    }
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, name, email, role, created_at')
-      .eq('id', req.params.id)
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('user_id, name, role, created_at')
+      .eq('user_id', userId)
       .single();
-
-    if (userError || !user) {
+    
+    if (roleError || !roleData) {
       res.status(404).json({ error: 'Usuário não encontrado.' });
       return;
     }
+    
+    // Buscar email do auth.users
+    const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+    const user = {
+      id: roleData.user_id,
+      name: roleData.name || '',
+      email: authUser?.user?.email || '',
+      role: roleData.role,
+      created_at: roleData.created_at
+    };
+
 
     const { data: auditsRaw } = await supabase
       .from('audits')

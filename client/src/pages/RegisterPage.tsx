@@ -16,7 +16,7 @@ export default function RegisterPage() {
 
   function homeByRole(role: string): string {
     if (role === 'LIDERANCA') return '/admin/dashboard';
-    if (role === 'PRESTADOR') return '/tinder-do-fluxo/meu-perfil';
+    if (role === 'PRESTADOR') return '/tinder-do-fluxo/perfil';
     return '/app/upload';
   }
 

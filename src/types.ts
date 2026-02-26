@@ -1,14 +1,13 @@
 export interface User {
-  id: number;
+  id: string; // UUID do Supabase Auth
   name: string;
   email: string;
-  password_hash: string;
   role: 'LIDERANCA' | 'MENTORADO' | 'PRESTADOR';
   has_seen_tinder_do_fluxo_tutorial?: boolean;
   created_at: string;
 }
 
-export type SafeUser = Omit<User, 'password_hash'>;
+export type SafeUser = User;
 
 export interface Audit {
   id: number;
@@ -114,7 +113,7 @@ export interface ParseResult {
 }
 
 export interface JwtPayload {
-  id: number;
+  id: string; // UUID
   email: string;
   role: string;
 }

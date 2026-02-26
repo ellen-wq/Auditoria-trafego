@@ -21,6 +21,12 @@ function toPositiveInt(value: unknown): number | null {
   return n;
 }
 
+function isValidUUID(value: unknown): string | null {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const str = String(value ?? '').trim();
+  return uuidRegex.test(str) ? str : null;
+}
+
 function toRating(value: unknown): number | null {
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
@@ -28,7 +34,7 @@ function toRating(value: unknown): number | null {
   return Math.round(n);
 }
 
-function normalizeMatchPair(a: number, b: number): [number, number] {
+function normalizeMatchPair(a: string, b: string): [string, string] {
   return a < b ? [a, b] : [b, a];
 }
 
@@ -44,7 +50,7 @@ function ensureRoles(req: Request, res: Response, roles: AppRole[]): boolean {
   return true;
 }
 
-async function logAction(actorUserId: number | null, action: string, meta: Record<string, unknown> = {}): Promise<void> {
+async function logAction(actorUserId: string | null, action: string, meta: Record<string, unknown> = {}): Promise<void> {
   try {
     const supabase = getSupabase();
     await supabase.from('tinder_do_fluxo_logs').insert({
@@ -68,9 +74,9 @@ router.post('/tutorial-status', async (req: Request, res: Response): Promise<voi
   try {
     const supabase = getSupabase();
     await supabase
-      .from('users')
+      .from('user_roles')
       .update({ has_seen_tinder_do_fluxo_tutorial: true })
-      .eq('id', req.user!.id);
+      .eq('user_id', req.user!.id);
 
     await logAction(req.user!.id, 'TINDER_TUTORIAL_SEEN', { userId: req.user!.id });
     res.json({ ok: true });
@@ -330,28 +336,42 @@ router.get('/feed/comunidade', async (req: Request, res: Response): Promise<void
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
   const supabase = getSupabase();
   const { data, error } = await supabase
-    .from('users')
-    .select('id, name, email, role, created_at, tinder_mentor_profiles(*)')
+    .from('user_roles')
+    .select('user_id, name, role, created_at, tinder_mentor_profiles(*)')
     .eq('role', 'MENTORADO')
-    .neq('id', req.user!.id)
-    .order('id', { ascending: false })
+    .neq('user_id', req.user!.id)
+    .order('created_at', { ascending: false })
     .limit(80);
   if (error) {
     res.status(500).json({ error: 'Erro ao buscar comunidade.' });
     return;
   }
-  res.json({ users: data || [] });
+  // Buscar emails do auth.users
+  const userIds = (data || []).map(u => u.user_id);
+  const { data: authUsers } = await supabase.auth.admin.listUsers();
+  const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) || []);
+  
+  const users = (data || []).map(u => ({
+    id: u.user_id,
+    name: u.name,
+    email: emailMap.get(u.user_id) || '',
+    role: u.role,
+    created_at: u.created_at,
+    tinder_mentor_profiles: u.tinder_mentor_profiles
+  }));
+  
+  res.json({ users });
 });
 
 router.get('/feed/expert', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
   const supabase = getSupabase();
   const { data, error } = await supabase
-    .from('users')
-    .select('id, name, email, role, created_at, tinder_mentor_profiles(*), tinder_expert_profiles(*)')
+    .from('user_roles')
+    .select('user_id, name, role, created_at, tinder_mentor_profiles(*), tinder_expert_profiles(*)')
     .eq('role', 'MENTORADO')
-    .neq('id', req.user!.id)
-    .order('id', { ascending: false })
+    .neq('user_id', req.user!.id)
+    .order('created_at', { ascending: false })
     .limit(80);
   if (error) {
     res.status(500).json({ error: 'Erro ao buscar feed expert/coprodutor.' });
@@ -463,7 +483,7 @@ router.post('/services/:id/reviews', async (req: Request, res: Response): Promis
 // Interest / match
 router.post('/interest', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
-  const toUserId = toPositiveInt(req.body.toUserId);
+  const toUserId = isValidUUID(req.body.toUserId);
   const type = cleanString(req.body.type, 40) || 'COMUNIDADE';
   if (!toUserId || toUserId === req.user!.id) {
     res.status(400).json({ error: 'Destinatário inválido.' });
@@ -526,7 +546,7 @@ router.get('/matches', async (req: Request, res: Response): Promise<void> => {
 
 router.post('/favorite', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
-  const targetUserId = toPositiveInt(req.body.targetUserId);
+  const targetUserId = isValidUUID(req.body.targetUserId);
   const type = cleanString(req.body.type, 40) || 'COMUNIDADE';
   if (!targetUserId || targetUserId === req.user!.id) {
     res.status(400).json({ error: 'Favorito inválido.' });
@@ -566,7 +586,7 @@ router.get('/favorites', async (req: Request, res: Response): Promise<void> => {
 
 router.delete('/favorite', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
-  const targetUserId = toPositiveInt(req.body.targetUserId ?? req.query.targetUserId);
+  const targetUserId = isValidUUID(req.body.targetUserId ?? req.query.targetUserId);
   const type = cleanString(req.body.type ?? req.query.type, 40) || 'COMUNIDADE';
   if (!targetUserId) {
     res.status(400).json({ error: 'Dados inválidos.' });
@@ -585,21 +605,35 @@ router.delete('/favorite', async (req: Request, res: Response): Promise<void> =>
 
 // Public profile
 router.get('/users/:id', async (req: Request, res: Response): Promise<void> => {
-  const targetId = toPositiveInt(req.params.id);
+  const targetId = isValidUUID(req.params.id);
   if (!targetId) {
-    res.status(400).json({ error: 'ID inválido.' });
+    res.status(400).json({ error: 'ID inválido. Deve ser um UUID.' });
     return;
   }
   const supabase = getSupabase();
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('id, name, email, role, created_at')
-    .eq('id', targetId)
+  
+  // Buscar role do usuário
+  const { data: roleData, error: roleError } = await supabase
+    .from('user_roles')
+    .select('user_id, name, role, created_at')
+    .eq('user_id', targetId)
     .single();
-  if (error || !user) {
+  
+  if (roleError || !roleData) {
     res.status(404).json({ error: 'Usuário não encontrado.' });
     return;
   }
+  
+  // Buscar email do auth.users
+  const { data: authUser } = await supabase.auth.admin.getUserById(targetId);
+  const user = {
+    id: roleData.user_id,
+    name: roleData.name || '',
+    email: authUser?.user?.email || '',
+    role: roleData.role,
+    created_at: roleData.created_at
+  };
+  
   const { data: mentorProfile } = await supabase
     .from('tinder_mentor_profiles')
     .select('*')
@@ -631,22 +665,154 @@ router.get('/users/:id', async (req: Request, res: Response): Promise<void> => {
   });
 });
 
-// Jobs
+// Jobs - Buscar vagas com filtros
 router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
   const supabase = getSupabase();
-  const { specialty, query } = req.query;
-  let q = supabase
+  const {
+    q, // busca textual
+    tipo_vaga,
+    pretensao_min,
+    pretensao_max,
+    tipo_contratacao,
+    modelo_trabalho,
+    habilidades, // JSON string
+    page = '1',
+    per_page = '20'
+  } = req.query;
+
+  let query = supabase
     .from('tinder_jobs')
-    .select('*')
+    .select('*', { count: 'exact' })
+    .eq('status', 'OPEN')
     .order('created_at', { ascending: false });
-  if (specialty) q = q.eq('specialty', cleanString(specialty, 60));
-  if (query) q = q.or(`title.ilike.%${cleanString(query, 120)}%,description.ilike.%${cleanString(query, 120)}%`);
-  const { data, error } = await q.limit(120);
+
+  // Busca textual (nome da vaga, empresa, cidade, descrição)
+  if (q) {
+    const searchTerm = cleanString(q as string, 200);
+    query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`);
+  }
+
+  // Filtro tipo_vaga
+  if (tipo_vaga) {
+    query = query.eq('model', cleanString(tipo_vaga as string, 60));
+  }
+
+  // Filtro pretensão salarial
+  if (pretensao_min) {
+    const min = Number(pretensao_min);
+    if (!isNaN(min)) {
+      query = query.gte('value', min);
+    }
+  }
+  if (pretensao_max) {
+    const max = Number(pretensao_max);
+    if (!isNaN(max)) {
+      query = query.lte('value', max);
+    }
+  }
+
+  // Filtro tipo_contratacao (mapear para campo existente ou adicionar)
+  // Por enquanto, vamos usar o campo 'model' se existir, ou criar lógica customizada
+  if (tipo_contratacao) {
+    // Assumindo que tipo_contratacao pode estar em um campo JSON ou separado
+    // Por enquanto, vamos ignorar se não existir na tabela
+  }
+
+  // Filtro modelo_trabalho
+  if (modelo_trabalho) {
+    query = query.ilike('location', `%${cleanString(modelo_trabalho as string, 60)}%`);
+  }
+
+  // Filtro habilidades (JSON)
+  if (habilidades) {
+    try {
+      const habilidadesObj = typeof habilidades === 'string' ? JSON.parse(habilidades) : habilidades;
+      const specialtyFilters: string[] = [];
+      
+      // Se copywriter está selecionado, filtrar por specialty = 'COPY'
+      if (habilidadesObj.copywriter) {
+        specialtyFilters.push('COPY');
+      }
+      
+      // Se trafego_pago tem subcategorias, filtrar por specialty = 'TRAFEGO'
+      if (habilidadesObj.trafego_pago && Array.isArray(habilidadesObj.trafego_pago) && habilidadesObj.trafego_pago.length > 0) {
+        specialtyFilters.push('TRAFEGO');
+      }
+      
+      // Se automacao_ia está selecionado, filtrar por specialty = 'AUTOMACAO'
+      if (habilidadesObj.automacao_ia) {
+        specialtyFilters.push('AUTOMACAO');
+      }
+      
+      // Aplicar filtro de specialty se houver habilidades selecionadas
+      if (specialtyFilters.length > 0) {
+        query = query.in('specialty', specialtyFilters);
+      }
+    } catch (err) {
+      // Ignorar erro de parse JSON
+    }
+  }
+
+  // Paginação
+  const pageNum = Math.max(1, Number(page) || 1);
+  const perPageNum = Math.min(100, Math.max(1, Number(per_page) || 20));
+  const from = (pageNum - 1) * perPageNum;
+  const to = from + perPageNum - 1;
+
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
+
   if (error) {
+    console.error('[GET /jobs] Erro:', error);
     res.status(500).json({ error: 'Erro ao listar vagas.' });
     return;
   }
-  res.json({ jobs: data || [] });
+
+  // Buscar nomes dos criadores
+  const creatorIds = [...new Set((data || []).map((j: any) => j.creator_id))];
+  const creatorMap = new Map<string, string>();
+  
+  if (creatorIds.length > 0) {
+    const { data: creators } = await supabase
+      .from('user_roles')
+      .select('user_id, name')
+      .in('user_id', creatorIds);
+    
+    (creators || []).forEach((c: any) => {
+      creatorMap.set(c.user_id, c.name);
+    });
+  }
+
+  // Formatar resposta
+  const formattedJobs = (data || []).map((job: any) => {
+    const creatorName = creatorMap.get(job.creator_id) || 'Não especificado';
+    return {
+      id: job.id,
+      titulo: job.title,
+      empresa: creatorName,
+      localizacao: job.location || '',
+      valor: job.value,
+      descricao_resumida: job.description ? job.description.substring(0, 240) : '',
+      data_publicacao: job.created_at,
+      tipo_contratacao: job.model || '',
+      modelo_trabalho: job.location || '',
+      beneficios: job.beneficios || '',
+      specialty: job.specialty,
+      creator_name: creatorName,
+      // Campos adicionais para compatibilidade
+      title: job.title,
+      description: job.description,
+      created_at: job.created_at
+    };
+  });
+
+  res.json({
+    jobs: formattedJobs,
+    total_vagas: count || 0,
+    page: pageNum,
+    per_page: perPageNum
+  });
 });
 
 router.post('/jobs', async (req: Request, res: Response): Promise<void> => {
@@ -919,20 +1085,34 @@ router.get('/admin/users', async (req: Request, res: Response): Promise<void> =>
   const q = cleanOptionalString(req.query.q, 120);
   const role = cleanOptionalString(req.query.role, 20);
   const supabase = getSupabase();
-  let query = supabase.from('users').select('id,name,email,role,created_at').order('created_at', { ascending: false });
-  if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%`);
+  let query = supabase.from('user_roles').select('user_id,name,role,created_at').order('created_at', { ascending: false });
+  if (q) query = query.ilike('name', `%${q}%`);
   if (role) query = query.eq('role', role);
   const { data, error } = await query.limit(200);
   if (error) {
     res.status(500).json({ error: 'Erro ao listar usuários.' });
     return;
   }
-  res.json({ users: data || [] });
+  
+  // Buscar emails do auth.users
+  const userIds = (data || []).map((u: any) => u.user_id);
+  const { data: authUsers } = await supabase.auth.admin.listUsers();
+  const emailMap = new Map(authUsers?.users?.map((u: any) => [u.id, u.email]) || []);
+  
+  const users = (data || []).map((u: any) => ({
+    id: u.user_id,
+    name: u.name,
+    email: emailMap.get(u.user_id) || '',
+    role: u.role,
+    created_at: u.created_at
+  }));
+  
+  res.json({ users });
 });
 
 router.post('/admin/ban', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['LIDERANCA'])) return;
-  const userId = toPositiveInt(req.body.userId);
+  const userId = isValidUUID(req.body.userId);
   const banned = !!req.body.banned;
   if (!userId) {
     res.status(400).json({ error: 'ID inválido.' });

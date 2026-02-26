@@ -90,31 +90,301 @@ export function TinderPrestadoresPage() {
 
 export function TinderVagasPage() {
   const user = api.getUser();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState({
+    tipo_vaga: '',
+    pretensao_min: '',
+    pretensao_max: '',
+    tipo_contratacao: '',
+    modelo_trabalho: '',
+    habilidades: {
+      copywriter: false,
+      trafego_pago: [] as string[],
+      automacao_ia: false
+    }
+  });
   const [jobs, setJobs] = useState<any[]>([]);
+  const [totalVagas, setTotalVagas] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const perPage = 20;
+
+  const tipoVagaOptions = ['Projeto', 'Fixo', 'Parceria'];
+  const tipoContratacaoOptions = ['PJ', 'CLT', 'Freelancer', 'Indiferente'];
+  const modeloTrabalhoOptions = ['Remoto', 'Presencial', 'Híbrido', 'Indiferente'];
+  const trafegoSubcategorias = [
+    { value: 'facebook_ads', label: 'Facebook Ads' },
+    { value: 'google_ads', label: 'Google Ads' },
+    { value: 'tiktok_ads', label: 'TikTok Ads' },
+    { value: 'linkedin_ads', label: 'LinkedIn Ads' },
+    { value: 'twitter_ads', label: 'Twitter Ads' },
+    { value: 'pinterest_ads', label: 'Pinterest Ads' },
+    { value: 'native_ads', label: 'Native Ads' }
+  ];
+
+  // Debounce para busca
   useEffect(() => {
-    api.get<{ jobs: any[] }>('/api/tinder-do-fluxo/jobs').then((r) => setJobs(r.jobs || []));
-  }, []);
+    const timer = setTimeout(() => {
+      loadJobs();
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, filters, page]);
+
+  const loadJobs = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('q', searchQuery);
+      if (filters.tipo_vaga) params.append('tipo_vaga', filters.tipo_vaga);
+      if (filters.pretensao_min) params.append('pretensao_min', filters.pretensao_min);
+      if (filters.pretensao_max) params.append('pretensao_max', filters.pretensao_max);
+      if (filters.tipo_contratacao) params.append('tipo_contratacao', filters.tipo_contratacao);
+      if (filters.modelo_trabalho) params.append('modelo_trabalho', filters.modelo_trabalho);
+      if (filters.habilidades.copywriter || filters.habilidades.trafego_pago.length > 0 || filters.habilidades.automacao_ia) {
+        const habilidadesObj: any = {};
+        if (filters.habilidades.copywriter) habilidadesObj.copywriter = true;
+        if (filters.habilidades.trafego_pago.length > 0) habilidadesObj.trafego_pago = filters.habilidades.trafego_pago;
+        if (filters.habilidades.automacao_ia) habilidadesObj.automacao_ia = true;
+        params.append('habilidades', JSON.stringify(habilidadesObj));
+      }
+      params.append('page', page.toString());
+      params.append('per_page', perPage.toString());
+
+      const res = await api.get<{ jobs: any[], total_vagas: number }>(`/api/tinder-do-fluxo/jobs?${params.toString()}`);
+      setJobs(res.jobs || []);
+      setTotalVagas(res.total_vagas || 0);
+    } catch (err: any) {
+      setError(err.message || 'Erro ao carregar vagas.');
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatRelativeDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffHours < 1) return 'Publicado há menos de 1 hora';
+    if (diffHours < 24) return `Publicado há ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+    return `Publicado há ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`;
+  };
+
+  const truncateDescription = (text: string, maxLength: number = 240): string => {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  };
+
   return (
-    <TinderDoFluxoPageShell title="Vagas" subtitle="Oportunidades abertas no ecossistema">
+    <TinderDoFluxoPageShell title="Vagas">
+      {/* Header com busca */}
       <div className="card" style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span className="card-title">Vagas abertas</span>
-          {(user?.role === 'MENTORADO' || user?.role === 'LIDERANCA') && <Link className="btn btn-primary" to="/tinder-do-fluxo/vagas/criar">Criar vaga</Link>}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            type="text"
+            placeholder="Buscar vagas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ flex: 1, minWidth: 200, padding: '10px 12px', fontSize: 14 }}
+          />
+          {(user?.role === 'MENTORADO' || user?.role === 'LIDERANCA') && (
+            <Link className="btn btn-primary" to="/tinder-do-fluxo/vagas/criar">Criar vaga</Link>
+          )}
         </div>
       </div>
-      <div className="card">
-        {jobs.length === 0 ? <EmptyState text="Nenhuma vaga cadastrada." /> : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {jobs.map((j) => (
-              <div key={j.id} className="quick-action">
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700 }}>{j.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{j.specialty || 'Sem especialidade'} • {j.model || 'Sem modelo'}</div>
-                </div>
-                <Link className="btn btn-outline" to={`/tinder-do-fluxo/vagas/${j.id}`}>Detalhes</Link>
-              </div>
-            ))}
+
+      {/* Contador de vagas */}
+      {!loading && totalVagas > 0 && (
+        <div className="card" style={{ marginBottom: 12, padding: 16, background: 'var(--bg-secondary)' }}>
+          <strong>{totalVagas} vagas esperando pela sua aplicação</strong>
+        </div>
+      )}
+
+      {/* Filtros */}
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="card-title" style={{ marginBottom: 16 }}>Filtros</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+          <div className="form-group">
+            <label>Tipo da vaga</label>
+            <select value={filters.tipo_vaga} onChange={(e) => setFilters({ ...filters, tipo_vaga: e.target.value })}>
+              <option value="">Todos</option>
+              {tipoVagaOptions.map(opt => (
+                <option key={opt} value={opt.toLowerCase()}>{opt}</option>
+              ))}
+            </select>
           </div>
+          <div className="form-group">
+            <label>Pretensão mínima (R$)</label>
+            <input
+              type="number"
+              placeholder="0"
+              value={filters.pretensao_min}
+              onChange={(e) => setFilters({ ...filters, pretensao_min: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Pretensão máxima (R$)</label>
+            <input
+              type="number"
+              placeholder="0"
+              value={filters.pretensao_max}
+              onChange={(e) => setFilters({ ...filters, pretensao_max: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Tipo de contratação</label>
+            <select value={filters.tipo_contratacao} onChange={(e) => setFilters({ ...filters, tipo_contratacao: e.target.value })}>
+              <option value="">Todos</option>
+              {tipoContratacaoOptions.map(opt => (
+                <option key={opt} value={opt.toLowerCase()}>{opt}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Modelo de trabalho</label>
+            <select value={filters.modelo_trabalho} onChange={(e) => setFilters({ ...filters, modelo_trabalho: e.target.value })}>
+              <option value="">Todos</option>
+              {modeloTrabalhoOptions.map(opt => (
+                <option key={opt} value={opt.toLowerCase()}>{opt}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Habilidades */}
+        <div style={{ marginTop: 16, padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)' }}>
+          <div style={{ fontWeight: 600, marginBottom: 12 }}>Habilidades</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={filters.habilidades.copywriter}
+                onChange={(e) => setFilters({
+                  ...filters,
+                  habilidades: { ...filters.habilidades, copywriter: e.target.checked }
+                })}
+              />
+              <span>✍️ Copywriter</span>
+            </label>
+            <div>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer', marginBottom: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={filters.habilidades.trafego_pago.length > 0}
+                  onChange={(e) => {
+                    if (!e.target.checked) {
+                      setFilters({
+                        ...filters,
+                        habilidades: { ...filters.habilidades, trafego_pago: [] }
+                      });
+                    }
+                  }}
+                />
+                <span>📊 Tráfego Pago</span>
+              </label>
+              {filters.habilidades.trafego_pago.length > 0 && (
+                <div style={{ marginLeft: 24, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {trafegoSubcategorias.map(sub => (
+                    <label key={sub.value} style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer', fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={filters.habilidades.trafego_pago.includes(sub.value)}
+                        onChange={(e) => {
+                          const newSubs = e.target.checked
+                            ? [...filters.habilidades.trafego_pago, sub.value]
+                            : filters.habilidades.trafego_pago.filter(s => s !== sub.value);
+                          setFilters({
+                            ...filters,
+                            habilidades: { ...filters.habilidades, trafego_pago: newSubs }
+                          });
+                        }}
+                      />
+                      <span>{sub.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={filters.habilidades.automacao_ia}
+                onChange={(e) => setFilters({
+                  ...filters,
+                  habilidades: { ...filters.habilidades, automacao_ia: e.target.checked }
+                })}
+              />
+              <span>🤖 Automação e IA</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Listagem de vagas */}
+      <div className="card">
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 24 }}>
+            <div className="loading-spinner" />
+          </div>
+        ) : error ? (
+          <div className="alert alert-error" style={{ display: 'block' }}>{error}</div>
+        ) : jobs.length === 0 ? (
+          <EmptyState text="Nenhuma vaga encontrada com esses filtros." />
+        ) : (
+          <>
+            <div style={{ display: 'grid', gap: 12 }}>
+              {jobs.map((j) => (
+                <div key={j.id} className="quick-action" style={{ padding: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{j.title}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>
+                      {j.empresa || j.creator_name || 'Empresa'} • {j.localizacao || j.location || 'Não especificado'}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                      {truncateDescription(j.descricao_resumida || j.description || '', 240)}
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+                      {j.tipo_contratacao && <span>{j.tipo_contratacao}</span>}
+                      {j.modelo_trabalho && <span>• {j.modelo_trabalho}</span>}
+                      {j.valor && <span>• R$ {Number(j.valor).toLocaleString('pt-BR')}</span>}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      {formatRelativeDate(j.data_publicacao || j.created_at)}
+                    </div>
+                  </div>
+                  <Link className="btn btn-outline" to={`/tinder-do-fluxo/vagas/${j.id}`}>Detalhes</Link>
+                </div>
+              ))}
+            </div>
+            {/* Paginação */}
+            {totalVagas > perPage && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 20 }}>
+                <button
+                  className="btn btn-outline"
+                  disabled={page === 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                >
+                  Anterior
+                </button>
+                <span style={{ display: 'flex', alignItems: 'center', padding: '0 12px' }}>
+                  Página {page} de {Math.ceil(totalVagas / perPage)}
+                </span>
+                <button
+                  className="btn btn-outline"
+                  disabled={page >= Math.ceil(totalVagas / perPage)}
+                  onClick={() => setPage(p => p + 1)}
+                >
+                  Próxima
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </TinderDoFluxoPageShell>
@@ -513,43 +783,38 @@ export function TinderPerfilPage() {
             
             {/* Opção para ser Expert/Coprodutor */}
             <div style={{ marginTop: 16, marginBottom: 16, padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)' }}>
-              <label style={{ display: 'flex', gap: 8, marginBottom: 10, fontWeight: 600 }}>
-                <input 
-                  type="checkbox" 
-                  checked={form.isExpert || form.isCoproducer} 
-                  onChange={(e) => {
-                    if (!e.target.checked) {
-                      setForm({ ...form, isExpert: false, isCoproducer: false });
-                    }
-                  }}
-                /> 
+              <label style={{ display: 'block', marginBottom: 12, fontWeight: 600, fontSize: 14 }}>
                 Quero ser Expert / Coprodutor
               </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={form.isExpert} 
+                    onChange={(e) => setForm({ ...form, isExpert: e.target.checked })} 
+                    style={{ cursor: 'pointer' }}
+                  /> 
+                  <span>Expert</span>
+                </label>
+                <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={form.isCoproducer} 
+                    onChange={(e) => setForm({ ...form, isCoproducer: e.target.checked })} 
+                    style={{ cursor: 'pointer' }}
+                  /> 
+                  <span>Coprodutor</span>
+                </label>
+              </div>
               {(form.isExpert || form.isCoproducer) && (
                 <>
-                  <label style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                    <input 
-                      type="checkbox" 
-                      checked={form.isExpert} 
-                      onChange={(e) => setForm({ ...form, isExpert: e.target.checked })} 
-                    /> 
-                    Quero aparecer como Expert
-                  </label>
-                  <label style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                    <input 
-                      type="checkbox" 
-                      checked={form.isCoproducer} 
-                      onChange={(e) => setForm({ ...form, isCoproducer: e.target.checked })} 
-                    /> 
-                    Quero aparecer como Coprodutor
-                  </label>
-                  <div className="form-group">
+                  <div className="form-group" style={{ marginTop: 16 }}>
                     <label>Objetivo</label>
-                    <input value={form.goalText} onChange={(e) => setForm({ ...form, goalText: e.target.value })} />
+                    <input value={form.goalText} onChange={(e) => setForm({ ...form, goalText: e.target.value })} placeholder="Ex: Escalar produto perpétuo" />
                   </div>
                   <div className="form-group">
                     <label>Bio de busca</label>
-                    <textarea rows={4} value={form.searchBio} onChange={(e) => setForm({ ...form, searchBio: e.target.value })} />
+                    <textarea rows={4} value={form.searchBio} onChange={(e) => setForm({ ...form, searchBio: e.target.value })} placeholder="Descreva o que você busca em parcerias..." />
                   </div>
                 </>
               )}
@@ -687,132 +952,6 @@ export function TinderPerfilExpertPage() {
   );
 }
 
-export function TinderMeuPerfilPrestadorPage() {
-  const [form, setForm] = useState({ 
-    city: '', 
-    instagram: '', 
-    phoneCountryCode: '+55', 
-    phoneAreaCode: '', 
-    phoneNumber: '', 
-    specialty: '', 
-    certification: '', 
-    portfolio: '', 
-    experience: '', 
-    bio: '' 
-  });
-  const [saved, setSaved] = useState(false);
-  
-  const specialtyOptions = ['COPY', 'TRAFEGO', 'AUTOMACAO'];
-  const countryCodes = [
-    { code: '+55', flag: '🇧🇷', label: 'Brasil (+55)' },
-    { code: '+1', flag: '🇺🇸', label: 'EUA/Canadá (+1)' },
-    { code: '+351', flag: '🇵🇹', label: 'Portugal (+351)' }
-  ];
-
-  useEffect(() => {
-    api.get<{ profile: any }>('/api/tinder-do-fluxo/service-profile').then((r) => {
-      if (!r.profile) return;
-      const whatsapp = r.profile.whatsapp || '';
-      const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
-      setForm({
-        city: r.profile.city || '',
-        instagram: r.profile.instagram || '',
-        phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
-        phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
-        phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : '',
-        specialty: r.profile.specialty || '',
-        certification: r.profile.certification || '',
-        portfolio: r.profile.portfolio || '',
-        experience: r.profile.experience || '',
-        bio: r.profile.bio || ''
-      });
-    });
-  }, []);
-
-  const formatPhoneNumber = (value: string): string => {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length <= 4) return numbers;
-    if (numbers.length <= 8) return `${numbers.slice(0, 4)}-${numbers.slice(4)}`;
-    return `${numbers.slice(0, 5)}-${numbers.slice(5, 9)}`;
-  };
-
-  const save = async (e: FormEvent) => {
-    e.preventDefault();
-    const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
-    await api.post('/api/tinder-do-fluxo/service-profile', {
-      ...form,
-      whatsapp
-    });
-    setSaved(true);
-  };
-
-  return (
-    <TinderDoFluxoPageShell title="Meu Perfil (Prestador)">
-      <form className="card" onSubmit={save}>
-        <div className="form-group">
-          <label>Cidade</label>
-          <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-        </div>
-        <div className="form-group">
-          <label>Instagram</label>
-          <input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} />
-        </div>
-        <div className="form-group">
-          <label>WhatsApp</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <select 
-              value={form.phoneCountryCode} 
-              onChange={(e) => setForm({ ...form, phoneCountryCode: e.target.value })}
-              style={{ width: '140px' }}
-            >
-              {countryCodes.map(cc => (
-                <option key={cc.code} value={cc.code}>{cc.flag} {cc.code}</option>
-              ))}
-            </select>
-            <input
-              type="text"
-              placeholder="DDD"
-              value={form.phoneAreaCode}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 2);
-                setForm({ ...form, phoneAreaCode: val });
-              }}
-              style={{ width: '80px' }}
-              maxLength={2}
-            />
-            <input
-              type="text"
-              placeholder="Número"
-              value={formatPhoneNumber(form.phoneNumber)}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 9);
-                setForm({ ...form, phoneNumber: val });
-              }}
-              style={{ flex: 1 }}
-              maxLength={10}
-            />
-          </div>
-        </div>
-        <div className="form-group">
-          <label>Especialidade</label>
-          <select value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })}>
-            <option value="">Selecione...</option>
-            {specialtyOptions.map(opt => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group"><label>Especialidade</label><input value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })} /></div>
-        <div className="form-group"><label>Certificação</label><input value={form.certification} onChange={(e) => setForm({ ...form, certification: e.target.value })} /></div>
-        <div className="form-group"><label>Portfólio</label><input value={form.portfolio} onChange={(e) => setForm({ ...form, portfolio: e.target.value })} /></div>
-        <div className="form-group"><label>Experiência</label><textarea rows={3} value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} /></div>
-        <div className="form-group"><label>Bio</label><textarea rows={3} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} /></div>
-        <button className="btn btn-primary" type="submit">Salvar</button>
-        {saved && <p style={{ marginTop: 8, color: 'var(--green)' }}>Perfil salvo.</p>}
-      </form>
-    </TinderDoFluxoPageShell>
-  );
-}
 
 export function TinderAvaliacoesPrestadorPage() {
   const [reviews, setReviews] = useState<any[]>([]);

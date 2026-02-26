@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
 import { getSupabase } from '../db/database';
 import { generateToken, requireAuth } from '../middleware/auth';
 import type { SafeUser } from '../types';
@@ -21,56 +20,72 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedName = name.trim();
-    
-    console.log('[Register API] Verificando se email já existe:', normalizedEmail);
     const supabase = getSupabase();
-    const { data: existing, error: checkError } = await supabase
-      .from('users')
-      .select('id, email')
-      .eq('email', normalizedEmail)
-      .maybeSingle();
+    
+    // 1. Criar usuário no Supabase Auth usando Admin API (não envia email)
+    console.log('[Register API] Criando usuário no Supabase Auth via Admin API...');
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: normalizedEmail,
+      password: password,
+      user_metadata: {
+        name: normalizedName
+      },
+      email_confirm: true // Confirmar email automaticamente (não precisa de confirmação)
+    });
 
-    if (checkError) {
-      console.error('[Register API] Erro ao verificar email existente:', checkError);
-    }
-
-    if (existing) {
-      console.log('[Register API] Email já cadastrado:', normalizedEmail, 'ID:', existing.id);
-      res.status(409).json({ error: 'Email já cadastrado.' });
+    if (authError) {
+      console.error('[Register API] Erro ao criar usuário no Auth:', authError);
+      if (authError.message.includes('already registered')) {
+        res.status(409).json({ error: 'Email já cadastrado.' });
+      } else {
+        res.status(500).json({ error: 'Erro ao criar usuário: ' + authError.message });
+      }
       return;
     }
 
-    const role = LIDERANCA_EMAILS.includes(normalizedEmail) ? 'LIDERANCA' : 'MENTORADO';
-    console.log('[Register API] Criando usuário com role:', role);
-    const hash = bcrypt.hashSync(password, 10);
-
-    const { data: newUser, error } = await supabase
-      .from('users')
-      .insert({
-        name: normalizedName,
-        email: normalizedEmail,
-        password_hash: hash,
-        role
-      })
-      .select('id, name, email, role, created_at')
-      .single();
-
-    if (error) {
-      console.error('[Register API] Erro ao inserir usuário:', error);
-      res.status(500).json({ error: 'Erro ao criar usuário: ' + error.message });
-      return;
-    }
-
-    if (!newUser) {
-      console.error('[Register API] Usuário não retornado após inserção');
+    if (!authData.user) {
+      console.error('[Register API] Usuário não retornado do Auth');
       res.status(500).json({ error: 'Erro ao criar usuário.' });
       return;
     }
 
-    console.log('[Register API] Usuário criado com sucesso:', { id: newUser.id, email: newUser.email, role: newUser.role });
-    const user: SafeUser = newUser as SafeUser;
-    const token = generateToken(user);
+    const userId = authData.user.id;
+    console.log('[Register API] Usuário criado no Auth:', { userId, email: normalizedEmail });
+    const role = LIDERANCA_EMAILS.includes(normalizedEmail) ? 'LIDERANCA' : 'MENTORADO';
+    
+    // 2. Criar registro na tabela user_roles
+    console.log('[Register API] Criando role para usuário:', { userId, role });
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: userId,
+        name: normalizedName,
+        role
+      })
+      .select('user_id, name, role, created_at')
+      .single();
 
+    if (roleError) {
+      console.error('[Register API] Erro ao criar role:', roleError);
+      // Tentar deletar o usuário do auth se falhar
+      await supabase.auth.admin.deleteUser(userId);
+      res.status(500).json({ error: 'Erro ao criar perfil: ' + roleError.message });
+      return;
+    }
+
+    console.log('[Register API] Usuário criado com sucesso:', { userId, email: normalizedEmail, role });
+    
+    // 3. Criar token JWT customizado (ou usar session do Supabase)
+    const user: SafeUser = {
+      id: userId,
+      name: normalizedName,
+      email: normalizedEmail,
+      role,
+      has_seen_tinder_do_fluxo_tutorial: false,
+      created_at: roleData.created_at
+    };
+    
+    const token = generateToken(user);
     res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
     console.log('[Register API] Token gerado, enviando resposta');
     res.json({ user, token });
@@ -89,38 +104,44 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     }
 
     const supabase = getSupabase();
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email.toLowerCase().trim())
-      .order('id', { ascending: false })
-      .limit(5);
+    const normalizedEmail = email.toLowerCase().trim();
 
-    if (error || !users || users.length === 0) {
+    // 1. Autenticar no Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password: password
+    });
+
+    if (authError || !authData.user) {
       res.status(401).json({ error: 'Email ou senha inválidos.' });
       return;
     }
 
-    const user = users[0];
-    if (users.length > 1) {
-      console.warn(`Login com email duplicado detectado: ${email.toLowerCase().trim()} (${users.length} registros).`);
-    }
+    const userId = authData.user.id;
 
-    if (!bcrypt.compareSync(password, user.password_hash)) {
-      res.status(401).json({ error: 'Email ou senha inválidos.' });
+    // 2. Buscar role do usuário
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (roleError || !roleData) {
+      console.error('[Login API] Erro ao buscar role:', roleError);
+      res.status(500).json({ error: 'Erro ao buscar perfil do usuário.' });
       return;
     }
 
     const safeUser: SafeUser = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      has_seen_tinder_do_fluxo_tutorial: user.has_seen_tinder_do_fluxo_tutorial,
-      created_at: user.created_at
+      id: userId,
+      name: roleData.name || authData.user.user_metadata?.name || '',
+      email: normalizedEmail,
+      role: roleData.role,
+      has_seen_tinder_do_fluxo_tutorial: roleData.has_seen_tinder_do_fluxo_tutorial || false,
+      created_at: roleData.created_at
     };
+    
     const token = generateToken(safeUser);
-
     res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
     res.json({ user: safeUser, token });
   } catch (err) {
@@ -138,39 +159,48 @@ router.post('/login-prestador', async (req: Request, res: Response): Promise<voi
     }
 
     const supabase = getSupabase();
-    const { data: users, error } = await supabase
-      .from('users')
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // 1. Autenticar no Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password: password
+    });
+
+    if (authError || !authData.user) {
+      res.status(401).json({ error: 'Email ou senha inválidos.' });
+      return;
+    }
+
+    const userId = authData.user.id;
+
+    // 2. Buscar role do usuário
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
       .select('*')
-      .eq('email', email.toLowerCase().trim())
-      .order('id', { ascending: false })
-      .limit(5);
+      .eq('user_id', userId)
+      .single();
 
-    if (error || !users || users.length === 0) {
+    if (roleError || !roleData) {
       res.status(401).json({ error: 'Email ou senha inválidos.' });
       return;
     }
 
-    const user = users[0];
-    if (!bcrypt.compareSync(password, user.password_hash)) {
-      res.status(401).json({ error: 'Email ou senha inválidos.' });
-      return;
-    }
-
-    if (user.role !== 'PRESTADOR') {
+    if (roleData.role !== 'PRESTADOR') {
       res.status(403).json({ error: 'Esta área é exclusiva para prestadores de serviço.' });
       return;
     }
 
     const safeUser: SafeUser = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      has_seen_tinder_do_fluxo_tutorial: user.has_seen_tinder_do_fluxo_tutorial,
-      created_at: user.created_at
+      id: userId,
+      name: roleData.name || authData.user.user_metadata?.name || '',
+      email: normalizedEmail,
+      role: roleData.role,
+      has_seen_tinder_do_fluxo_tutorial: roleData.has_seen_tinder_do_fluxo_tutorial || false,
+      created_at: roleData.created_at
     };
+    
     const token = generateToken(safeUser);
-
     res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
     res.json({ user: safeUser, token });
   } catch (err) {
@@ -187,36 +217,63 @@ router.post('/register-prestador', async (req: Request, res: Response): Promise<
       return;
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedName = name.trim();
     const supabase = getSupabase();
-    const { data: existing } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email.toLowerCase().trim())
-      .maybeSingle();
 
-    if (existing) {
-      res.status(409).json({ error: 'Email já cadastrado.' });
+    // 1. Criar usuário no Supabase Auth usando Admin API (não envia email)
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: normalizedEmail,
+      password: password,
+      user_metadata: {
+        name: normalizedName
+      },
+      email_confirm: true // Confirmar email automaticamente
+    });
+
+    if (authError) {
+      if (authError.message.includes('already registered')) {
+        res.status(409).json({ error: 'Email já cadastrado.' });
+      } else {
+        res.status(500).json({ error: 'Erro ao criar usuário: ' + authError.message });
+      }
       return;
     }
 
-    const hash = bcrypt.hashSync(password, 10);
-    const { data: newUser, error } = await supabase
-      .from('users')
+    if (!authData.user) {
+      res.status(500).json({ error: 'Erro ao criar usuário.' });
+      return;
+    }
+
+    const userId = authData.user.id;
+
+    // 2. Criar registro na tabela user_roles
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
       .insert({
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        password_hash: hash,
+        user_id: userId,
+        name: normalizedName,
         role: 'PRESTADOR'
       })
-      .select('id, name, email, role, created_at')
+      .select('user_id, name, role, created_at')
       .single();
 
-    if (error || !newUser) {
-      res.status(500).json({ error: 'Erro ao criar usuário prestador.' });
+    if (roleError) {
+      console.error('[Register Prestador] Erro ao criar role:', roleError);
+      await supabase.auth.admin.deleteUser(userId);
+      res.status(500).json({ error: 'Erro ao criar perfil: ' + roleError.message });
       return;
     }
 
-    const user: SafeUser = newUser as SafeUser;
+    const user: SafeUser = {
+      id: userId,
+      name: normalizedName,
+      email: normalizedEmail,
+      role: 'PRESTADOR',
+      has_seen_tinder_do_fluxo_tutorial: false,
+      created_at: roleData.created_at
+    };
+    
     const token = generateToken(user);
     res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
     res.json({ user, token });
@@ -247,24 +304,22 @@ router.post('/recover-password', async (req: Request, res: Response): Promise<vo
     const supabase = getSupabase();
     const normalizedEmail = String(email).toLowerCase().trim();
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', normalizedEmail)
-      .maybeSingle();
+    // Buscar usuário pelo email no auth
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const authUser = authUsers?.users?.find(u => u.email === normalizedEmail);
 
-    if (!user) {
+    if (!authUser) {
       res.status(404).json({ error: 'Usuário não encontrado para este email.' });
       return;
     }
 
-    const passwordHash = bcrypt.hashSync(String(newPassword), 10);
-    const { error } = await supabase
-      .from('users')
-      .update({ password_hash: passwordHash })
-      .eq('id', user.id);
+    // Atualizar senha usando admin API
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      authUser.id,
+      { password: String(newPassword) }
+    );
 
-    if (error) {
+    if (updateError) {
       res.status(500).json({ error: 'Não foi possível atualizar a senha.' });
       return;
     }

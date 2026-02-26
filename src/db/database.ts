@@ -99,7 +99,7 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
   }
 
   if (seedUsers) {
-    const bcrypt = await import('bcryptjs');
+    // Seed de usuários agora usa Supabase Auth (não precisa mais de bcrypt)
     const seedData = [
       { name: 'Ellen', email: 'ellen@vtsd.com.br', password: '123', role: 'LIDERANCA' },
       { name: 'Fernanda', email: 'fernanda@vtsd.com.br', password: '123', role: 'LIDERANCA' },
@@ -135,29 +135,62 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
       { name: 'Teste Layout', email: 'teste.layout@fluxo.fake', password: '123456', role: 'MENTORADO' }
     ];
 
-    const tinderUsersMap: Map<string, number> = new Map();
+    const tinderUsersMap: Map<string, string> = new Map();
 
     for (const u of seedData) {
-      const { data: existing } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', u.email)
-        .maybeSingle();
+      // Verificar se usuário já existe no auth.users
+      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      const existingAuthUser = authUsers?.users?.find(au => au.email === u.email.toLowerCase().trim());
+      
+      let userId: string;
 
-      const hash = bcrypt.hashSync(u.password, 10);
-      let userId: number;
-
-      if (existing) {
-        await supabase.from('users')
-          .update({ password_hash: hash, role: u.role })
-          .eq('email', u.email);
-        userId = existing.id;
+      if (existingAuthUser) {
+        // Usuário já existe no auth, apenas atualizar role se necessário
+        userId = existingAuthUser.id;
+        const { data: existingRole } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (!existingRole) {
+          // Criar role se não existir
+          await supabase.from('user_roles')
+            .insert({ user_id: userId, name: u.name, role: u.role });
+        } else {
+          // Atualizar role se necessário
+          await supabase.from('user_roles')
+            .update({ role: u.role, name: u.name })
+            .eq('user_id', userId);
+        }
       } else {
-        const { data: inserted } = await supabase.from('users')
-          .insert({ name: u.name, email: u.email, password_hash: hash, role: u.role })
-          .select('id')
-          .single();
-        userId = inserted?.id || 0;
+        // Criar novo usuário no Supabase Auth usando Admin API (não envia email)
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: u.email.toLowerCase().trim(),
+          password: u.password,
+          user_metadata: {
+            name: u.name
+          },
+          email_confirm: true // Confirmar email automaticamente
+        });
+
+        if (authError || !authData.user) {
+          console.error(`[SEED] Erro ao criar usuário ${u.email}:`, authError);
+          continue;
+        }
+
+        userId = authData.user.id;
+
+        // Criar registro em user_roles
+        const { error: roleError } = await supabase.from('user_roles')
+          .insert({ user_id: userId, name: u.name, role: u.role });
+
+        if (roleError) {
+          console.error(`[SEED] Erro ao criar role para ${u.email}:`, roleError);
+          // Tentar deletar usuário do auth se falhar
+          await supabase.auth.admin.deleteUser(userId);
+          continue;
+        }
       }
 
       // Guarda IDs dos perfis fake do Tinder do Fluxo

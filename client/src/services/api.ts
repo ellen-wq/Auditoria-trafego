@@ -1,7 +1,7 @@
 const API_BASE = '';
 
 interface User {
-  id: number;
+  id: string; // UUID agora
   name: string;
   email: string;
   role: 'MENTORADO' | 'LIDERANCA' | 'PRESTADOR';

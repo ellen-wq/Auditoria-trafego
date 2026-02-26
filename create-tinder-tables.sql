@@ -4,7 +4,7 @@
 -- Tabela de perfis de mentorado
 CREATE TABLE IF NOT EXISTS tinder_mentor_profiles (
   id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   photo_url TEXT DEFAULT '',
   city TEXT DEFAULT '',
   instagram TEXT DEFAULT '',
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS tinder_mentor_profiles (
 -- Tabela de perfis de expert/coprodutor
 CREATE TABLE IF NOT EXISTS tinder_expert_profiles (
   id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   is_expert BOOLEAN DEFAULT FALSE,
   is_coproducer BOOLEAN DEFAULT FALSE,
   goal_text TEXT DEFAULT '',
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS tinder_expert_profiles (
 -- Tabela de perfis de prestadores
 CREATE TABLE IF NOT EXISTS tinder_service_profiles (
   id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   photo_url TEXT DEFAULT '',
   city TEXT DEFAULT '',
   instagram TEXT DEFAULT '',

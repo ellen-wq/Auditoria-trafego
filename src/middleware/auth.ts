@@ -5,7 +5,7 @@ import type { JwtPayload, SafeUser } from '../types';
 
 const JWT_SECRET: string = process.env.JWT_SECRET || 'fluxer_auditoria_secret_2024';
 
-function generateToken(user: { id: number; email: string; role: string }): string {
+function generateToken(user: { id: string; email: string; role: string }): string {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role },
     JWT_SECRET,
@@ -22,36 +22,50 @@ async function requireAuth(req: Request, res: Response, next: NextFunction): Pro
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     const supabase = getSupabase();
-    let user: any = null;
-    let error: any = null;
-
-    const withTutorial = await supabase
-      .from('users')
-      .select('id, name, email, role, has_seen_tinder_do_fluxo_tutorial, created_at')
-      .eq('id', decoded.id)
+    
+    console.log('[requireAuth] Verificando usuário:', { id: decoded.id, email: decoded.email });
+    
+    // Buscar role do usuário na tabela user_roles
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('user_id, name, role, has_seen_tinder_do_fluxo_tutorial, created_at')
+      .eq('user_id', decoded.id)
       .single();
 
-    user = withTutorial.data;
-    error = withTutorial.error;
-
-    // Fallback para ambientes em que a coluna do tutorial ainda não existe.
-    if (error && String(error.message || '').includes('has_seen_tinder_do_fluxo_tutorial')) {
-      const basicUser = await supabase
-        .from('users')
-        .select('id, name, email, role, created_at')
-        .eq('id', decoded.id)
-        .single();
-      user = basicUser.data ? { ...basicUser.data, has_seen_tinder_do_fluxo_tutorial: false } : null;
-      error = basicUser.error;
-    }
-
-    if (error || !user) {
+    if (roleError || !roleData) {
+      console.error('[requireAuth] Erro ao buscar role:', {
+        error: roleError,
+        userId: decoded.id,
+        errorCode: roleError?.code,
+        errorMessage: roleError?.message
+      });
       res.status(401).json({ error: 'Usuário não encontrado' });
       return;
     }
-    req.user = user as SafeUser;
+
+    // Buscar email do auth.users
+    let email = decoded.email;
+    try {
+      const { data: authUser } = await supabase.auth.admin.getUserById(decoded.id);
+      email = authUser?.user?.email || decoded.email;
+    } catch (authErr) {
+      console.warn('[requireAuth] Erro ao buscar email do auth.users, usando do token:', authErr);
+    }
+
+    const user: SafeUser = {
+      id: roleData.user_id,
+      name: roleData.name || '',
+      email: email,
+      role: roleData.role as 'LIDERANCA' | 'MENTORADO' | 'PRESTADOR',
+      has_seen_tinder_do_fluxo_tutorial: roleData.has_seen_tinder_do_fluxo_tutorial || false,
+      created_at: roleData.created_at
+    };
+
+    console.log('[requireAuth] Usuário autenticado:', { id: user.id, email: user.email, role: user.role });
+    req.user = user;
     next();
-  } catch {
+  } catch (err: any) {
+    console.error('[requireAuth] Erro ao verificar token:', err);
     res.status(401).json({ error: 'Token inválido' });
   }
 }

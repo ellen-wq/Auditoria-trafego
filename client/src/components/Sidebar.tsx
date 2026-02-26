@@ -62,12 +62,12 @@ export default function Sidebar({ user }: SidebarProps) {
           aria-controls="audit-accordion-content"
         >
           <span className="sidebar-accordion-label">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            Auditoria de Tráfego
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          Auditoria de Tráfego
           </span>
           <svg className="sidebar-accordion-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="6 9 12 15 18 9" />
@@ -85,34 +85,34 @@ export default function Sidebar({ user }: SidebarProps) {
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
             Nova Auditoria
-          </NavLink>
+        </NavLink>
           <NavLink to="/app/historico" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            Histórico
-          </NavLink>
-          {user.role === 'LIDERANCA' && (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          Histórico
+        </NavLink>
+      {user.role === 'LIDERANCA' && (
             <>
               <NavLink to="/admin/dashboard" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="7" height="7" />
-                  <rect x="14" y="3" width="7" height="7" />
-                  <rect x="14" y="14" width="7" height="7" />
-                  <rect x="3" y="14" width="7" height="7" />
-                </svg>
-                Dashboard Liderança
-              </NavLink>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+            Dashboard Liderança
+          </NavLink>
               <NavLink to="/admin/mentorados" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 00-3-3.87" />
-                  <path d="M16 3.13a4 4 0 010 7.75" />
-                </svg>
-                Mentorados
-              </NavLink>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 00-3-3.87" />
+              <path d="M16 3.13a4 4 0 010 7.75" />
+            </svg>
+            Mentorados
+          </NavLink>
             </>
           )}
           {user.role !== 'LIDERANCA' && (
@@ -124,7 +124,7 @@ export default function Sidebar({ user }: SidebarProps) {
             </NavLink>
           )}
         </div>
-      </nav>
+        </nav>
 
       <nav className="sidebar-group">
         <button
@@ -154,12 +154,11 @@ export default function Sidebar({ user }: SidebarProps) {
               <NavLink to="/tinder-do-fluxo/matches" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Matches</NavLink>
               <NavLink to="/tinder-do-fluxo/favoritos" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Favoritos</NavLink>
               <NavLink to="/tinder-do-fluxo/perfil" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Meu Perfil</NavLink>
-              <NavLink to="/tinder-do-fluxo/perfil-expert" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Perfil Expert/Coprodutor</NavLink>
             </>
           )}
           {user.role === 'PRESTADOR' && (
             <>
-              <NavLink to="/tinder-do-fluxo/meu-perfil" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Meu Perfil</NavLink>
+              <NavLink to="/tinder-do-fluxo/perfil" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Meu Perfil</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Vagas</NavLink>
               <NavLink to="/tinder-do-fluxo/avaliacoes" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Minhas Avaliações</NavLink>
             </>
@@ -173,8 +172,7 @@ export default function Sidebar({ user }: SidebarProps) {
               <NavLink to="/tinder-do-fluxo/vagas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Vagas</NavLink>
               <NavLink to="/tinder-do-fluxo/matches" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Matches</NavLink>
               <NavLink to="/tinder-do-fluxo/favoritos" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Favoritos</NavLink>
-              <NavLink to="/tinder-do-fluxo/perfil" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Perfil de Mentorado</NavLink>
-              <NavLink to="/tinder-do-fluxo/meu-perfil" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Perfil de Prestador</NavLink>
+              <NavLink to="/tinder-do-fluxo/perfil" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Meu Perfil</NavLink>
               <NavLink to="/tinder-do-fluxo/avaliacoes" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Avaliações de Prestador</NavLink>
 
               <div className="sidebar-subgroup-title">Admin</div>

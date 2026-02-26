@@ -16,15 +16,46 @@ function getMainDashboardPath(role?: string): string {
 }
 
 export default function ProtectedRoute({ children, requiredRole, allowedRoles, redirectTo }: Props) {
-  const [user, setUser] = useState<User | null>(() => api.getUser());
-  const [isCheckingSession, setIsCheckingSession] = useState<boolean>(() => !api.getUser());
+  const [user, setUser] = useState<User | null>(null);
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
+    // Verificar usuário do localStorage primeiro (rápido)
+    try {
+      const cachedUser = api.getUser();
+      if (cachedUser) {
+        setUser(cachedUser);
+        setIsChecking(false);
+        // Verificar no servidor em background (não bloqueia)
+        api.get<{ user: User }>('/api/auth/me')
+          .then((res) => {
+            if (res?.user) {
+              api.setUser(res.user);
+              setUser(res.user);
+            }
+          })
+          .catch(() => {
+            // Se falhar, usar cache
+          });
+        return;
+      }
+    } catch (err) {
+      console.error('[ProtectedRoute] Erro ao ler cache:', err);
+    }
+
+    // Se não tem cache, verificar no servidor
     let mounted = true;
-    if (!isCheckingSession) return;
+    const timeoutId = setTimeout(() => {
+      if (mounted) {
+        setIsChecking(false);
+        const cached = api.getUser();
+        setUser(cached);
+      }
+    }, 2000); // Timeout de 2 segundos
 
     api.get<{ user: User }>('/api/auth/me')
       .then((res) => {
+        clearTimeout(timeoutId);
         if (!mounted) return;
         if (res?.user) {
           api.setUser(res.user);
@@ -32,21 +63,30 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles, r
         } else {
           setUser(null);
         }
+        setIsChecking(false);
       })
       .catch(() => {
+        clearTimeout(timeoutId);
         if (!mounted) return;
         setUser(null);
-      })
-      .finally(() => {
-        if (mounted) setIsCheckingSession(false);
+        setIsChecking(false);
       });
 
     return () => {
       mounted = false;
+      clearTimeout(timeoutId);
     };
-  }, [isCheckingSession]);
+  }, []); // Executar apenas uma vez
 
-  if (isCheckingSession) return null;
+  if (isChecking) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column', gap: 16 }}>
+        <div className="loading-spinner" />
+        <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Carregando...</div>
+      </div>
+    );
+  }
+  
   if (!user) return <Navigate to="/login" replace />;
 
   if (requiredRole && user.role !== requiredRole) {

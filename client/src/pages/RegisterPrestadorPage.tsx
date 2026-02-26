@@ -53,7 +53,7 @@ export default function RegisterPrestadorPage() {
         setPassword('');
         setPassword2('');
         setAcceptTerms(false);
-        navigate('/tinder-do-fluxo/meu-perfil', { replace: true });
+        navigate('/tinder-do-fluxo/perfil', { replace: true });
       } else {
         console.error('[Register Prestador] Resposta inválida da API:', data);
         setError('Resposta inválida do servidor.');
