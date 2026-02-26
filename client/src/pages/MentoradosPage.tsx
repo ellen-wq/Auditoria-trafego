@@ -19,10 +19,13 @@ export default function MentoradosPage() {
   useEffect(() => {
     async function load() {
       try {
+        console.log('[MentoradosPage] Carregando usuários...');
         const data = await api.get<{ users: MentoradoUser[] }>('/api/admin/users');
+        console.log('[MentoradosPage] Usuários carregados:', data.users?.length || 0);
         setUsers(data.users || []);
-      } catch (err) {
-        console.error('Erro ao carregar mentorados:', err);
+      } catch (err: any) {
+        console.error('[MentoradosPage] Erro ao carregar mentorados:', err);
+        console.error('[MentoradosPage] Detalhes do erro:', err.message, err.response);
       } finally {
         setLoading(false);
       }

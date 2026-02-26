@@ -146,21 +146,67 @@ router.get('/users', async (_req: Request, res: Response): Promise<void> => {
   try {
     const supabase = getSupabase();
 
-    const { data: usersRaw } = await supabase
+    console.log('[Admin /users] Iniciando busca de MENTORADOS...');
+
+    // Teste de query simples primeiro
+    const { data: testData, error: testError } = await supabase
+      .from('user_roles')
+      .select('user_id, name, role, created_at')
+      .limit(5);
+
+    console.log('[Admin /users] Teste de query:', { 
+      dataCount: testData?.length || 0, 
+      error: testError,
+      errorCode: testError?.code,
+      errorMessage: testError?.message
+    });
+
+    if (testError) {
+      console.error('[Admin /users] Erro no teste:', testError);
+      res.status(500).json({ 
+        error: 'Erro ao buscar usuários.',
+        details: process.env.NODE_ENV === 'development' ? testError.message : undefined,
+        code: testError.code
+      });
+      return;
+    }
+
+    const { data: usersRaw, error: usersError } = await supabase
       .from('user_roles')
       .select('user_id, name, role, created_at')
       .eq('role', 'MENTORADO')
       .order('name');
 
+    console.log('[Admin /users] Query MENTORADOS:', { 
+      dataCount: usersRaw?.length || 0, 
+      error: usersError,
+      errorCode: usersError?.code,
+      errorMessage: usersError?.message
+    });
+
+    if (usersError) {
+      console.error('[Admin /users] Erro ao buscar MENTORADOS:', usersError);
+      res.status(500).json({ 
+        error: 'Erro ao buscar usuários.',
+        details: process.env.NODE_ENV === 'development' ? usersError.message : undefined,
+        code: usersError.code
+      });
+      return;
+    }
+
     const userIds = (usersRaw || []).map((u: any) => u.user_id);
     let auditStats: Record<string, { count: number; last: string | null }> = {};
 
     if (userIds.length > 0) {
-      const { data: audits } = await supabase
+      const { data: audits, error: auditsError } = await supabase
         .from('audits')
         .select('user_id, created_at')
         .in('user_id', userIds)
         .order('created_at', { ascending: false });
+
+      if (auditsError) {
+        console.error('[Admin /users] Erro ao buscar audits:', auditsError);
+      }
 
       if (audits) {
         audits.forEach(a => {
@@ -173,7 +219,11 @@ router.get('/users', async (_req: Request, res: Response): Promise<void> => {
     }
 
     // Buscar emails do auth.users
-    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+    if (authError) {
+      console.error('[Admin /users] Erro ao buscar auth.users:', authError);
+    }
+    
     const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) || []);
     
     const users = (usersRaw || []).map((u: any) => {
@@ -189,10 +239,15 @@ router.get('/users', async (_req: Request, res: Response): Promise<void> => {
       };
     });
 
+    console.log('[Admin /users] Retornando', users.length, 'usuários MENTORADOS');
     res.json({ users });
-  } catch (err) {
-    console.error('Admin users error:', err);
-    res.status(500).json({ error: 'Erro interno.' });
+  } catch (err: any) {
+    console.error('[Admin /users] Erro geral:', err);
+    console.error('[Admin /users] Stack:', err?.stack);
+    res.status(500).json({ 
+      error: 'Erro interno.',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 

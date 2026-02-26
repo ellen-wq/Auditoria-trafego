@@ -334,54 +334,117 @@ router.post('/service-profile', async (req: Request, res: Response): Promise<voi
 // Feeds
 router.get('/feed/comunidade', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from('user_roles')
-    .select('user_id, name, role, created_at, tinder_mentor_profiles(*)')
-    .eq('role', 'MENTORADO')
-    .neq('user_id', req.user!.id)
-    .order('created_at', { ascending: false })
-    .limit(80);
-  if (error) {
-    res.status(500).json({ error: 'Erro ao buscar comunidade.' });
-    return;
+  try {
+    const supabase = getSupabase();
+    console.log('[Feed Comunidade] Iniciando busca...');
+    
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('user_id, name, role, created_at, tinder_mentor_profiles(*)')
+      .eq('role', 'MENTORADO')
+      .neq('user_id', req.user!.id)
+      .order('created_at', { ascending: false })
+      .limit(80);
+    
+    console.log('[Feed Comunidade] Query resultado:', { 
+      dataCount: data?.length || 0, 
+      error: error,
+      errorCode: error?.code,
+      errorMessage: error?.message,
+      errorDetails: error?.details,
+      errorHint: error?.hint
+    });
+    
+    if (error) {
+      console.error('[Feed Comunidade] Erro na query:', error);
+      res.status(500).json({ 
+        error: 'Erro ao buscar comunidade.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        code: error.code
+      });
+      return;
+    }
+    
+    // Buscar emails do auth.users
+    const userIds = (data || []).map(u => u.user_id);
+    console.log('[Feed Comunidade] Buscando emails para', userIds.length, 'usuários');
+    
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+    if (authError) {
+      console.error('[Feed Comunidade] Erro ao buscar auth.users:', authError);
+    }
+    
+    const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) || []);
+    
+    const users = (data || []).map(u => ({
+      id: u.user_id,
+      name: u.name,
+      email: emailMap.get(u.user_id) || '',
+      role: u.role,
+      created_at: u.created_at,
+      tinder_mentor_profiles: u.tinder_mentor_profiles
+    }));
+    
+    console.log('[Feed Comunidade] Retornando', users.length, 'usuários');
+    res.json({ users });
+  } catch (err: any) {
+    console.error('[Feed Comunidade] Erro geral:', err);
+    console.error('[Feed Comunidade] Stack:', err?.stack);
+    res.status(500).json({ 
+      error: 'Erro interno.',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
-  // Buscar emails do auth.users
-  const userIds = (data || []).map(u => u.user_id);
-  const { data: authUsers } = await supabase.auth.admin.listUsers();
-  const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) || []);
-  
-  const users = (data || []).map(u => ({
-    id: u.user_id,
-    name: u.name,
-    email: emailMap.get(u.user_id) || '',
-    role: u.role,
-    created_at: u.created_at,
-    tinder_mentor_profiles: u.tinder_mentor_profiles
-  }));
-  
-  res.json({ users });
 });
 
 router.get('/feed/expert', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from('user_roles')
-    .select('user_id, name, role, created_at, tinder_mentor_profiles(*), tinder_expert_profiles(*)')
-    .eq('role', 'MENTORADO')
-    .neq('user_id', req.user!.id)
-    .order('created_at', { ascending: false })
-    .limit(80);
-  if (error) {
-    res.status(500).json({ error: 'Erro ao buscar feed expert/coprodutor.' });
-    return;
+  try {
+    const supabase = getSupabase();
+    console.log('[Feed Expert] Iniciando busca...');
+    
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('user_id, name, role, created_at, tinder_mentor_profiles(*), tinder_expert_profiles(*)')
+      .eq('role', 'MENTORADO')
+      .neq('user_id', req.user!.id)
+      .order('created_at', { ascending: false })
+      .limit(80);
+    
+    console.log('[Feed Expert] Query resultado:', { 
+      dataCount: data?.length || 0, 
+      error: error,
+      errorCode: error?.code,
+      errorMessage: error?.message,
+      errorDetails: error?.details,
+      errorHint: error?.hint
+    });
+    
+    if (error) {
+      console.error('[Feed Expert] Erro na query:', error);
+      res.status(500).json({ 
+        error: 'Erro ao buscar feed expert/coprodutor.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        code: error.code
+      });
+      return;
+    }
+    
+    const filtered = (data || []).filter((u: any) => {
+      const e = Array.isArray(u.tinder_expert_profiles) ? u.tinder_expert_profiles[0] : u.tinder_expert_profiles;
+      return !!(e?.is_expert || e?.is_coproducer);
+    });
+    
+    console.log('[Feed Expert] Retornando', filtered.length, 'usuários (filtrados de', data?.length || 0, ')');
+    res.json({ users: filtered });
+  } catch (err: any) {
+    console.error('[Feed Expert] Erro geral:', err);
+    console.error('[Feed Expert] Stack:', err?.stack);
+    res.status(500).json({ 
+      error: 'Erro interno.',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
-  const filtered = (data || []).filter((u: any) => {
-    const e = Array.isArray(u.tinder_expert_profiles) ? u.tinder_expert_profiles[0] : u.tinder_expert_profiles;
-    return !!(e?.is_expert || e?.is_coproducer);
-  });
-  res.json({ users: filtered });
 });
 
 // Services
@@ -1100,19 +1163,66 @@ router.get('/admin/users', async (req: Request, res: Response): Promise<void> =>
     const q = cleanOptionalString(req.query.q, 120);
     const role = cleanOptionalString(req.query.role, 20);
     const supabase = getSupabase();
+    
+    console.log('[Admin Users] Iniciando busca de usuários...', { q, role });
+    
+    // Primeiro, testar uma query simples sem filtros
+    const { data: testData, error: testError } = await supabase
+      .from('user_roles')
+      .select('user_id, name, role, created_at')
+      .limit(5);
+    
+    console.log('[Admin Users] Teste de query simples:', { 
+      dataCount: testData?.length || 0, 
+      error: testError,
+      errorCode: testError?.code,
+      errorMessage: testError?.message,
+      errorDetails: testError?.details,
+      errorHint: testError?.hint
+    });
+    
+    if (testError) {
+      console.error('[Admin Users] Erro no teste de query:', testError);
+      res.status(500).json({ 
+        error: 'Erro ao buscar usuários.', 
+        details: process.env.NODE_ENV === 'development' ? testError.message : undefined,
+        code: testError.code
+      });
+      return;
+    }
+    
+    // Agora fazer a query completa com filtros
     let query = supabase.from('user_roles').select('user_id,name,role,created_at').order('created_at', { ascending: false });
     if (q) query = query.ilike('name', `%${q}%`);
     if (role) query = query.eq('role', role);
     const { data, error } = await query.limit(200);
+    
+    console.log('[Admin Users] Query completa:', { 
+      dataCount: data?.length || 0, 
+      error: error,
+      errorCode: error?.code,
+      errorMessage: error?.message
+    });
+    
     if (error) {
       console.error('[Admin Users] Erro ao buscar user_roles:', error);
-      res.status(500).json({ error: 'Erro ao listar usuários.' });
+      res.status(500).json({ 
+        error: 'Erro ao listar usuários.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        code: error.code
+      });
       return;
     }
     
     // Buscar emails do auth.users
     const userIds = (data || []).map((u: any) => u.user_id);
-    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    console.log('[Admin Users] Buscando emails para', userIds.length, 'usuários');
+    
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+    if (authError) {
+      console.error('[Admin Users] Erro ao buscar auth.users:', authError);
+    }
+    
     const emailMap = new Map(authUsers?.users?.map((u: any) => [u.id, u.email]) || []);
     
     const users = (data || []).map((u: any) => ({
@@ -1123,10 +1233,15 @@ router.get('/admin/users', async (req: Request, res: Response): Promise<void> =>
       created_at: u.created_at
     }));
     
+    console.log('[Admin Users] Retornando', users.length, 'usuários');
     res.json({ users });
   } catch (err: any) {
     console.error('[Admin Users] Erro geral:', err);
-    res.status(500).json({ error: 'Erro interno.' });
+    console.error('[Admin Users] Stack:', err?.stack);
+    res.status(500).json({ 
+      error: 'Erro interno.',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 

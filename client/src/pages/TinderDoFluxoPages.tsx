@@ -1067,13 +1067,33 @@ export function TinderAdminDashboardPage() {
 
 export function TinderAdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  
   useEffect(() => {
-    api.get<{ users: any[] }>('/api/tinder-do-fluxo/admin/users').then((r) => setUsers(r.users || []));
+    setLoading(true);
+    setError('');
+    api.get<{ users: any[] }>('/api/tinder-do-fluxo/admin/users')
+      .then((r) => {
+        setUsers(r.users || []);
+        setLoading(false);
+      })
+      .catch((err: any) => {
+        console.error('[TinderAdminUsersPage] Erro:', err);
+        setError(err.message || 'Erro ao carregar usuários.');
+        setLoading(false);
+      });
   }, []);
+  
   return (
     <TinderDoFluxoPageShell title="Admin • Usuários">
       <div className="card">
-        {users.length === 0 ? <EmptyState text="Nenhum usuário encontrado." /> : users.map((u) => (
+        {loading && <div style={{ textAlign: 'center', padding: 48 }}><div className="loading-spinner" /></div>}
+        {error && <div style={{ padding: 16, background: 'var(--error-bg)', color: 'var(--error)', borderRadius: 8, marginBottom: 16 }}>
+          <strong>Erro:</strong> {error}
+        </div>}
+        {!loading && !error && users.length === 0 && <EmptyState text="Nenhum usuário encontrado." />}
+        {!loading && !error && users.length > 0 && users.map((u) => (
           <div key={u.id} className="quick-action">{u.name} • {u.email} • {u.role}</div>
         ))}
       </div>
