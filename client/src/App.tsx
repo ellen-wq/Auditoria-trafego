@@ -14,6 +14,8 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import MentoradosPage from './pages/MentoradosPage';
 import MentoradoDetalhePage from './pages/MentoradoDetalhePage';
 import AdminCriativosPage from './pages/AdminCriativosPage';
+import AuditoriaCopyHistoricoPage from './pages/AuditoriaCopyHistoricoPage';
+import AuditoriaCopySolicitacoesPage from './pages/AuditoriaCopySolicitacoesPage';
 import {
   TinderAdminDashboardPage,
   TinderAdminJobsPage,
@@ -69,6 +71,10 @@ export default function App() {
       <Route path="/app/historico.html" element={<ProtectedRoute><Navigate to="/app/historico" replace /></ProtectedRoute>} />
       <Route path="/app/criativos.html" element={<ProtectedRoute><Navigate to="/app/criativos" replace /></ProtectedRoute>} />
       <Route path="/app/perfil.html" element={<ProtectedRoute><Navigate to="/app/perfil" replace /></ProtectedRoute>} />
+
+      {/* Auditoria de Copy */}
+      <Route path="/auditoria-copy/historico" element={<ProtectedRoute><AuditoriaCopyHistoricoPage /></ProtectedRoute>} />
+      <Route path="/auditoria-copy/solicitacoes" element={<ProtectedRoute><AuditoriaCopySolicitacoesPage /></ProtectedRoute>} />
 
       {/* Tinder do Fluxo */}
       <Route path="/tinder-do-fluxo/comunidade" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderComunidadePage /></ProtectedRoute>} />

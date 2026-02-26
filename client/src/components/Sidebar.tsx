@@ -11,6 +11,7 @@ interface SidebarProps {
 export default function Sidebar({ user }: SidebarProps) {
   const location = useLocation();
   const [isAuditMenuOpen, setIsAuditMenuOpen] = useState(false);
+  const [isCopyAuditMenuOpen, setIsCopyAuditMenuOpen] = useState(false);
   const [isTinderMenuOpen, setIsTinderMenuOpen] = useState(() => {
     try {
       return localStorage.getItem('sidebar_tinder_open') === '1';
@@ -23,6 +24,14 @@ export default function Sidebar({ user }: SidebarProps) {
     () => location.pathname.startsWith('/tinder-do-fluxo'),
     [location.pathname]
   );
+  const isCopyAuditRouteActive = useMemo(
+    () => location.pathname.startsWith('/auditoria-copy'),
+    [location.pathname]
+  );
+
+  useEffect(() => {
+    if (isCopyAuditRouteActive) setIsCopyAuditMenuOpen(true);
+  }, [isCopyAuditRouteActive]);
 
   useEffect(() => {
     try {
@@ -180,14 +189,36 @@ export default function Sidebar({ user }: SidebarProps) {
       </nav>
 
       <nav className="sidebar-group">
-        <div className="sidebar-group-title">Em breve</div>
-        <div className="sidebar-link sidebar-link-disabled" aria-disabled="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M4 4h16v16H4z" />
-            <path d="M8 9h8M8 13h6M8 17h4" />
+        <button
+          type="button"
+          className={`sidebar-accordion-trigger${isCopyAuditMenuOpen ? ' open' : ''}${isCopyAuditRouteActive ? ' active' : ''}`}
+          onClick={() => setIsCopyAuditMenuOpen((prev) => !prev)}
+          aria-expanded={isCopyAuditMenuOpen}
+          aria-controls="copy-audit-accordion-content"
+        >
+          <span className="sidebar-accordion-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 4h16v16H4z" />
+              <path d="M8 9h8M8 13h6M8 17h4" />
+            </svg>
+            Auditoria de Copy
+          </span>
+          <svg className="sidebar-accordion-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 12 15 18 9" />
           </svg>
-          Auditoria de Copy
+        </button>
+        <div id="copy-audit-accordion-content" className={`sidebar-accordion-content${isCopyAuditMenuOpen ? ' open' : ''}`}>
+          <NavLink end to="/auditoria-copy/historico" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>
+            Histórico
+          </NavLink>
+          <NavLink end to="/auditoria-copy/solicitacoes" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>
+            Solicitações
+          </NavLink>
         </div>
+      </nav>
+
+      <nav className="sidebar-group">
+        <div className="sidebar-group-title">Em breve</div>
         <div className="sidebar-link sidebar-link-disabled" aria-disabled="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M16 3h5v5" />
