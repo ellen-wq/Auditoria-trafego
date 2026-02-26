@@ -125,12 +125,46 @@ export default async function handler(req: Request, res: Response): Promise<void
       }
       return;
     }
-
-    await ensureDbInit();
-    const app = await getAppInstance();
     
-    // Convert Vercel request/response to Express-like format
-    app(req as any, res as any);
+    // Test DB init endpoint
+    if (req.url === '/api/test-db') {
+      try {
+        await ensureDbInit();
+        res.status(200).json({ success: true, message: 'DB initialized' });
+      } catch (err: any) {
+        res.status(500).json({
+          success: false,
+          error: err.message,
+          stack: err.stack
+        });
+      }
+      return;
+    }
+
+    // Initialize DB and app
+    console.log('Initializing DB...');
+    await ensureDbInit();
+    console.log('DB initialized, getting app instance...');
+    const app = await getAppInstance();
+    console.log('App instance obtained, calling app handler...');
+    
+    // Call Express app - it should handle the request/response
+    return new Promise<void>((resolve) => {
+      app(req as any, res as any, () => {
+        resolve();
+      });
+      
+      // Timeout fallback
+      setTimeout(() => {
+        if (!res.headersSent) {
+          console.error('App handler timeout - response not sent');
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Handler timeout' });
+          }
+          resolve();
+        }
+      }, 25000);
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
