@@ -24,17 +24,18 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
   const seedUsers = options.seedUsers ?? true;
   const ensureStorageBucket = options.ensureStorageBucket ?? true;
 
-  if (initialized && supabase) return;
+  // Sempre reconecta ao Supabase se necessário
+  if (!supabase) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+      throw new Error('SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios no .env');
+    }
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    throw new Error('SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios no .env');
+    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
   }
 
-  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
-
-  if (ensureStorageBucket) {
+  if (ensureStorageBucket && !initialized) {
     const { data: buckets } = await supabase.storage.listBuckets();
     const hasUploadsBucket = (buckets || []).some((b) => b.name === STORAGE_BUCKET_NAME);
     if (!hasUploadsBucket) {
@@ -108,8 +109,11 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
       // Guarda IDs dos perfis fake do Tinder do Fluxo
       if (u.email.includes('tinder@fluxo.fake')) {
         tinderUsersMap.set(u.name, userId);
+        console.log(`[SEED] Criado usuário Tinder: ${u.name} (ID: ${userId})`);
       }
     }
+
+    console.log(`[SEED] Total de usuários Tinder criados: ${tinderUsersMap.size}`);
 
     // Cria perfis de COMUNIDADE
     const comunidadeProfiles = [
@@ -121,7 +125,7 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
     for (const profile of comunidadeProfiles) {
       const userId = tinderUsersMap.get(profile.name);
       if (userId) {
-        await supabase.from('tinder_mentor_profiles').upsert({
+        const { error } = await supabase.from('tinder_mentor_profiles').upsert({
           user_id: userId,
           city: profile.city,
           instagram: profile.instagram,
@@ -131,6 +135,13 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
           whatsapp: `+55 11 90000-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
+        if (error) {
+          console.error(`[SEED] Erro ao criar perfil comunidade ${profile.name}:`, error);
+        } else {
+          console.log(`[SEED] Perfil comunidade criado: ${profile.name}`);
+        }
+      } else {
+        console.warn(`[SEED] Usuário não encontrado para perfil comunidade: ${profile.name}`);
       }
     }
 
@@ -262,8 +273,13 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
     }
   }
 
-  initialized = true;
-  console.log('Supabase conectado e seed executado.');
+  if (!initialized) {
+    initialized = true;
+  }
+  console.log('✅ Supabase conectado e seed executado.');
+  if (seedUsers) {
+    console.log('✅ Perfis fake do Tinder do Fluxo criados com sucesso!');
+  }
 }
 
 export { getSupabase, initDb, STORAGE_BUCKET_NAME };
