@@ -1,4 +1,4 @@
-import type { IncomingMessage, ServerResponse } from 'http';
+import type { Request, Response } from 'express';
 
 let initPromise: Promise<void> | null = null;
 let appInstance: any = null;
@@ -49,7 +49,7 @@ async function ensureDbInit(): Promise<void> {
   await initPromise;
 }
 
-export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export default async function handler(req: Request, res: Response): Promise<void> {
   try {
     // Health check endpoint
     if (req.url === '/api/health' || req.url === '/health') {
