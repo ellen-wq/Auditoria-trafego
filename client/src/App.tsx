@@ -80,9 +80,9 @@ export default function App() {
       <Route path="/tinder-do-fluxo/vagas/:id" element={<ProtectedRoute allowedRoles={['MENTORADO', 'PRESTADOR', 'LIDERANCA']}><TinderJobDetailPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/matches" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderMatchesPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/favoritos" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderFavoritosPage /></ProtectedRoute>} />
-      <Route path="/tinder-do-fluxo/perfil" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderPerfilPage /></ProtectedRoute>} />
-      <Route path="/tinder-do-fluxo/perfil-expert" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderPerfilExpertPage /></ProtectedRoute>} />
-      <Route path="/tinder-do-fluxo/meu-perfil" element={<ProtectedRoute allowedRoles={['PRESTADOR', 'LIDERANCA']}><TinderMeuPerfilPrestadorPage /></ProtectedRoute>} />
+      <Route path="/tinder-do-fluxo/perfil" element={<ProtectedRoute><TinderPerfilPage /></ProtectedRoute>} />
+      <Route path="/tinder-do-fluxo/perfil-expert" element={<ProtectedRoute><TinderPerfilPage /></ProtectedRoute>} />
+      <Route path="/tinder-do-fluxo/meu-perfil" element={<ProtectedRoute><TinderPerfilPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/avaliacoes" element={<ProtectedRoute allowedRoles={['PRESTADOR', 'LIDERANCA']}><TinderAvaliacoesPrestadorPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/u/:id" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderUserPublicPage /></ProtectedRoute>} />
 

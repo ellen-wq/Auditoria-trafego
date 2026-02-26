@@ -82,64 +82,103 @@ router.post('/tutorial-status', async (req: Request, res: Response): Promise<voi
 // Mentor profile
 router.get('/mentor-profile', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  
+  // Garantir que userId vem da sessão
+  const userId = req.user!.id;
+  if (!userId) {
+    res.status(401).json({ error: 'Usuário não autenticado.' });
+    return;
+  }
+  
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('tinder_mentor_profiles')
     .select('*')
-    .eq('user_id', req.user!.id)
+    .eq('user_id', userId)
     .maybeSingle();
   if (error) {
-    res.status(500).json({ error: 'Erro ao buscar perfil.' });
+    console.error('[GET /mentor-profile] Erro:', error);
+    res.status(500).json({ error: 'Erro ao buscar perfil de mentorado.' });
     return;
   }
-  res.json({ profile: data });
+  
+  // Retornar perfil ou objeto vazio com defaults
+  res.json({ profile: data || null });
 });
 
 router.post('/mentor-profile', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  
+  // Garantir que userId vem da sessão, não do body
+  const userId = req.user!.id;
+  if (!userId) {
+    res.status(401).json({ error: 'Usuário não autenticado.' });
+    return;
+  }
+  
   const supabase = getSupabase();
   const payload = {
-    user_id: req.user!.id,
-    photo_url: cleanString(req.body.photoUrl, 1000),
-    city: cleanString(req.body.city, 120),
-    instagram: cleanString(req.body.instagram, 120),
-    niche: cleanString(req.body.niche, 120),
-    nivel_fluxo: cleanString(req.body.nivelFluxo, 50),
-    bio: cleanString(req.body.bio, 2000),
-    whatsapp: cleanString(req.body.whatsapp, 40),
+    user_id: userId, // Sempre da sessão
+    photo_url: cleanString(req.body.photoUrl || '', 1000),
+    city: cleanString(req.body.city || '', 120),
+    instagram: cleanString(req.body.instagram || '', 120),
+    niche: cleanString(req.body.niche || '', 120),
+    nivel_fluxo: cleanString(req.body.nivelFluxo || '', 50),
+    bio: cleanString(req.body.bio || '', 2000),
+    whatsapp: cleanString(req.body.whatsapp || '', 40),
     updated_at: new Date().toISOString()
   };
+  
   const { data, error } = await supabase
     .from('tinder_mentor_profiles')
     .upsert(payload, { onConflict: 'user_id' })
     .select('*')
     .single();
   if (error) {
-    res.status(500).json({ error: 'Erro ao salvar perfil.' });
+    console.error('[POST /mentor-profile] Erro:', error);
+    res.status(500).json({ error: 'Erro ao salvar perfil: ' + error.message });
     return;
   }
-  await logAction(req.user!.id, 'TINDER_MENTOR_PROFILE_UPSERT', { userId: req.user!.id });
+  await logAction(userId, 'TINDER_MENTOR_PROFILE_UPSERT', { userId });
   res.json({ profile: data });
 });
 
 // Expert profile
 router.get('/expert-profile', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  
+  // Garantir que userId vem da sessão
+  const userId = req.user!.id;
+  if (!userId) {
+    res.status(401).json({ error: 'Usuário não autenticado.' });
+    return;
+  }
+  
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('tinder_expert_profiles')
     .select('*')
-    .eq('user_id', req.user!.id)
+    .eq('user_id', userId)
     .maybeSingle();
   if (error) {
+    console.error('[GET /expert-profile] Erro:', error);
     res.status(500).json({ error: 'Erro ao buscar perfil expert/coprodutor.' });
     return;
   }
-  res.json({ profile: data });
+  
+  // Retornar perfil ou objeto vazio
+  res.json({ profile: data || null });
 });
 
 router.post('/expert-profile', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  
+  // Garantir que userId vem da sessão
+  const userId = req.user!.id;
+  if (!userId) {
+    res.status(401).json({ error: 'Usuário não autenticado.' });
+    return;
+  }
   
   // Validação: prestador não pode ser expert/coprodutor
   if (req.user!.role === 'PRESTADOR') {
@@ -149,24 +188,26 @@ router.post('/expert-profile', async (req: Request, res: Response): Promise<void
   
   const supabase = getSupabase();
   const payload = {
-    user_id: req.user!.id,
+    user_id: userId, // Sempre da sessão
     is_expert: !!req.body.isExpert,
     is_coproducer: !!req.body.isCoproducer,
-    goal_text: cleanString(req.body.goalText, 400),
-    search_bio: cleanString(req.body.searchBio, 2000),
+    goal_text: cleanString(req.body.goalText || '', 400),
+    search_bio: cleanString(req.body.searchBio || '', 2000),
     preferences_json: req.body.preferencesJson && typeof req.body.preferencesJson === 'object' ? req.body.preferencesJson : {},
     updated_at: new Date().toISOString()
   };
+  
   const { data, error } = await supabase
     .from('tinder_expert_profiles')
     .upsert(payload, { onConflict: 'user_id' })
     .select('*')
     .single();
   if (error) {
-    res.status(500).json({ error: 'Erro ao salvar perfil expert/coprodutor.' });
+    console.error('[POST /expert-profile] Erro:', error);
+    res.status(500).json({ error: 'Erro ao salvar perfil expert/coprodutor: ' + error.message });
     return;
   }
-  await logAction(req.user!.id, 'TINDER_EXPERT_PROFILE_UPSERT', { userId: req.user!.id });
+  await logAction(userId, 'TINDER_EXPERT_PROFILE_UPSERT', { userId });
   res.json({ profile: data });
 });
 
@@ -189,12 +230,19 @@ router.get('/service-profile', async (req: Request, res: Response): Promise<void
 router.post('/service-profile', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['PRESTADOR', 'LIDERANCA'])) return;
   
+  // Garantir que userId vem da sessão
+  const userId = req.user!.id;
+  if (!userId) {
+    res.status(401).json({ error: 'Usuário não autenticado.' });
+    return;
+  }
+  
   // Validação: expert/coprodutor não pode ser prestador
   const supabase = getSupabase();
   const { data: expertProfile } = await supabase
     .from('tinder_expert_profiles')
     .select('is_expert, is_coproducer')
-    .eq('user_id', req.user!.id)
+    .eq('user_id', userId)
     .maybeSingle();
   
   if (expertProfile && (expertProfile.is_expert || expertProfile.is_coproducer)) {
@@ -203,16 +251,16 @@ router.post('/service-profile', async (req: Request, res: Response): Promise<voi
   }
   
   const payload = {
-    user_id: req.user!.id,
-    photo_url: cleanString(req.body.photoUrl, 1000),
-    city: cleanString(req.body.city, 120),
-    instagram: cleanString(req.body.instagram, 120),
-    whatsapp: cleanString(req.body.whatsapp, 40),
-    specialty: cleanString(req.body.specialty, 60),
-    certification: cleanString(req.body.certification, 100),
-    portfolio: cleanString(req.body.portfolio, 1000),
-    experience: cleanString(req.body.experience, 2000),
-    bio: cleanString(req.body.bio, 2000),
+    user_id: userId, // Sempre da sessão
+    photo_url: cleanString(req.body.photoUrl || '', 1000),
+    city: cleanString(req.body.city || '', 120),
+    instagram: cleanString(req.body.instagram || '', 120),
+    whatsapp: cleanString(req.body.whatsapp || '', 40),
+    specialty: cleanString(req.body.specialty || '', 60),
+    certification: cleanString(req.body.certification || '', 100),
+    portfolio: cleanString(req.body.portfolio || '', 1000),
+    experience: cleanString(req.body.experience || '', 2000),
+    bio: cleanString(req.body.bio || '', 2000),
     updated_at: new Date().toISOString()
   };
   const { data, error } = await supabase
@@ -221,10 +269,11 @@ router.post('/service-profile', async (req: Request, res: Response): Promise<voi
     .select('*')
     .single();
   if (error) {
-    res.status(500).json({ error: 'Erro ao salvar perfil de prestador.' });
+    console.error('[POST /service-profile] Erro:', error);
+    res.status(500).json({ error: 'Erro ao salvar perfil de prestador: ' + error.message });
     return;
   }
-  await logAction(req.user!.id, 'TINDER_SERVICE_PROFILE_UPSERT', { userId: req.user!.id });
+  await logAction(userId, 'TINDER_SERVICE_PROFILE_UPSERT', { userId });
   res.json({ profile: data });
 });
 
@@ -555,16 +604,29 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
 router.post('/jobs', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
   
-  // Verificar se o usuário é expert/coprodutor
+  // Garantir que userId vem da sessão
+  const userId = req.user!.id;
+  if (!userId) {
+    res.status(401).json({ error: 'Usuário não autenticado.' });
+    return;
+  }
+  
+  // Buscar expert_profile automaticamente pelo userId
   const supabase = getSupabase();
-  const { data: expertProfile } = await supabase
+  const { data: expertProfile, error: expertError } = await supabase
     .from('tinder_expert_profiles')
-    .select('is_expert, is_coproducer')
-    .eq('user_id', req.user!.id)
+    .select('id, is_expert, is_coproducer')
+    .eq('user_id', userId)
     .maybeSingle();
   
+  if (expertError) {
+    console.error('[POST /jobs] Erro ao buscar expert profile:', expertError);
+    res.status(500).json({ error: 'Erro ao verificar perfil de expert/coprodutor.' });
+    return;
+  }
+  
   if (!expertProfile || (!expertProfile.is_expert && !expertProfile.is_coproducer)) {
-    res.status(403).json({ error: 'Apenas experts e coprodutores podem criar vagas.' });
+    res.status(400).json({ error: 'Você precisa ser Expert ou Coprodutor para criar vagas. Configure seu perfil primeiro.' });
     return;
   }
   
@@ -574,23 +636,27 @@ router.post('/jobs', async (req: Request, res: Response): Promise<void> => {
     res.status(400).json({ error: 'Título e descrição são obrigatórios.' });
     return;
   }
+  
+  // Criar vaga com creator_id da sessão
   const payload = {
-    creator_id: req.user!.id,
+    creator_id: userId, // Sempre da sessão
     title,
     description,
-    specialty: cleanString(req.body.specialty, 60),
-    model: cleanString(req.body.model, 60),
+    specialty: cleanString(req.body.specialty || '', 60),
+    model: cleanString(req.body.model || '', 60),
     value: req.body.value ? Number(req.body.value) : null,
     deadline: cleanOptionalString(req.body.deadline, 20),
-    location: cleanString(req.body.location, 120),
+    location: cleanString(req.body.location || '', 120),
     status: 'OPEN'
   };
+  
   const { data, error } = await supabase.from('tinder_jobs').insert(payload).select('*').single();
   if (error || !data) {
-    res.status(500).json({ error: 'Erro ao criar vaga.' });
+    console.error('[POST /jobs] Erro ao criar vaga:', error);
+    res.status(500).json({ error: 'Erro ao criar vaga: ' + (error?.message || 'desconhecido') });
     return;
   }
-  await logAction(req.user!.id, 'TINDER_JOB_CREATED', { jobId: data.id });
+  await logAction(userId, 'TINDER_JOB_CREATED', { jobId: data.id });
   res.json({ job: data });
 });
 

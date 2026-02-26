@@ -228,6 +228,11 @@ export function TinderFavoritosPage() {
 }
 
 export function TinderPerfilPage() {
+  const user = api.getUser();
+  const isMentorado = user?.role === 'MENTORADO' || user?.role === 'LIDERANCA';
+  const isPrestador = user?.role === 'PRESTADOR';
+  
+  // Form base (comum a todos)
   const [form, setForm] = useState({ 
     city: '', 
     instagram: '', 
@@ -236,11 +241,23 @@ export function TinderPerfilPage() {
     bio: '', 
     phoneCountryCode: '+55', 
     phoneAreaCode: '', 
-    phoneNumber: '' 
+    phoneNumber: '',
+    // Expert/Coprodutor fields
+    isExpert: false,
+    isCoproducer: false,
+    goalText: '',
+    searchBio: '',
+    // Prestador fields
+    specialty: '',
+    certification: '',
+    portfolio: '',
+    experience: ''
   });
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   const nivelOptions = ['Newbie', 'Soft', 'Hard', 'Pro', 'Pro+', 'Master'];
+  const specialtyOptions = ['COPY', 'TRAFEGO', 'AUTOMACAO'];
   const countryCodes = [
     { code: '+55', flag: '🇧🇷', label: 'Brasil (+55)' },
     { code: '+1', flag: '🇺🇸', label: 'EUA/Canadá (+1)' },
@@ -248,23 +265,69 @@ export function TinderPerfilPage() {
   ];
 
   useEffect(() => {
-    api.get<{ profile: any }>('/api/tinder-do-fluxo/mentor-profile').then((r) => {
-      if (!r.profile) return;
-      const whatsapp = r.profile.whatsapp || '';
-      // Parse existing whatsapp format: +55 11 90000-0000
-      const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
-      setForm({
-        city: r.profile.city || '',
-        instagram: r.profile.instagram || '',
-        niche: r.profile.niche || '',
-        nivelFluxo: r.profile.nivel_fluxo || '',
-        bio: r.profile.bio || '',
-        phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
-        phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
-        phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : ''
-      });
-    });
-  }, []);
+    const loadProfiles = async () => {
+      setLoading(true);
+      try {
+        if (isMentorado) {
+          // Carregar mentor profile
+          const mentorRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/mentor-profile');
+          if (mentorRes.profile) {
+            const whatsapp = mentorRes.profile.whatsapp || '';
+            const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
+            setForm(prev => ({
+              ...prev,
+              city: mentorRes.profile.city || '',
+              instagram: mentorRes.profile.instagram || '',
+              niche: mentorRes.profile.niche || '',
+              nivelFluxo: mentorRes.profile.nivel_fluxo || '',
+              bio: mentorRes.profile.bio || '',
+              phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
+              phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
+              phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : ''
+            }));
+          }
+          
+          // Carregar expert profile
+          const expertRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/expert-profile');
+          if (expertRes.profile) {
+            setForm(prev => ({
+              ...prev,
+              isExpert: !!expertRes.profile.is_expert,
+              isCoproducer: !!expertRes.profile.is_coproducer,
+              goalText: expertRes.profile.goal_text || '',
+              searchBio: expertRes.profile.search_bio || ''
+            }));
+          }
+        } else if (isPrestador) {
+          // Carregar service profile
+          const serviceRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/service-profile');
+          if (serviceRes.profile) {
+            const whatsapp = serviceRes.profile.whatsapp || '';
+            const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
+            setForm(prev => ({
+              ...prev,
+              city: serviceRes.profile.city || '',
+              instagram: serviceRes.profile.instagram || '',
+              phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
+              phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
+              phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : '',
+              specialty: serviceRes.profile.specialty || '',
+              certification: serviceRes.profile.certification || '',
+              portfolio: serviceRes.profile.portfolio || '',
+              experience: serviceRes.profile.experience || '',
+              bio: serviceRes.profile.bio || ''
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao carregar perfis:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadProfiles();
+  }, [isMentorado, isPrestador]);
 
   const formatPhoneNumber = (value: string): string => {
     const numbers = value.replace(/\D/g, '');
@@ -275,17 +338,68 @@ export function TinderPerfilPage() {
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
-    await api.post('/api/tinder-do-fluxo/mentor-profile', {
-      ...form,
-      whatsapp
-    });
-    setSaved(true);
+    setSaved(false);
+    
+    try {
+      if (isMentorado) {
+        // Salvar mentor profile
+        const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
+        await api.post('/api/tinder-do-fluxo/mentor-profile', {
+          city: form.city,
+          instagram: form.instagram,
+          niche: form.niche,
+          nivelFluxo: form.nivelFluxo,
+          bio: form.bio,
+          whatsapp
+        });
+        
+        // Salvar expert profile se selecionado
+        if (form.isExpert || form.isCoproducer) {
+          await api.post('/api/tinder-do-fluxo/expert-profile', {
+            isExpert: form.isExpert,
+            isCoproducer: form.isCoproducer,
+            goalText: form.goalText,
+            searchBio: form.searchBio
+          });
+        }
+      } else if (isPrestador) {
+        // Salvar service profile
+        const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
+        await api.post('/api/tinder-do-fluxo/service-profile', {
+          city: form.city,
+          instagram: form.instagram,
+          whatsapp,
+          specialty: form.specialty,
+          certification: form.certification,
+          portfolio: form.portfolio,
+          experience: form.experience,
+          bio: form.bio
+        });
+      }
+      
+      setSaved(true);
+    } catch (err: any) {
+      console.error('Erro ao salvar perfil:', err);
+      alert(err.message || 'Erro ao salvar perfil.');
+    }
   };
+
+  if (loading) {
+    return (
+      <TinderDoFluxoPageShell title="Meu Perfil">
+        <div className="card">
+          <div style={{ textAlign: 'center', padding: 24 }}>
+            <div className="loading-spinner" />
+          </div>
+        </div>
+      </TinderDoFluxoPageShell>
+    );
+  }
 
   return (
     <TinderDoFluxoPageShell title="Meu Perfil">
       <form className="card" onSubmit={save}>
+        {/* Campos comuns */}
         <div className="form-group">
           <label>Cidade</label>
           <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
@@ -294,23 +408,106 @@ export function TinderPerfilPage() {
           <label>Instagram</label>
           <input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} />
         </div>
-        <div className="form-group">
-          <label>Nicho</label>
-          <input value={form.niche} onChange={(e) => setForm({ ...form, niche: e.target.value })} />
-        </div>
-        <div className="form-group">
-          <label>Nível Fluxo</label>
-          <select value={form.nivelFluxo} onChange={(e) => setForm({ ...form, nivelFluxo: e.target.value })}>
-            <option value="">Selecione...</option>
-            {nivelOptions.map(opt => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label>Bio</label>
-          <textarea rows={4} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
-        </div>
+        
+        {/* Seção para MENTORADO */}
+        {isMentorado && (
+          <>
+            <div className="form-group">
+              <label>Nicho</label>
+              <input value={form.niche} onChange={(e) => setForm({ ...form, niche: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label>Nível Fluxo</label>
+              <select value={form.nivelFluxo} onChange={(e) => setForm({ ...form, nivelFluxo: e.target.value })}>
+                <option value="">Selecione...</option>
+                {nivelOptions.map(opt => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Bio</label>
+              <textarea rows={4} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+            </div>
+            
+            {/* Opção para ser Expert/Coprodutor */}
+            <div style={{ marginTop: 16, marginBottom: 16, padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)' }}>
+              <label style={{ display: 'flex', gap: 8, marginBottom: 10, fontWeight: 600 }}>
+                <input 
+                  type="checkbox" 
+                  checked={form.isExpert || form.isCoproducer} 
+                  onChange={(e) => {
+                    if (!e.target.checked) {
+                      setForm({ ...form, isExpert: false, isCoproducer: false });
+                    }
+                  }}
+                /> 
+                Quero ser Expert / Coprodutor
+              </label>
+              {(form.isExpert || form.isCoproducer) && (
+                <>
+                  <label style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={form.isExpert} 
+                      onChange={(e) => setForm({ ...form, isExpert: e.target.checked })} 
+                    /> 
+                    Quero aparecer como Expert
+                  </label>
+                  <label style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={form.isCoproducer} 
+                      onChange={(e) => setForm({ ...form, isCoproducer: e.target.checked })} 
+                    /> 
+                    Quero aparecer como Coprodutor
+                  </label>
+                  <div className="form-group">
+                    <label>Objetivo</label>
+                    <input value={form.goalText} onChange={(e) => setForm({ ...form, goalText: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Bio de busca</label>
+                    <textarea rows={4} value={form.searchBio} onChange={(e) => setForm({ ...form, searchBio: e.target.value })} />
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
+        
+        {/* Seção para PRESTADOR */}
+        {isPrestador && (
+          <>
+            <div className="form-group">
+              <label>Especialidade</label>
+              <select value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })}>
+                <option value="">Selecione...</option>
+                {specialtyOptions.map(opt => (
+                  <option key={opt} value={opt}>{opt === 'TRAFEGO' ? 'Tráfego Pago' : opt === 'AUTOMACAO' ? 'Automação & IA' : opt}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Certificação</label>
+              <input value={form.certification} onChange={(e) => setForm({ ...form, certification: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label>Portfólio</label>
+              <input value={form.portfolio} onChange={(e) => setForm({ ...form, portfolio: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label>Experiência</label>
+              <textarea rows={3} value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label>Bio</label>
+              <textarea rows={3} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+            </div>
+          </>
+        )}
+        
+        {/* WhatsApp (comum a todos) */}
         <div className="form-group">
           <label>WhatsApp</label>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -347,6 +544,7 @@ export function TinderPerfilPage() {
             />
           </div>
         </div>
+        
         <button className="btn btn-primary" type="submit">Salvar perfil</button>
         {saved && <p style={{ marginTop: 8, color: 'var(--green)' }}>Perfil salvo com sucesso.</p>}
       </form>
