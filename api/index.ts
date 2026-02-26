@@ -5,18 +5,27 @@ let appInstance: any = null;
 
 async function getAppInstance() {
   if (!appInstance) {
-    // Try dist first (production build), fallback to src (dev/Vercel auto-compile)
+    const path = await import('path');
+    const cwd = process.cwd();
+    
+    // Try dist first (production build)
     try {
-      const appModule = await import('../dist/app');
+      const distPath = path.join(cwd, 'dist', 'app.js');
+      console.log('Trying to import from:', distPath);
+      const appModule = await import(distPath);
       appInstance = appModule.default;
+      console.log('Successfully imported app from dist');
     } catch (distErr) {
+      console.error('Failed to import app from dist:', distErr);
+      // Try relative path as fallback
       try {
-        const appModule = await import('../src/app');
+        console.log('Trying relative path: ../dist/app');
+        const appModule = await import('../dist/app');
         appInstance = appModule.default;
-      } catch (srcErr) {
-        console.error('Failed to import app from dist:', distErr);
-        console.error('Failed to import app from src:', srcErr);
-        throw new Error(`Cannot import app: ${distErr instanceof Error ? distErr.message : String(distErr)}`);
+        console.log('Successfully imported app from relative dist path');
+      } catch (relErr) {
+        console.error('Failed to import app from relative dist:', relErr);
+        throw new Error(`Cannot import app. Dist error: ${distErr instanceof Error ? distErr.message : String(distErr)}. Rel error: ${relErr instanceof Error ? relErr.message : String(relErr)}`);
       }
     }
   }
@@ -26,17 +35,26 @@ async function getAppInstance() {
 async function ensureDbInit(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
-      // Try dist first (production build), fallback to src (dev/Vercel auto-compile)
+      const path = await import('path');
+      const cwd = process.cwd();
+      
+      // Try dist first (production build)
       let dbModule;
       try {
-        dbModule = await import('../dist/db/database');
+        const distPath = path.join(cwd, 'dist', 'db', 'database.js');
+        console.log('Trying to import database from:', distPath);
+        dbModule = await import(distPath);
+        console.log('Successfully imported database from dist');
       } catch (distErr) {
+        console.error('Failed to import database from dist:', distErr);
+        // Try relative path as fallback
         try {
-          dbModule = await import('../src/db/database');
-        } catch (srcErr) {
-          console.error('Failed to import database from dist:', distErr);
-          console.error('Failed to import database from src:', srcErr);
-          throw new Error(`Cannot import database: ${distErr instanceof Error ? distErr.message : String(distErr)}`);
+          console.log('Trying relative path: ../dist/db/database');
+          dbModule = await import('../dist/db/database');
+          console.log('Successfully imported database from relative dist path');
+        } catch (relErr) {
+          console.error('Failed to import database from relative dist:', relErr);
+          throw new Error(`Cannot import database. Dist error: ${distErr instanceof Error ? distErr.message : String(distErr)}. Rel error: ${relErr instanceof Error ? relErr.message : String(relErr)}`);
         }
       }
       await dbModule.initDb({ seedUsers: false, ensureStorageBucket: false });
