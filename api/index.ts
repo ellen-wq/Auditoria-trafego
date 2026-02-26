@@ -1,8 +1,5 @@
-import serverless from 'serverless-http';
-
 let initPromise: Promise<void> | null = null;
 let appInstance: any = null;
-let serverlessHandler: any = null;
 
 async function getAppInstance() {
   if (!appInstance) {
@@ -142,56 +139,44 @@ export default async function handler(req: any, res: any): Promise<void> {
       return;
     }
     
-    // Test serverless handler endpoint
-    if (req.url === '/api/test-serverless') {
-      try {
-        await ensureDbInit();
-        const app = await getAppInstance();
-        const handler = serverless(app);
-        res.status(200).json({ 
-          success: true, 
-          message: 'Serverless handler created',
-          handlerType: typeof handler
-        });
-      } catch (err: any) {
-        res.status(500).json({
-          success: false,
-          error: err.message,
-          stack: err.stack
-        });
-      }
-      return;
-    }
-
     // Initialize DB and app
     console.log('Initializing DB...');
     await ensureDbInit();
     console.log('DB initialized, getting app instance...');
     const app = await getAppInstance();
-    console.log('App instance obtained, creating serverless handler...');
+    console.log('App instance obtained, calling Express app...');
     
-    // Create serverless handler if not exists
-    if (!serverlessHandler) {
-      serverlessHandler = serverless(app, {
-        binary: ['image/*', 'application/pdf']
+    // Call Express app directly - Vercel req/res should be compatible
+    return new Promise<void>((resolve, reject) => {
+      // Ensure response ends properly
+      const originalEnd = res.end;
+      res.end = function(...args: any[]) {
+        originalEnd.apply(this, args);
+        resolve();
+      };
+      
+      // Call Express app
+      app(req, res, (err?: any) => {
+        if (err) {
+          console.error('Express app error:', err);
+          reject(err);
+        } else if (!res.headersSent) {
+          // If Express didn't send a response, resolve anyway
+          resolve();
+        }
       });
-    }
-    
-    console.log('Calling serverless handler...');
-    // Use serverless-http to bridge Vercel and Express
-    // Wrap in Promise to ensure proper handling
-    try {
-      const result = await serverlessHandler(req, res);
-      return result;
-    } catch (handlerErr: any) {
-      console.error('Serverless handler error:', handlerErr);
-      if (!res.headersSent) {
-        res.status(500).json({
-          error: 'Handler execution failed: ' + (handlerErr.message || String(handlerErr))
-        });
-      }
-      throw handlerErr;
-    }
+      
+      // Timeout safety
+      setTimeout(() => {
+        if (!res.headersSent) {
+          console.warn('Request timeout - response not sent');
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Request timeout' });
+          }
+          resolve();
+        }
+      }, 25000);
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
