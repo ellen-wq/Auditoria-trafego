@@ -55,7 +55,7 @@ async function ensureDbInit(): Promise<void> {
           throw new Error(`Cannot import database. Dist error: ${distErr instanceof Error ? distErr.message : String(distErr)}. Rel error: ${relErr instanceof Error ? relErr.message : String(relErr)}`);
         }
       }
-      await dbModule.initDb({ seedUsers: false, ensureStorageBucket: false });
+      await dbModule.initDb({ seedUsers: true, ensureStorageBucket: false });
     })().catch((err) => {
       initPromise = null;
       console.error('DB init error:', err);
