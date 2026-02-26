@@ -6,3 +6,9 @@ uploads/
 dist/
 public_dist/
 client/node_modules/
+.vercel
+.env.vercel
+tmp/
+test-results/
+client/tsconfig.tsbuildinfo
+fluxer-logo-animation.svg

@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import logoFluxo from '../assets/fluxo.logo.animation.svg';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -11,6 +12,12 @@ export default function RegisterPage() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [error, setError] = useState('');
+
+  function homeByRole(role: string): string {
+    if (role === 'LIDERANCA') return '/admin/dashboard';
+    if (role === 'PRESTADOR') return '/tinder-do-fluxo/meu-perfil';
+    return '/app/upload';
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -29,7 +36,7 @@ export default function RegisterPage() {
     try {
       const data = await api.post('/api/auth/register', { name, email, password });
       api.setAuth(data.token, data.user);
-      navigate(data.user.role === 'LIDERANCA' ? '/admin/dashboard' : '/app/upload', { replace: true });
+      navigate(homeByRole(data.user.role), { replace: true });
     } catch (err: any) {
       setError(err.message || 'Erro ao criar conta.');
     }
@@ -55,12 +62,8 @@ export default function RegisterPage() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-logo">
-          <div className="logo-x">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </div>
-          fluxer<span>.</span>
+          <img src={logoFluxo} alt="Fluxo" className="auth-logo-image" />
+          <span className="auth-logo-tools">ferramentas</span>
         </div>
         <p className="auth-subtitle">Crie sua conta para começar a auditar</p>
 

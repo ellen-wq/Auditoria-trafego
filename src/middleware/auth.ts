@@ -22,11 +22,28 @@ async function requireAuth(req: Request, res: Response, next: NextFunction): Pro
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     const supabase = getSupabase();
-    const { data: user, error } = await supabase
+    let user: any = null;
+    let error: any = null;
+
+    const withTutorial = await supabase
       .from('users')
-      .select('id, name, email, role, created_at')
+      .select('id, name, email, role, has_seen_tinder_do_fluxo_tutorial, created_at')
       .eq('id', decoded.id)
       .single();
+
+    user = withTutorial.data;
+    error = withTutorial.error;
+
+    // Fallback para ambientes em que a coluna do tutorial ainda não existe.
+    if (error && String(error.message || '').includes('has_seen_tinder_do_fluxo_tutorial')) {
+      const basicUser = await supabase
+        .from('users')
+        .select('id, name, email, role, created_at')
+        .eq('id', decoded.id)
+        .single();
+      user = basicUser.data ? { ...basicUser.data, has_seen_tinder_do_fluxo_tutorial: false } : null;
+      error = basicUser.error;
+    }
 
     if (error || !user) {
       res.status(401).json({ error: 'Usuário não encontrado' });

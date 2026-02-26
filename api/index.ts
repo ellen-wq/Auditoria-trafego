@@ -29,11 +29,25 @@ async function ensureDbInit(): Promise<void> {
 export default function handler(req: Request, res: Response): void {
   void (async () => {
     try {
-      if (req.url === '/api/health' || req.url === '/health') {
+      const requestPath = (() => {
+        try {
+          return new URL(req.url || '/', 'http://localhost').pathname;
+        } catch {
+          return req.url || '/';
+        }
+      })();
+
+      if (requestPath === '/api/health' || requestPath === '/health') {
         res.status(200).json({ ok: true });
         return;
       }
-      await ensureDbInit();
+
+      // Evita quebrar render de páginas estáticas quando há falha de DB/env.
+      // Inicializamos conexão apenas quando a rota é realmente de API.
+      if (requestPath.startsWith('/api/')) {
+        await ensureDbInit();
+      }
+
       const app = await getAppInstance();
       app(req, res);
     } catch (err: unknown) {

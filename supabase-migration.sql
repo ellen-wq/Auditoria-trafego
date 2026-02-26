@@ -115,6 +115,162 @@ BEGIN
 END;
 $$;
 
+-- ============================================================
+-- Tinder do Fluxo (módulo)
+-- ============================================================
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS has_seen_tinder_do_fluxo_tutorial BOOLEAN DEFAULT FALSE;
+
+-- Garante novo role PRESTADOR
+DO $$
+BEGIN
+  ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+  ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('MENTORADO', 'LIDERANCA', 'PRESTADOR'));
+EXCEPTION WHEN duplicate_object THEN
+  NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS tinder_mentor_profiles (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  photo_url TEXT DEFAULT '',
+  city TEXT DEFAULT '',
+  instagram TEXT DEFAULT '',
+  niche TEXT DEFAULT '',
+  nivel_fluxo TEXT DEFAULT '',
+  bio TEXT DEFAULT '',
+  whatsapp TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tinder_expert_profiles (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  is_expert BOOLEAN DEFAULT FALSE,
+  is_coproducer BOOLEAN DEFAULT FALSE,
+  goal_text TEXT DEFAULT '',
+  search_bio TEXT DEFAULT '',
+  preferences_json JSONB DEFAULT '{}'::JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tinder_service_profiles (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  photo_url TEXT DEFAULT '',
+  city TEXT DEFAULT '',
+  instagram TEXT DEFAULT '',
+  whatsapp TEXT DEFAULT '',
+  specialty TEXT DEFAULT '',
+  certification TEXT DEFAULT '',
+  portfolio TEXT DEFAULT '',
+  experience TEXT DEFAULT '',
+  bio TEXT DEFAULT '',
+  rating_avg REAL DEFAULT 0,
+  rating_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tinder_interests (
+  id SERIAL PRIMARY KEY,
+  from_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (from_user_id, to_user_id, type)
+);
+
+CREATE TABLE IF NOT EXISTS tinder_favorites (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (user_id, target_user_id, type)
+);
+
+CREATE TABLE IF NOT EXISTS tinder_matches (
+  id SERIAL PRIMARY KEY,
+  user1_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user2_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (user1_id, user2_id, type)
+);
+
+CREATE TABLE IF NOT EXISTS tinder_reviews (
+  id SERIAL PRIMARY KEY,
+  reviewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  service_profile_id INTEGER NOT NULL REFERENCES tinder_service_profiles(id) ON DELETE CASCADE,
+  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tinder_jobs (
+  id SERIAL PRIMARY KEY,
+  creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  specialty TEXT DEFAULT '',
+  model TEXT DEFAULT '',
+  value BIGINT,
+  deadline DATE,
+  location TEXT DEFAULT '',
+  status TEXT DEFAULT 'OPEN',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tinder_applications (
+  id SERIAL PRIMARY KEY,
+  job_id INTEGER NOT NULL REFERENCES tinder_jobs(id) ON DELETE CASCADE,
+  candidate_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  message TEXT DEFAULT '',
+  portfolio_link TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (job_id, candidate_id)
+);
+
+CREATE TABLE IF NOT EXISTS tinder_partnerships (
+  id SERIAL PRIMARY KEY,
+  match_id INTEGER NOT NULL REFERENCES tinder_matches(id) ON DELETE CASCADE,
+  started_at TIMESTAMPTZ,
+  status TEXT DEFAULT 'NAO_INICIOU',
+  notes TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tinder_notifications (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  reference_id INTEGER,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tinder_do_fluxo_logs (
+  id SERIAL PRIMARY KEY,
+  actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  meta JSONB DEFAULT '{}'::JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tinder_interests_from ON tinder_interests(from_user_id);
+CREATE INDEX IF NOT EXISTS idx_tinder_interests_to ON tinder_interests(to_user_id);
+CREATE INDEX IF NOT EXISTS idx_tinder_matches_user1 ON tinder_matches(user1_id);
+CREATE INDEX IF NOT EXISTS idx_tinder_matches_user2 ON tinder_matches(user2_id);
+CREATE INDEX IF NOT EXISTS idx_tinder_jobs_creator ON tinder_jobs(creator_id);
+CREATE INDEX IF NOT EXISTS idx_tinder_jobs_status ON tinder_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_tinder_apps_job ON tinder_applications(job_id);
+CREATE INDEX IF NOT EXISTS idx_tinder_logs_created ON tinder_do_fluxo_logs(created_at DESC);
+
 -- Função: Ranking de CTR
 CREATE OR REPLACE FUNCTION admin_ctr_ranking(
   p_from TEXT DEFAULT NULL,

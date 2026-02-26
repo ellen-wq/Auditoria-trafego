@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { api } from '../services/api';
 import type { User } from '../services/api';
@@ -14,7 +14,8 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children, breadcrumbs = [] }: AppLayoutProps) {
-  const user = api.getUser() as User;
+  const user = api.getUser() as User | null;
+  if (!user) return <Navigate to="/login" replace />;
 
   return (
     <div className="layout">
