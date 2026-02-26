@@ -140,6 +140,13 @@ router.get('/expert-profile', async (req: Request, res: Response): Promise<void>
 
 router.post('/expert-profile', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  
+  // Validação: prestador não pode ser expert/coprodutor
+  if (req.user!.role === 'PRESTADOR') {
+    res.status(403).json({ error: 'Prestadores de serviço não podem ser experts/coprodutores.' });
+    return;
+  }
+  
   const supabase = getSupabase();
   const payload = {
     user_id: req.user!.id,
@@ -181,7 +188,20 @@ router.get('/service-profile', async (req: Request, res: Response): Promise<void
 
 router.post('/service-profile', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['PRESTADOR', 'LIDERANCA'])) return;
+  
+  // Validação: expert/coprodutor não pode ser prestador
   const supabase = getSupabase();
+  const { data: expertProfile } = await supabase
+    .from('tinder_expert_profiles')
+    .select('is_expert, is_coproducer')
+    .eq('user_id', req.user!.id)
+    .maybeSingle();
+  
+  if (expertProfile && (expertProfile.is_expert || expertProfile.is_coproducer)) {
+    res.status(403).json({ error: 'Experts/coprodutores não podem ser prestadores de serviço.' });
+    return;
+  }
+  
   const payload = {
     user_id: req.user!.id,
     photo_url: cleanString(req.body.photoUrl, 1000),
@@ -534,13 +554,26 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
 
 router.post('/jobs', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  
+  // Verificar se o usuário é expert/coprodutor
+  const supabase = getSupabase();
+  const { data: expertProfile } = await supabase
+    .from('tinder_expert_profiles')
+    .select('is_expert, is_coproducer')
+    .eq('user_id', req.user!.id)
+    .maybeSingle();
+  
+  if (!expertProfile || (!expertProfile.is_expert && !expertProfile.is_coproducer)) {
+    res.status(403).json({ error: 'Apenas experts e coprodutores podem criar vagas.' });
+    return;
+  }
+  
   const title = cleanString(req.body.title, 180);
   const description = cleanString(req.body.description, 5000);
   if (!title || !description) {
     res.status(400).json({ error: 'Título e descrição são obrigatórios.' });
     return;
   }
-  const supabase = getSupabase();
   const payload = {
     creator_id: req.user!.id,
     title,

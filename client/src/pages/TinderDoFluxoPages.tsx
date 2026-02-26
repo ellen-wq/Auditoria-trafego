@@ -125,14 +125,21 @@ export function TinderJobCreatePage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ title: '', description: '', specialty: '', model: '', location: '' });
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
     try {
       const res = await api.post<{ job: { id: number } }>('/api/tinder-do-fluxo/jobs', form);
-      navigate(`/tinder-do-fluxo/vagas/${res.job.id}`);
+      // Navegar para a lista de vagas e recarregar
+      navigate('/tinder-do-fluxo/vagas', { replace: true });
+      // Forçar reload da página para atualizar a lista
+      window.location.reload();
     } catch (err: any) {
       setError(err.message || 'Erro ao criar vaga.');
+      setIsSubmitting(false);
     }
   };
   return (
@@ -144,7 +151,9 @@ export function TinderJobCreatePage() {
         <div className="form-group"><label>Modelo</label><input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} /></div>
         <div className="form-group"><label>Local</label><input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div>
         {error && <div className="alert alert-error visible">{error}</div>}
-        <button className="btn btn-primary" type="submit">Salvar vaga</button>
+        <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Criando vaga...' : 'Salvar vaga'}
+        </button>
       </form>
     </TinderDoFluxoPageShell>
   );
@@ -219,35 +228,125 @@ export function TinderFavoritosPage() {
 }
 
 export function TinderPerfilPage() {
-  const [form, setForm] = useState({ city: '', instagram: '', niche: '', nivelFluxo: '', bio: '', whatsapp: '' });
+  const [form, setForm] = useState({ 
+    city: '', 
+    instagram: '', 
+    niche: '', 
+    nivelFluxo: '', 
+    bio: '', 
+    phoneCountryCode: '+55', 
+    phoneAreaCode: '', 
+    phoneNumber: '' 
+  });
   const [saved, setSaved] = useState(false);
+  
+  const nivelOptions = ['Newbie', 'Soft', 'Hard', 'Pro', 'Pro+', 'Master'];
+  const countryCodes = [
+    { code: '+55', flag: '🇧🇷', label: 'Brasil (+55)' },
+    { code: '+1', flag: '🇺🇸', label: 'EUA/Canadá (+1)' },
+    { code: '+351', flag: '🇵🇹', label: 'Portugal (+351)' }
+  ];
+
   useEffect(() => {
     api.get<{ profile: any }>('/api/tinder-do-fluxo/mentor-profile').then((r) => {
       if (!r.profile) return;
+      const whatsapp = r.profile.whatsapp || '';
+      // Parse existing whatsapp format: +55 11 90000-0000
+      const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
       setForm({
         city: r.profile.city || '',
         instagram: r.profile.instagram || '',
         niche: r.profile.niche || '',
         nivelFluxo: r.profile.nivel_fluxo || '',
         bio: r.profile.bio || '',
-        whatsapp: r.profile.whatsapp || ''
+        phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
+        phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
+        phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : ''
       });
     });
   }, []);
+
+  const formatPhoneNumber = (value: string): string => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 4) return numbers;
+    if (numbers.length <= 8) return `${numbers.slice(0, 4)}-${numbers.slice(4)}`;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 9)}`;
+  };
+
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    await api.post('/api/tinder-do-fluxo/mentor-profile', form);
+    const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
+    await api.post('/api/tinder-do-fluxo/mentor-profile', {
+      ...form,
+      whatsapp
+    });
     setSaved(true);
   };
+
   return (
     <TinderDoFluxoPageShell title="Meu Perfil">
       <form className="card" onSubmit={save}>
-        <div className="form-group"><label>Cidade</label><input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
-        <div className="form-group"><label>Instagram</label><input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} /></div>
-        <div className="form-group"><label>Nicho</label><input value={form.niche} onChange={(e) => setForm({ ...form, niche: e.target.value })} /></div>
-        <div className="form-group"><label>Nível Fluxo</label><input value={form.nivelFluxo} onChange={(e) => setForm({ ...form, nivelFluxo: e.target.value })} /></div>
-        <div className="form-group"><label>Bio</label><textarea rows={4} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} /></div>
-        <div className="form-group"><label>WhatsApp</label><input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} /></div>
+        <div className="form-group">
+          <label>Cidade</label>
+          <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>Instagram</label>
+          <input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>Nicho</label>
+          <input value={form.niche} onChange={(e) => setForm({ ...form, niche: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>Nível Fluxo</label>
+          <select value={form.nivelFluxo} onChange={(e) => setForm({ ...form, nivelFluxo: e.target.value })}>
+            <option value="">Selecione...</option>
+            {nivelOptions.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Bio</label>
+          <textarea rows={4} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>WhatsApp</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select 
+              value={form.phoneCountryCode} 
+              onChange={(e) => setForm({ ...form, phoneCountryCode: e.target.value })}
+              style={{ width: '140px' }}
+            >
+              {countryCodes.map(cc => (
+                <option key={cc.code} value={cc.code}>{cc.flag} {cc.code}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder="DDD"
+              value={form.phoneAreaCode}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+                setForm({ ...form, phoneAreaCode: val });
+              }}
+              style={{ width: '80px' }}
+              maxLength={2}
+            />
+            <input
+              type="text"
+              placeholder="Número"
+              value={formatPhoneNumber(form.phoneNumber)}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 9);
+                setForm({ ...form, phoneNumber: val });
+              }}
+              style={{ flex: 1 }}
+              maxLength={10}
+            />
+          </div>
+        </div>
         <button className="btn btn-primary" type="submit">Salvar perfil</button>
         {saved && <p style={{ marginTop: 8, color: 'var(--green)' }}>Perfil salvo com sucesso.</p>}
       </form>
@@ -289,15 +388,38 @@ export function TinderPerfilExpertPage() {
 }
 
 export function TinderMeuPerfilPrestadorPage() {
-  const [form, setForm] = useState({ city: '', instagram: '', whatsapp: '', specialty: '', certification: '', portfolio: '', experience: '', bio: '' });
+  const [form, setForm] = useState({ 
+    city: '', 
+    instagram: '', 
+    phoneCountryCode: '+55', 
+    phoneAreaCode: '', 
+    phoneNumber: '', 
+    specialty: '', 
+    certification: '', 
+    portfolio: '', 
+    experience: '', 
+    bio: '' 
+  });
   const [saved, setSaved] = useState(false);
+  
+  const specialtyOptions = ['COPY', 'TRAFEGO', 'AUTOMACAO'];
+  const countryCodes = [
+    { code: '+55', flag: '🇧🇷', label: 'Brasil (+55)' },
+    { code: '+1', flag: '🇺🇸', label: 'EUA/Canadá (+1)' },
+    { code: '+351', flag: '🇵🇹', label: 'Portugal (+351)' }
+  ];
+
   useEffect(() => {
     api.get<{ profile: any }>('/api/tinder-do-fluxo/service-profile').then((r) => {
       if (!r.profile) return;
+      const whatsapp = r.profile.whatsapp || '';
+      const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
       setForm({
         city: r.profile.city || '',
         instagram: r.profile.instagram || '',
-        whatsapp: r.profile.whatsapp || '',
+        phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
+        phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
+        phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : '',
         specialty: r.profile.specialty || '',
         certification: r.profile.certification || '',
         portfolio: r.profile.portfolio || '',
@@ -306,17 +428,80 @@ export function TinderMeuPerfilPrestadorPage() {
       });
     });
   }, []);
+
+  const formatPhoneNumber = (value: string): string => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 4) return numbers;
+    if (numbers.length <= 8) return `${numbers.slice(0, 4)}-${numbers.slice(4)}`;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 9)}`;
+  };
+
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    await api.post('/api/tinder-do-fluxo/service-profile', form);
+    const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
+    await api.post('/api/tinder-do-fluxo/service-profile', {
+      ...form,
+      whatsapp
+    });
     setSaved(true);
   };
+
   return (
     <TinderDoFluxoPageShell title="Meu Perfil (Prestador)">
       <form className="card" onSubmit={save}>
-        <div className="form-group"><label>Cidade</label><input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
-        <div className="form-group"><label>Instagram</label><input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} /></div>
-        <div className="form-group"><label>WhatsApp</label><input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} /></div>
+        <div className="form-group">
+          <label>Cidade</label>
+          <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>Instagram</label>
+          <input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>WhatsApp</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select 
+              value={form.phoneCountryCode} 
+              onChange={(e) => setForm({ ...form, phoneCountryCode: e.target.value })}
+              style={{ width: '140px' }}
+            >
+              {countryCodes.map(cc => (
+                <option key={cc.code} value={cc.code}>{cc.flag} {cc.code}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder="DDD"
+              value={form.phoneAreaCode}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+                setForm({ ...form, phoneAreaCode: val });
+              }}
+              style={{ width: '80px' }}
+              maxLength={2}
+            />
+            <input
+              type="text"
+              placeholder="Número"
+              value={formatPhoneNumber(form.phoneNumber)}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 9);
+                setForm({ ...form, phoneNumber: val });
+              }}
+              style={{ flex: 1 }}
+              maxLength={10}
+            />
+          </div>
+        </div>
+        <div className="form-group">
+          <label>Especialidade</label>
+          <select value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })}>
+            <option value="">Selecione...</option>
+            {specialtyOptions.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </div>
         <div className="form-group"><label>Especialidade</label><input value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })} /></div>
         <div className="form-group"><label>Certificação</label><input value={form.certification} onChange={(e) => setForm({ ...form, certification: e.target.value })} /></div>
         <div className="form-group"><label>Portfólio</label><input value={form.portfolio} onChange={(e) => setForm({ ...form, portfolio: e.target.value })} /></div>

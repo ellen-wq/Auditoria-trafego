@@ -3,6 +3,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RecoverPasswordPage from './pages/RecoverPasswordPage';
 import RegisterPage from './pages/RegisterPage';
+import RegisterPrestadorPage from './pages/RegisterPrestadorPage';
 import AuditoriaUploadPage from './pages/AuditoriaUploadPage';
 import MetaAdsConnectPage from './pages/MetaAdsConnectPage';
 import AuditoriaResultadoPage from './pages/AuditoriaResultadoPage';
@@ -48,6 +49,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/recuperar-senha" element={<RecoverPasswordPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/register/prestador" element={<RegisterPrestadorPage />} />
       <Route path="/index.html" element={<Navigate to="/login" replace />} />
       <Route path="/login.html" element={<Navigate to="/login" replace />} />
       <Route path="/register.html" element={<Navigate to="/register" replace />} />
