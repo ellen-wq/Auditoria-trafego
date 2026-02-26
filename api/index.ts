@@ -54,20 +54,41 @@ async function ensureDbInit(): Promise<void> {
 export default function handler(req: Request, res: Response): void {
   void (async () => {
     try {
+      // Health check endpoint
       if (req.url === '/api/health' || req.url === '/health') {
-        res.status(200).json({ ok: true });
+        res.status(200).json({ ok: true, env: !!process.env.SUPABASE_URL });
         return;
       }
+
+      // Debug endpoint
+      if (req.url === '/api/debug') {
+        const cwd = process.cwd();
+        const fs = await import('fs');
+        const path = await import('path');
+        const distExists = fs.existsSync(path.join(cwd, 'dist', 'app.js'));
+        const srcExists = fs.existsSync(path.join(cwd, 'src', 'app.ts'));
+        res.status(200).json({
+          cwd,
+          distExists,
+          srcExists,
+          hasSupabaseUrl: !!process.env.SUPABASE_URL,
+          hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+          nodeEnv: process.env.NODE_ENV
+        });
+        return;
+      }
+
       await ensureDbInit();
       const app = await getAppInstance();
       app(req, res);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       const stack = err instanceof Error ? err.stack : undefined;
-      console.error('Handler error:', message, stack);
+      console.error('Handler error:', message);
+      console.error('Stack:', stack);
       res.status(500).json({ 
         error: 'Erro ao iniciar aplicação: ' + message,
-        stack: process.env.NODE_ENV === 'development' ? stack : undefined
+        details: process.env.NODE_ENV === 'development' ? stack : undefined
       });
     }
   })();
