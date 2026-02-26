@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function homeByRole(role: string): string {
     if (role === 'LIDERANCA') return '/admin/dashboard';
@@ -21,24 +22,59 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError('');
+    
+    // Previne múltiplos submits simultâneos
+    if (isSubmitting) {
+      console.log('[Register] Submit já em andamento, ignorando...');
+      return;
+    }
 
+    setError('');
+    setIsSubmitting(true);
+
+    // Validações locais
     if (password !== password2) {
       setError('As senhas não coincidem.');
+      setIsSubmitting(false);
       return;
     }
 
     if (!acceptTerms) {
       setError('Você precisa aceitar os Termos de Uso para continuar.');
+      setIsSubmitting(false);
       return;
     }
 
+    // Prepara payload
+    const payload = { name: name.trim(), email: email.toLowerCase().trim(), password };
+    console.log('[Register] Payload sendo enviado:', { ...payload, password: '***' });
+
     try {
-      const data = await api.post('/api/auth/register', { name, email, password });
-      api.setAuth(data.token, data.user);
-      navigate(homeByRole(data.user.role), { replace: true });
+      console.log('[Register] Chamando API /api/auth/register...');
+      const data = await api.post('/api/auth/register', payload);
+      console.log('[Register] Resposta da API:', { user: data.user, hasToken: !!data.token });
+      
+      if (data.token && data.user) {
+        api.setAuth(data.token, data.user);
+        console.log('[Register] Autenticação configurada, navegando para:', homeByRole(data.user.role));
+        // Reset form antes de navegar
+        setName('');
+        setEmail('');
+        setPassword('');
+        setPassword2('');
+        setAcceptTerms(false);
+        navigate(homeByRole(data.user.role), { replace: true });
+      } else {
+        console.error('[Register] Resposta inválida da API:', data);
+        setError('Resposta inválida do servidor.');
+        setIsSubmitting(false);
+      }
     } catch (err: any) {
-      setError(err.message || 'Erro ao criar conta.');
+      console.error('[Register] Erro ao criar conta:', err);
+      const errorMessage = err.message || 'Erro ao criar conta.';
+      console.error('[Register] Mensagem de erro:', errorMessage);
+      setError(errorMessage);
+      setIsSubmitting(false);
     }
   }
 
@@ -162,7 +198,9 @@ export default function RegisterPage() {
             </label>
           </div>
 
-          <button type="submit" className="btn btn-primary">Criar conta</button>
+          <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+            {isSubmitting ? 'Criando conta...' : 'Criar conta'}
+          </button>
         </form>
 
         {showTerms && (

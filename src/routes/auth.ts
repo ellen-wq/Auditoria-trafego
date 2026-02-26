@@ -11,49 +11,71 @@ const LIDERANCA_EMAILS = ['ellen@vtsd.com.br', 'fernanda@vtsd.com.br'];
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password } = req.body;
+    console.log('[Register API] Recebido:', { name, email: email?.toLowerCase()?.trim(), hasPassword: !!password });
+    
     if (!name || !email || !password) {
+      console.log('[Register API] Validação falhou: campos obrigatórios faltando');
       res.status(400).json({ error: 'Nome, email e senha são obrigatórios.' });
       return;
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedName = name.trim();
+    
+    console.log('[Register API] Verificando se email já existe:', normalizedEmail);
     const supabase = getSupabase();
-    const { data: existing } = await supabase
+    const { data: existing, error: checkError } = await supabase
       .from('users')
-      .select('id')
-      .eq('email', email.toLowerCase().trim())
+      .select('id, email')
+      .eq('email', normalizedEmail)
       .maybeSingle();
 
+    if (checkError) {
+      console.error('[Register API] Erro ao verificar email existente:', checkError);
+    }
+
     if (existing) {
+      console.log('[Register API] Email já cadastrado:', normalizedEmail, 'ID:', existing.id);
       res.status(409).json({ error: 'Email já cadastrado.' });
       return;
     }
 
-    const role = LIDERANCA_EMAILS.includes(email.toLowerCase().trim()) ? 'LIDERANCA' : 'MENTORADO';
+    const role = LIDERANCA_EMAILS.includes(normalizedEmail) ? 'LIDERANCA' : 'MENTORADO';
+    console.log('[Register API] Criando usuário com role:', role);
     const hash = bcrypt.hashSync(password, 10);
 
     const { data: newUser, error } = await supabase
       .from('users')
       .insert({
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
+        name: normalizedName,
+        email: normalizedEmail,
         password_hash: hash,
         role
       })
       .select('id, name, email, role, has_seen_tinder_do_fluxo_tutorial, created_at')
       .single();
 
-    if (error || !newUser) {
+    if (error) {
+      console.error('[Register API] Erro ao inserir usuário:', error);
+      res.status(500).json({ error: 'Erro ao criar usuário: ' + error.message });
+      return;
+    }
+
+    if (!newUser) {
+      console.error('[Register API] Usuário não retornado após inserção');
       res.status(500).json({ error: 'Erro ao criar usuário.' });
       return;
     }
 
+    console.log('[Register API] Usuário criado com sucesso:', { id: newUser.id, email: newUser.email, role: newUser.role });
     const user: SafeUser = newUser as SafeUser;
     const token = generateToken(user);
 
     res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
+    console.log('[Register API] Token gerado, enviando resposta');
     res.json({ user, token });
   } catch (err) {
-    console.error('Register error:', err);
+    console.error('[Register API] Erro não tratado:', err);
     res.status(500).json({ error: 'Erro interno.' });
   }
 });
