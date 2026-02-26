@@ -78,7 +78,9 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
       { name: 'Ana Carolina Copywriter', email: 'ana.carolina.tinder@fluxo.fake', password: '123456', role: 'PRESTADOR' },
       { name: 'Rafael Dev de Funis', email: 'rafael.dev.tinder@fluxo.fake', password: '123456', role: 'PRESTADOR' },
       // Perfil fake de teste
-      { name: 'Fernanda Brier', email: 'fernanda.brier.tinder@fluxo.fake', password: '123456', role: 'MENTORADO' }
+      { name: 'Fernanda Brier', email: 'fernanda.brier.tinder@fluxo.fake', password: '123456', role: 'MENTORADO' },
+      // Perfil fake para teste de layout
+      { name: 'Teste Layout', email: 'teste.layout@fluxo.fake', password: '123456', role: 'MENTORADO' }
     ];
 
     const tinderUsersMap: Map<string, number> = new Map();
@@ -119,7 +121,8 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
     const comunidadeProfiles = [
       { name: 'Mariana Alves', city: 'Belo Horizonte - MG', instagram: '@mariana.socialmediafake', niche: 'Social Media para Experts', bio: 'Transformo conteúdo em vendas todos os dias. +120 lançamentos atendidos. Amo dashboards, testes rápidos e café.', nivel: 'HARD' },
       { name: 'Juliana Rocha Santos', city: 'Curitiba - PR', instagram: '@copy.julianarochafake', niche: 'Copy para funil perpétuo low ticket', bio: 'Copy direta ao ponto para páginas, anúncios e e-mails. Foco total em conversão e escala previsível.', nivel: 'PRO' },
-      { name: 'Camila Freitas', city: 'Recife - PE', instagram: '@camilacriativosmeta', niche: 'Design de criativos para Meta Ads', bio: 'Especialista em criativos que aumentam CTR e reduzem CPA. Disponível para projetos fixos e freelas.', nivel: 'SOFT' }
+      { name: 'Camila Freitas', city: 'Recife - PE', instagram: '@camilacriativosmeta', niche: 'Design de criativos para Meta Ads', bio: 'Especialista em criativos que aumentam CTR e reduzem CPA. Disponível para projetos fixos e freelas.', nivel: 'SOFT' },
+      { name: 'Teste Layout', city: 'São Paulo - SP', instagram: '@fake', niche: 'Nicho fake', bio: 'Bio fake para teste de layout em todas as telas', nivel: 'PRO' }
     ];
 
     for (const profile of comunidadeProfiles) {
@@ -149,7 +152,8 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
     const expertProfiles = [
       { name: 'Renata Souza', city: 'São Paulo - SP', instagram: '@renata.esteticafake', niche: 'Estética avançada', bio: 'Ensino esteticistas a faturarem 20k+ com procedimentos premium. Produto perpétuo validado e escalando.', nivel: 'PRO' },
       { name: 'Patrícia Lima', city: 'Rio de Janeiro - RJ', instagram: '@patricia.englishcoursefake', niche: 'Inglês para adultos do zero à conversação', bio: 'Método próprio com mais de 3.000 alunas. Estruturando funil evergreen e buscando time para escalar.', nivel: 'HARD' },
-      { name: 'Fernanda Martins', city: 'Porto Alegre - RS', instagram: '@confeitaria.fernandafake', niche: 'Confeitaria lucrativa', bio: 'Ajudo confeiteiras a viverem da confeitaria em casa com vendas todos os dias através do digital.', nivel: 'SOFT' }
+      { name: 'Fernanda Martins', city: 'Porto Alegre - RS', instagram: '@confeitaria.fernandafake', niche: 'Confeitaria lucrativa', bio: 'Ajudo confeiteiras a viverem da confeitaria em casa com vendas todos os dias através do digital.', nivel: 'SOFT' },
+      { name: 'Teste Layout', city: 'São Paulo - SP', instagram: '@fake', niche: 'Nicho fake', bio: 'Bio fake para teste de layout em todas as telas', nivel: 'PRO' }
     ];
 
     for (const profile of expertProfiles) {
