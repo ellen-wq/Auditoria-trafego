@@ -17,7 +17,7 @@ async function ensureDbInit(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
       const dbModule = await import('../src/db/database');
-      await dbModule.initDb({ seedUsers: false, ensureStorageBucket: false });
+      await dbModule.initDb({ seedUsers: true, ensureStorageBucket: false });
     })().catch((err) => {
       initPromise = null;
       throw err;
