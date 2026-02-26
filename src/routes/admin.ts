@@ -12,16 +12,24 @@ router.get('/summary', async (req: Request, res: Response): Promise<void> => {
     const supabase = getSupabase();
     const { from, to, product_type } = req.query as { from?: string; to?: string; product_type?: string };
 
-    const { count: totalUsers } = await supabase
+    const { count: totalUsers, error: usersError } = await supabase
       .from('user_roles')
       .select('user_id', { count: 'exact', head: true })
       .eq('role', 'MENTORADO');
+    
+    if (usersError) {
+      console.error('[Admin Summary] Erro ao buscar user_roles:', usersError);
+    }
 
     let auditsQuery = supabase.from('audits').select('id', { count: 'exact', head: true });
     if (from) auditsQuery = auditsQuery.gte('created_at', from);
     if (to) auditsQuery = auditsQuery.lte('created_at', to);
     if (product_type) auditsQuery = auditsQuery.eq('product_type', product_type);
-    const { count: totalAudits } = await auditsQuery;
+    const { count: totalAudits, error: auditsError } = await auditsQuery;
+    
+    if (auditsError) {
+      console.error('[Admin Summary] Erro ao buscar audits:', auditsError);
+    }
 
     let campaignsQuery = supabase
       .from('campaigns')
@@ -29,7 +37,11 @@ router.get('/summary', async (req: Request, res: Response): Promise<void> => {
     if (from) campaignsQuery = campaignsQuery.gte('audits.created_at', from);
     if (to) campaignsQuery = campaignsQuery.lte('audits.created_at', to);
     if (product_type) campaignsQuery = campaignsQuery.eq('audits.product_type', product_type);
-    const { data: allCampaigns } = await campaignsQuery;
+    const { data: allCampaigns, error: campaignsError } = await campaignsQuery;
+    
+    if (campaignsError) {
+      console.error('[Admin Summary] Erro ao buscar campaigns:', campaignsError);
+    }
 
     const campaigns = allCampaigns || [];
     let s1 = 0, s2 = 0, s3 = 0, totalSpend = 0, totalPurchases = 0, totalCpa = 0, totalCtr = 0;

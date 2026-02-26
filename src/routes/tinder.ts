@@ -1046,68 +1046,88 @@ router.post('/admin/create-tables', async (req: Request, res: Response): Promise
 // Admin
 router.get('/admin/dashboard', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['LIDERANCA'])) return;
-  const supabase = getSupabase();
-  const [
-    mentorProfiles,
-    serviceProfiles,
-    interests,
-    matches,
-    jobs,
-    applications,
-    reviews
-  ] = await Promise.all([
-    supabase.from('tinder_mentor_profiles').select('id', { count: 'exact', head: true }),
-    supabase.from('tinder_service_profiles').select('id', { count: 'exact', head: true }),
-    supabase.from('tinder_interests').select('id', { count: 'exact', head: true }),
-    supabase.from('tinder_matches').select('id', { count: 'exact', head: true }),
-    supabase.from('tinder_jobs').select('id,status'),
-    supabase.from('tinder_applications').select('id', { count: 'exact', head: true }),
-    supabase.from('tinder_reviews').select('id', { count: 'exact', head: true })
-  ]);
+  try {
+    const supabase = getSupabase();
+    const [
+      mentorProfiles,
+      serviceProfiles,
+      interests,
+      matches,
+      jobs,
+      applications,
+      reviews
+    ] = await Promise.all([
+      supabase.from('tinder_mentor_profiles').select('id', { count: 'exact', head: true }),
+      supabase.from('tinder_service_profiles').select('id', { count: 'exact', head: true }),
+      supabase.from('tinder_interests').select('id', { count: 'exact', head: true }),
+      supabase.from('tinder_matches').select('id', { count: 'exact', head: true }),
+      supabase.from('tinder_jobs').select('id,status'),
+      supabase.from('tinder_applications').select('id', { count: 'exact', head: true }),
+      supabase.from('tinder_reviews').select('id', { count: 'exact', head: true })
+    ]);
 
-  const jobRows = jobs.data || [];
-  res.json({
-    kpis: {
-      mentorProfiles: mentorProfiles.count || 0,
-      serviceProfiles: serviceProfiles.count || 0,
-      interests: interests.count || 0,
-      matches: matches.count || 0,
-      jobsOpen: jobRows.filter((j: any) => j.status === 'OPEN').length,
-      jobsClosed: jobRows.filter((j: any) => j.status === 'CLOSED').length,
-      applications: applications.count || 0,
-      reviews: reviews.count || 0
-    }
-  });
+    // Log erros para debug
+    if (mentorProfiles.error) console.error('[Admin Dashboard] Erro mentorProfiles:', mentorProfiles.error);
+    if (serviceProfiles.error) console.error('[Admin Dashboard] Erro serviceProfiles:', serviceProfiles.error);
+    if (interests.error) console.error('[Admin Dashboard] Erro interests:', interests.error);
+    if (matches.error) console.error('[Admin Dashboard] Erro matches:', matches.error);
+    if (jobs.error) console.error('[Admin Dashboard] Erro jobs:', jobs.error);
+    if (applications.error) console.error('[Admin Dashboard] Erro applications:', applications.error);
+    if (reviews.error) console.error('[Admin Dashboard] Erro reviews:', reviews.error);
+
+    const jobRows = jobs.data || [];
+    res.json({
+      kpis: {
+        mentorProfiles: mentorProfiles.count || 0,
+        serviceProfiles: serviceProfiles.count || 0,
+        interests: interests.count || 0,
+        matches: matches.count || 0,
+        jobsOpen: jobRows.filter((j: any) => j.status === 'OPEN').length,
+        jobsClosed: jobRows.filter((j: any) => j.status === 'CLOSED').length,
+        applications: applications.count || 0,
+        reviews: reviews.count || 0
+      }
+    });
+  } catch (err: any) {
+    console.error('[Admin Dashboard] Erro geral:', err);
+    res.status(500).json({ error: 'Erro ao carregar dashboard.' });
+  }
 });
 
 router.get('/admin/users', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['LIDERANCA'])) return;
-  const q = cleanOptionalString(req.query.q, 120);
-  const role = cleanOptionalString(req.query.role, 20);
-  const supabase = getSupabase();
-  let query = supabase.from('user_roles').select('user_id,name,role,created_at').order('created_at', { ascending: false });
-  if (q) query = query.ilike('name', `%${q}%`);
-  if (role) query = query.eq('role', role);
-  const { data, error } = await query.limit(200);
-  if (error) {
-    res.status(500).json({ error: 'Erro ao listar usuários.' });
-    return;
+  try {
+    const q = cleanOptionalString(req.query.q, 120);
+    const role = cleanOptionalString(req.query.role, 20);
+    const supabase = getSupabase();
+    let query = supabase.from('user_roles').select('user_id,name,role,created_at').order('created_at', { ascending: false });
+    if (q) query = query.ilike('name', `%${q}%`);
+    if (role) query = query.eq('role', role);
+    const { data, error } = await query.limit(200);
+    if (error) {
+      console.error('[Admin Users] Erro ao buscar user_roles:', error);
+      res.status(500).json({ error: 'Erro ao listar usuários.' });
+      return;
+    }
+    
+    // Buscar emails do auth.users
+    const userIds = (data || []).map((u: any) => u.user_id);
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const emailMap = new Map(authUsers?.users?.map((u: any) => [u.id, u.email]) || []);
+    
+    const users = (data || []).map((u: any) => ({
+      id: u.user_id,
+      name: u.name,
+      email: emailMap.get(u.user_id) || '',
+      role: u.role,
+      created_at: u.created_at
+    }));
+    
+    res.json({ users });
+  } catch (err: any) {
+    console.error('[Admin Users] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
   }
-  
-  // Buscar emails do auth.users
-  const userIds = (data || []).map((u: any) => u.user_id);
-  const { data: authUsers } = await supabase.auth.admin.listUsers();
-  const emailMap = new Map(authUsers?.users?.map((u: any) => [u.id, u.email]) || []);
-  
-  const users = (data || []).map((u: any) => ({
-    id: u.user_id,
-    name: u.name,
-    email: emailMap.get(u.user_id) || '',
-    role: u.role,
-    created_at: u.created_at
-  }));
-  
-  res.json({ users });
 });
 
 router.post('/admin/ban', async (req: Request, res: Response): Promise<void> => {
@@ -1126,13 +1146,19 @@ router.post('/admin/ban', async (req: Request, res: Response): Promise<void> => 
 
 router.get('/admin/jobs', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['LIDERANCA'])) return;
-  const supabase = getSupabase();
-  const { data, error } = await supabase.from('tinder_jobs').select('*').order('created_at', { ascending: false }).limit(300);
-  if (error) {
-    res.status(500).json({ error: 'Erro ao listar vagas.' });
-    return;
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.from('tinder_jobs').select('*').order('created_at', { ascending: false }).limit(300);
+    if (error) {
+      console.error('[Admin Jobs] Erro:', error);
+      res.status(500).json({ error: 'Erro ao listar vagas.' });
+      return;
+    }
+    res.json({ jobs: data || [] });
+  } catch (err: any) {
+    console.error('[Admin Jobs] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
   }
-  res.json({ jobs: data || [] });
 });
 
 router.post('/admin/jobs/close', async (req: Request, res: Response): Promise<void> => {
@@ -1150,13 +1176,19 @@ router.post('/admin/jobs/close', async (req: Request, res: Response): Promise<vo
 
 router.get('/admin/reviews', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['LIDERANCA'])) return;
-  const supabase = getSupabase();
-  const { data, error } = await supabase.from('tinder_reviews').select('*').order('created_at', { ascending: false }).limit(300);
-  if (error) {
-    res.status(500).json({ error: 'Erro ao listar avaliações.' });
-    return;
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.from('tinder_reviews').select('*').order('created_at', { ascending: false }).limit(300);
+    if (error) {
+      console.error('[Admin Reviews] Erro:', error);
+      res.status(500).json({ error: 'Erro ao listar avaliações.' });
+      return;
+    }
+    res.json({ reviews: data || [] });
+  } catch (err: any) {
+    console.error('[Admin Reviews] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
   }
-  res.json({ reviews: data || [] });
 });
 
 router.delete('/admin/reviews/:id', async (req: Request, res: Response): Promise<void> => {
@@ -1174,17 +1206,23 @@ router.delete('/admin/reviews/:id', async (req: Request, res: Response): Promise
 
 router.get('/admin/logs', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['LIDERANCA'])) return;
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from('tinder_do_fluxo_logs')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(500);
-  if (error) {
-    res.status(500).json({ error: 'Erro ao listar logs.' });
-    return;
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('tinder_do_fluxo_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (error) {
+      console.error('[Admin Logs] Erro:', error);
+      res.status(500).json({ error: 'Erro ao listar logs.' });
+      return;
+    }
+    res.json({ logs: data || [] });
+  } catch (err: any) {
+    console.error('[Admin Logs] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
   }
-  res.json({ logs: data || [] });
 });
 
 export default router;

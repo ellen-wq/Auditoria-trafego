@@ -4,9 +4,18 @@
 -- ============================================================
 
 -- Função auxiliar para verificar se usuário é LIDERANCA
+-- SECURITY DEFINER permite que a função execute com privilégios do criador,
+-- bypassando RLS ao consultar user_roles
 CREATE OR REPLACE FUNCTION is_leadership(user_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
+  -- Se user_uuid é NULL, retornar false
+  IF user_uuid IS NULL THEN
+    RETURN FALSE;
+  END IF;
+  
+  -- Verificar se o usuário é LIDERANCA
+  -- SECURITY DEFINER permite bypassar RLS nesta consulta
   RETURN EXISTS (
     SELECT 1 FROM public.user_roles
     WHERE user_id = user_uuid AND role = 'LIDERANCA'
