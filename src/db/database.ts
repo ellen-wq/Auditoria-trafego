@@ -57,7 +57,13 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
     const bcrypt = await import('bcryptjs');
     const seedData = [
       { name: 'Ellen', email: 'ellen@vtsd.com.br', password: '123', role: 'LIDERANCA' },
-      { name: 'Fernanda', email: 'fernanda@vtsd.com.br', password: '123', role: 'LIDERANCA' }
+      { name: 'Fernanda', email: 'fernanda@vtsd.com.br', password: '123', role: 'LIDERANCA' },
+      // Perfis fake para aparecer na página de Mentorados
+      { name: 'João Silva', email: 'joao.silva@example.com', password: '123', role: 'MENTORADO' },
+      { name: 'Maria Santos', email: 'maria.santos@example.com', password: '123', role: 'MENTORADO' },
+      { name: 'Pedro Oliveira', email: 'pedro.oliveira@example.com', password: '123', role: 'MENTORADO' },
+      { name: 'Ana Costa', email: 'ana.costa@example.com', password: '123', role: 'MENTORADO' },
+      { name: 'Carlos Ferreira', email: 'carlos.ferreira@example.com', password: '123', role: 'MENTORADO' }
     ];
 
     for (const u of seedData) {
