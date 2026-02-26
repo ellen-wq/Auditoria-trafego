@@ -18,23 +18,15 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(express.static(path.join(rootDir, 'public_dist')));
-app.use(express.static(path.join(rootDir, 'public')));
-
+// API routes must come before static files
 app.use('/api/auth', authRoutes);
 app.use('/api/audits', auditRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/creatives', creativesRoutes);
 
-// Serve static files first (CSS, JS, images, etc.)
-app.get(/\.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$/, (req, res, next) => {
-  next();
-});
-
-// API routes
-app.use('/api', (req, res, next) => {
-  next();
-});
+// Serve static files (CSS, JS, images, etc.)
+app.use(express.static(path.join(rootDir, 'public_dist')));
+app.use(express.static(path.join(rootDir, 'public')));
 
 // Serve index.html for all non-API routes (React Router handles routing)
 app.get('*', (req, res) => {
