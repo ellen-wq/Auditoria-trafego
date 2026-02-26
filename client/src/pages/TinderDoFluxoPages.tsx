@@ -255,6 +255,9 @@ export function TinderPerfilPage() {
   });
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   const nivelOptions = ['Newbie', 'Soft', 'Hard', 'Pro', 'Pro+', 'Master'];
   const specialtyOptions = ['COPY', 'TRAFEGO', 'AUTOMACAO'];
@@ -338,13 +341,18 @@ export function TinderPerfilPage() {
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     setSaved(false);
+    setError('');
+    setSuccessMessage('');
     
     try {
       if (isMentorado) {
         // Salvar mentor profile
         const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
-        await api.post('/api/tinder-do-fluxo/mentor-profile', {
+        console.log('[Profile Save] Salvando mentor profile:', { city: form.city, instagram: form.instagram, niche: form.niche });
+        
+        const mentorRes = await api.post('/api/tinder-do-fluxo/mentor-profile', {
           city: form.city,
           instagram: form.instagram,
           niche: form.niche,
@@ -353,18 +361,24 @@ export function TinderPerfilPage() {
           whatsapp
         });
         
+        console.log('[Profile Save] Mentor profile salvo:', mentorRes);
+        
         // Salvar expert profile se selecionado
         if (form.isExpert || form.isCoproducer) {
+          console.log('[Profile Save] Salvando expert profile:', { isExpert: form.isExpert, isCoproducer: form.isCoproducer });
           await api.post('/api/tinder-do-fluxo/expert-profile', {
             isExpert: form.isExpert,
             isCoproducer: form.isCoproducer,
             goalText: form.goalText,
             searchBio: form.searchBio
           });
+          console.log('[Profile Save] Expert profile salvo');
         }
       } else if (isPrestador) {
         // Salvar service profile
         const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
+        console.log('[Profile Save] Salvando service profile:', { city: form.city, specialty: form.specialty });
+        
         await api.post('/api/tinder-do-fluxo/service-profile', {
           city: form.city,
           instagram: form.instagram,
@@ -375,12 +389,79 @@ export function TinderPerfilPage() {
           experience: form.experience,
           bio: form.bio
         });
+        
+        console.log('[Profile Save] Service profile salvo');
       }
       
       setSaved(true);
+      setSuccessMessage('Perfil salvo com sucesso!');
+      
+      // Recarregar dados após salvar
+      setTimeout(async () => {
+        setLoading(true);
+        try {
+          if (isMentorado) {
+            const mentorRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/mentor-profile');
+            if (mentorRes.profile) {
+              const whatsapp = mentorRes.profile.whatsapp || '';
+              const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
+              setForm(prev => ({
+                ...prev,
+                city: mentorRes.profile.city || '',
+                instagram: mentorRes.profile.instagram || '',
+                niche: mentorRes.profile.niche || '',
+                nivelFluxo: mentorRes.profile.nivel_fluxo || '',
+                bio: mentorRes.profile.bio || '',
+                phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
+                phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
+                phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : ''
+              }));
+            }
+            
+            const expertRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/expert-profile');
+            if (expertRes.profile) {
+              setForm(prev => ({
+                ...prev,
+                isExpert: !!expertRes.profile.is_expert,
+                isCoproducer: !!expertRes.profile.is_coproducer,
+                goalText: expertRes.profile.goal_text || '',
+                searchBio: expertRes.profile.search_bio || ''
+              }));
+            }
+          } else if (isPrestador) {
+            const serviceRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/service-profile');
+            if (serviceRes.profile) {
+              const whatsapp = serviceRes.profile.whatsapp || '';
+              const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
+              setForm(prev => ({
+                ...prev,
+                city: serviceRes.profile.city || '',
+                instagram: serviceRes.profile.instagram || '',
+                phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
+                phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
+                phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : '',
+                specialty: serviceRes.profile.specialty || '',
+                certification: serviceRes.profile.certification || '',
+                portfolio: serviceRes.profile.portfolio || '',
+                experience: serviceRes.profile.experience || '',
+                bio: serviceRes.profile.bio || ''
+              }));
+            }
+          }
+        } catch (reloadErr) {
+          console.error('Erro ao recarregar perfil:', reloadErr);
+        } finally {
+          setLoading(false);
+        }
+      }, 500);
+      
     } catch (err: any) {
-      console.error('Erro ao salvar perfil:', err);
-      alert(err.message || 'Erro ao salvar perfil.');
+      console.error('[Profile Save] Erro ao salvar perfil:', err);
+      const errorMessage = err.message || err.response?.data?.error || 'Erro ao salvar perfil. Tente novamente.';
+      setError(errorMessage);
+      setSuccessMessage('');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -545,8 +626,29 @@ export function TinderPerfilPage() {
           </div>
         </div>
         
-        <button className="btn btn-primary" type="submit">Salvar perfil</button>
-        {saved && <p style={{ marginTop: 8, color: 'var(--green)' }}>Perfil salvo com sucesso.</p>}
+        <button className="btn btn-primary" type="submit" disabled={saving}>
+          {saving ? 'Salvando...' : 'Salvar perfil'}
+        </button>
+        
+        {error && (
+          <div className="alert alert-error" style={{ marginTop: 16, display: 'block' }}>
+            {error}
+          </div>
+        )}
+        
+        {successMessage && (
+          <div style={{ 
+            marginTop: 16, 
+            padding: 12, 
+            background: 'var(--green)', 
+            color: 'white', 
+            borderRadius: 'var(--radius)',
+            fontSize: 14,
+            fontWeight: 500
+          }}>
+            ✓ {successMessage}
+          </div>
+        )}
       </form>
     </TinderDoFluxoPageShell>
   );

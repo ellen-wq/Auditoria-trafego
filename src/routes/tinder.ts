@@ -129,16 +129,27 @@ router.post('/mentor-profile', async (req: Request, res: Response): Promise<void
     updated_at: new Date().toISOString()
   };
   
+  console.log('[POST /mentor-profile] Payload:', payload);
   const { data, error } = await supabase
     .from('tinder_mentor_profiles')
     .upsert(payload, { onConflict: 'user_id' })
     .select('*')
     .single();
+  
   if (error) {
-    console.error('[POST /mentor-profile] Erro:', error);
-    res.status(500).json({ error: 'Erro ao salvar perfil: ' + error.message });
+    console.error('[POST /mentor-profile] Erro Supabase:', error);
+    console.error('[POST /mentor-profile] Detalhes:', JSON.stringify(error, null, 2));
+    res.status(500).json({ error: 'Erro ao salvar perfil: ' + (error.message || 'Erro desconhecido') });
     return;
   }
+  
+  if (!data) {
+    console.error('[POST /mentor-profile] Nenhum dado retornado após upsert');
+    res.status(500).json({ error: 'Erro ao salvar perfil: nenhum dado retornado' });
+    return;
+  }
+  
+  console.log('[POST /mentor-profile] Perfil salvo com sucesso:', data.id);
   await logAction(userId, 'TINDER_MENTOR_PROFILE_UPSERT', { userId });
   res.json({ profile: data });
 });
@@ -197,16 +208,27 @@ router.post('/expert-profile', async (req: Request, res: Response): Promise<void
     updated_at: new Date().toISOString()
   };
   
+  console.log('[POST /expert-profile] Payload:', payload);
   const { data, error } = await supabase
     .from('tinder_expert_profiles')
     .upsert(payload, { onConflict: 'user_id' })
     .select('*')
     .single();
+  
   if (error) {
-    console.error('[POST /expert-profile] Erro:', error);
-    res.status(500).json({ error: 'Erro ao salvar perfil expert/coprodutor: ' + error.message });
+    console.error('[POST /expert-profile] Erro Supabase:', error);
+    console.error('[POST /expert-profile] Detalhes:', JSON.stringify(error, null, 2));
+    res.status(500).json({ error: 'Erro ao salvar perfil expert/coprodutor: ' + (error.message || 'Erro desconhecido') });
     return;
   }
+  
+  if (!data) {
+    console.error('[POST /expert-profile] Nenhum dado retornado após upsert');
+    res.status(500).json({ error: 'Erro ao salvar perfil expert/coprodutor: nenhum dado retornado' });
+    return;
+  }
+  
+  console.log('[POST /expert-profile] Perfil salvo com sucesso:', data.id);
   await logAction(userId, 'TINDER_EXPERT_PROFILE_UPSERT', { userId });
   res.json({ profile: data });
 });
@@ -263,16 +285,27 @@ router.post('/service-profile', async (req: Request, res: Response): Promise<voi
     bio: cleanString(req.body.bio || '', 2000),
     updated_at: new Date().toISOString()
   };
+  console.log('[POST /service-profile] Payload:', payload);
   const { data, error } = await supabase
     .from('tinder_service_profiles')
     .upsert(payload, { onConflict: 'user_id' })
     .select('*')
     .single();
+  
   if (error) {
-    console.error('[POST /service-profile] Erro:', error);
-    res.status(500).json({ error: 'Erro ao salvar perfil de prestador: ' + error.message });
+    console.error('[POST /service-profile] Erro Supabase:', error);
+    console.error('[POST /service-profile] Detalhes:', JSON.stringify(error, null, 2));
+    res.status(500).json({ error: 'Erro ao salvar perfil de prestador: ' + (error.message || 'Erro desconhecido') });
     return;
   }
+  
+  if (!data) {
+    console.error('[POST /service-profile] Nenhum dado retornado após upsert');
+    res.status(500).json({ error: 'Erro ao salvar perfil de prestador: nenhum dado retornado' });
+    return;
+  }
+  
+  console.log('[POST /service-profile] Perfil salvo com sucesso:', data.id);
   await logAction(userId, 'TINDER_SERVICE_PROFILE_UPSERT', { userId });
   res.json({ profile: data });
 });
