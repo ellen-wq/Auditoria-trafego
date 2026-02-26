@@ -82,14 +82,47 @@ export default async function handler(req: Request, res: Response): Promise<void
       const path = await import('path');
       const distExists = fs.existsSync(path.join(cwd, 'dist', 'app.js'));
       const srcExists = fs.existsSync(path.join(cwd, 'src', 'app.ts'));
+      
+      // Try to list dist directory
+      let distFiles: string[] = [];
+      try {
+        distFiles = fs.readdirSync(path.join(cwd, 'dist'));
+      } catch (e) {
+        distFiles = ['error reading dist'];
+      }
+      
       res.status(200).json({
         cwd,
         distExists,
         srcExists,
+        distFiles: distFiles.slice(0, 10),
         hasSupabaseUrl: !!process.env.SUPABASE_URL,
         hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
         nodeEnv: process.env.NODE_ENV
       });
+      return;
+    }
+    
+    // Test import endpoint
+    if (req.url === '/api/test-import') {
+      try {
+        const path = await import('path');
+        const cwd = process.cwd();
+        const distPath = path.join(cwd, 'dist', 'app.js');
+        const appModule = await import(distPath);
+        res.status(200).json({
+          success: true,
+          hasDefault: !!appModule.default,
+          keys: Object.keys(appModule),
+          type: typeof appModule.default
+        });
+      } catch (err: any) {
+        res.status(500).json({
+          success: false,
+          error: err.message,
+          stack: err.stack
+        });
+      }
       return;
     }
 
