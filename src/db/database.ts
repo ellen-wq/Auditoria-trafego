@@ -66,20 +66,28 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
       { name: 'Ana Costa', email: 'ana.costa@example.com', password: '123', role: 'MENTORADO' },
       { name: 'Carlos Ferreira', email: 'carlos.ferreira@example.com', password: '123', role: 'MENTORADO' },
       // Perfis fake para o Tinder do Fluxo - COMUNIDADE
+      { name: 'Ana Social', email: 'ana.social@gmail.com', password: '123456', role: 'MENTORADO' },
+      { name: 'Bruno Copy', email: 'bruno.copy@gmail.com', password: '123456', role: 'MENTORADO' },
+      { name: 'Carla Design', email: 'carla.design@gmail.com', password: '123456', role: 'MENTORADO' },
+      // Perfis fake para o Tinder do Fluxo - EXPERTS
+      { name: 'Renata Expert', email: 'renata.expert@gmail.com', password: '123456', role: 'MENTORADO' },
+      { name: 'Patrícia English', email: 'patricia.english@gmail.com', password: '123456', role: 'MENTORADO' },
+      { name: 'Fernanda Confeitaria', email: 'fernanda.confeitaria@gmail.com', password: '123456', role: 'MENTORADO' },
+      // Perfis fake para o Tinder do Fluxo - PRESTADORES
+      { name: 'Lucas Tráfego', email: 'lucas.trafego@gmail.com', password: '123456', role: 'PRESTADOR' },
+      { name: 'Ana Copywriter', email: 'ana.copywriter@gmail.com', password: '123456', role: 'PRESTADOR' },
+      { name: 'Rafael Dev', email: 'rafael.dev@gmail.com', password: '123456', role: 'PRESTADOR' },
+      // Perfis fake antigos (mantidos para compatibilidade)
       { name: 'Mariana Alves', email: 'mariana.alves.tinder@fluxo.fake', password: '123456', role: 'MENTORADO' },
       { name: 'Juliana Rocha Santos', email: 'juliana.rocha.tinder@fluxo.fake', password: '123456', role: 'MENTORADO' },
       { name: 'Camila Freitas', email: 'camila.freitas.tinder@fluxo.fake', password: '123456', role: 'MENTORADO' },
-      // Perfis fake para o Tinder do Fluxo - EXPERTS
       { name: 'Renata Souza', email: 'renata.souza.tinder@fluxo.fake', password: '123456', role: 'MENTORADO' },
       { name: 'Patrícia Lima', email: 'patricia.lima.tinder@fluxo.fake', password: '123456', role: 'MENTORADO' },
       { name: 'Fernanda Martins', email: 'fernanda.martins.tinder@fluxo.fake', password: '123456', role: 'MENTORADO' },
-      // Perfis fake para o Tinder do Fluxo - PRESTADORES
-      { name: 'Lucas Tráfego', email: 'lucas.trafego.tinder@fluxo.fake', password: '123456', role: 'PRESTADOR' },
+      { name: 'Lucas Tráfego Old', email: 'lucas.trafego.tinder@fluxo.fake', password: '123456', role: 'PRESTADOR' },
       { name: 'Ana Carolina Copywriter', email: 'ana.carolina.tinder@fluxo.fake', password: '123456', role: 'PRESTADOR' },
       { name: 'Rafael Dev de Funis', email: 'rafael.dev.tinder@fluxo.fake', password: '123456', role: 'PRESTADOR' },
-      // Perfil fake de teste
       { name: 'Fernanda Brier', email: 'fernanda.brier.tinder@fluxo.fake', password: '123456', role: 'MENTORADO' },
-      // Perfil fake para teste de layout
       { name: 'Teste Layout', email: 'teste.layout@fluxo.fake', password: '123456', role: 'MENTORADO' }
     ];
 
@@ -119,6 +127,10 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
 
     // Cria perfis de COMUNIDADE
     const comunidadeProfiles = [
+      { name: 'Ana Social', city: 'São Paulo - SP', instagram: '@ana.social', niche: 'Social Media para Experts', bio: 'Transformo conteúdo em vendas todos os dias. +120 lançamentos atendidos. Amo dashboards, testes rápidos e café.', nivel: 'HARD' },
+      { name: 'Bruno Copy', city: 'Rio de Janeiro - RJ', instagram: '@bruno.copy', niche: 'Copy para funil perpétuo low ticket', bio: 'Copy direta ao ponto para páginas, anúncios e e-mails. Foco total em conversão e escala previsível.', nivel: 'PRO' },
+      { name: 'Carla Design', city: 'Belo Horizonte - MG', instagram: '@carla.design', niche: 'Design de criativos para Meta Ads', bio: 'Especialista em criativos que aumentam CTR e reduzem CPA. Disponível para projetos fixos e freelas.', nivel: 'SOFT' },
+      // Perfis antigos mantidos
       { name: 'Mariana Alves', city: 'Belo Horizonte - MG', instagram: '@mariana.socialmediafake', niche: 'Social Media para Experts', bio: 'Transformo conteúdo em vendas todos os dias. +120 lançamentos atendidos. Amo dashboards, testes rápidos e café.', nivel: 'HARD' },
       { name: 'Juliana Rocha Santos', city: 'Curitiba - PR', instagram: '@copy.julianarochafake', niche: 'Copy para funil perpétuo low ticket', bio: 'Copy direta ao ponto para páginas, anúncios e e-mails. Foco total em conversão e escala previsível.', nivel: 'PRO' },
       { name: 'Camila Freitas', city: 'Recife - PE', instagram: '@camilacriativosmeta', niche: 'Design de criativos para Meta Ads', bio: 'Especialista em criativos que aumentam CTR e reduzem CPA. Disponível para projetos fixos e freelas.', nivel: 'SOFT' },
@@ -150,6 +162,10 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
 
     // Cria perfis de EXPERTS
     const expertProfiles = [
+      { name: 'Renata Expert', city: 'São Paulo - SP', instagram: '@renata.expert', niche: 'Estética avançada', bio: 'Ensino esteticistas a faturarem 20k+ com procedimentos premium. Produto perpétuo validado e escalando.', nivel: 'PRO' },
+      { name: 'Patrícia English', city: 'Rio de Janeiro - RJ', instagram: '@patricia.english', niche: 'Inglês para adultos do zero à conversação', bio: 'Método próprio com mais de 3.000 alunas. Estruturando funil evergreen e buscando time para escalar.', nivel: 'HARD' },
+      { name: 'Fernanda Confeitaria', city: 'Porto Alegre - RS', instagram: '@fernanda.confeitaria', niche: 'Confeitaria lucrativa', bio: 'Ajudo confeiteiras a viverem da confeitaria em casa com vendas todos os dias através do digital.', nivel: 'SOFT' },
+      // Perfis antigos mantidos
       { name: 'Renata Souza', city: 'São Paulo - SP', instagram: '@renata.esteticafake', niche: 'Estética avançada', bio: 'Ensino esteticistas a faturarem 20k+ com procedimentos premium. Produto perpétuo validado e escalando.', nivel: 'PRO' },
       { name: 'Patrícia Lima', city: 'Rio de Janeiro - RJ', instagram: '@patricia.englishcoursefake', niche: 'Inglês para adultos do zero à conversação', bio: 'Método próprio com mais de 3.000 alunas. Estruturando funil evergreen e buscando time para escalar.', nivel: 'HARD' },
       { name: 'Fernanda Martins', city: 'Porto Alegre - RS', instagram: '@confeitaria.fernandafake', niche: 'Confeitaria lucrativa', bio: 'Ajudo confeiteiras a viverem da confeitaria em casa com vendas todos os dias através do digital.', nivel: 'SOFT' },
@@ -184,7 +200,11 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
 
     // Cria perfis de PRESTADORES
     const prestadorProfiles = [
-      { name: 'Lucas Tráfego', city: 'São Paulo - SP', instagram: '@lucas.metaadsfake', specialty: 'TRAFEGO', certification: 'SUPERHEADS', bio: '+2M investidos em anúncios. Escala de low ticket com foco em ROI e previsibilidade.', rating: 5.0 },
+      { name: 'Lucas Tráfego', city: 'São Paulo - SP', instagram: '@lucas.trafego', specialty: 'TRAFEGO', certification: 'SUPERHEADS', bio: '+2M investidos em anúncios. Escala de low ticket com foco em ROI e previsibilidade.', rating: 5.0 },
+      { name: 'Ana Copywriter', city: 'Rio de Janeiro - RJ', instagram: '@ana.copywriter', specialty: 'COPY', certification: 'LIGHTCOPY', bio: 'Especialista em páginas de vendas, VSL curta e e-mails para funis perpétuos.', rating: 4.8 },
+      { name: 'Rafael Dev', city: 'Belo Horizonte - MG', instagram: '@rafael.dev', specialty: 'AUTOMACAO', certification: 'AUTOMACOES_INTELIGENTES', bio: 'Criação de páginas rápidas, integradas e com tracking validado para produtos digitais.', rating: 4.9 },
+      // Perfis antigos mantidos
+      { name: 'Lucas Tráfego Old', city: 'São Paulo - SP', instagram: '@lucas.metaadsfake', specialty: 'TRAFEGO', certification: 'SUPERHEADS', bio: '+2M investidos em anúncios. Escala de low ticket com foco em ROI e previsibilidade.', rating: 5.0 },
       { name: 'Ana Carolina Copywriter', city: 'Rio de Janeiro - RJ', instagram: '@anacopy.conversao', specialty: 'COPY', certification: 'LIGHTCOPY', bio: 'Especialista em páginas de vendas, VSL curta e e-mails para funis perpétuos.', rating: 4.8 },
       { name: 'Rafael Dev de Funis', city: 'Belo Horizonte - MG', instagram: '@rafael.devfunnelsfake', specialty: 'AUTOMACAO', certification: 'AUTOMACOES_INTELIGENTES', bio: 'Criação de páginas rápidas, integradas e com tracking validado para produtos digitais.', rating: 4.9 }
     ];
@@ -224,11 +244,17 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
       }, { onConflict: 'user_id' });
     }
 
-    // Cria MATCHES (Mariana-Renata, Juliana-Patrícia, Camila-Fernanda)
+    // Cria MATCHES (7 matches: comunidade ↔ experts e comunidade ↔ prestadores)
     const matches = [
-      { user1: 'Mariana Alves', user2: 'Renata Souza' },
-      { user1: 'Juliana Rocha Santos', user2: 'Patrícia Lima' },
-      { user1: 'Camila Freitas', user2: 'Fernanda Martins' }
+      // Comunidade ↔ Experts
+      { user1: 'Ana Social', user2: 'Renata Expert', type: 'COMUNIDADE' },
+      { user1: 'Bruno Copy', user2: 'Patrícia English', type: 'COMUNIDADE' },
+      { user1: 'Carla Design', user2: 'Fernanda Confeitaria', type: 'COMUNIDADE' },
+      // Comunidade ↔ Prestadores
+      { user1: 'Ana Social', user2: 'Lucas Tráfego', type: 'SERVICO' },
+      { user1: 'Bruno Copy', user2: 'Ana Copywriter', type: 'SERVICO' },
+      { user1: 'Carla Design', user2: 'Rafael Dev', type: 'SERVICO' },
+      { user1: 'Ana Social', user2: 'Ana Copywriter', type: 'SERVICO' }
     ];
 
     for (const match of matches) {
@@ -239,16 +265,19 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
         await supabase.from('tinder_matches').upsert({
           user1_id: u1,
           user2_id: u2,
-          type: 'COMUNIDADE'
+          type: match.type || 'COMUNIDADE'
         }, { onConflict: 'user1_id,user2_id,type' });
+        console.log(`[SEED] Match criado: ${match.user1} ↔ ${match.user2} (${match.type || 'COMUNIDADE'})`);
+      } else {
+        console.warn(`[SEED] Usuários não encontrados para match: ${match.user1} ↔ ${match.user2}`);
       }
     }
 
-    // Cria VAGAS
+    // Cria VAGAS (vinculadas aos novos experts)
     const vagas = [
-      { expert: 'Renata Souza', title: 'Gestor de Tráfego para escalar produto low ticket validado', description: 'Produto com vendas diárias, estrutura pronta e criativos validados. Preciso de gestor para escalar no Meta Ads com foco em ROI.', specialty: 'TRAFEGO', model: 'PRESTACAO_SERVICO', location: 'Remoto' },
-      { expert: 'Patrícia Lima', title: 'Copywriter para reestruturação de funil perpétuo evergreen', description: 'Revisão completa de página, sequência de e-mails e novos anúncios. Experiência com CPL e produtos educacionais é diferencial.', specialty: 'COPY', model: 'PROJETO_FECHADO', location: 'Remoto' },
-      { expert: 'Fernanda Martins', title: 'Social Media estratégico com foco em conteúdo que gera vendas', description: 'Planejamento mensal, linha editorial e acompanhamento de métricas. Contrato recorrente para crescimento da marca.', specialty: 'SOCIAL_MEDIA', model: 'MENSAL', location: 'Remoto' }
+      { expert: 'Renata Expert', title: 'Gestor de Tráfego para escalar produto low ticket validado', description: 'Produto com vendas diárias, estrutura pronta e criativos validados. Preciso de gestor para escalar no Meta Ads com foco em ROI.', specialty: 'TRAFEGO', model: 'PRESTACAO_SERVICO', location: 'Remoto' },
+      { expert: 'Patrícia English', title: 'Copywriter para reestruturação de funil perpétuo evergreen', description: 'Revisão completa de página, sequência de e-mails e novos anúncios. Experiência com CPL e produtos educacionais é diferencial.', specialty: 'COPY', model: 'PROJETO_FECHADO', location: 'Remoto' },
+      { expert: 'Fernanda Confeitaria', title: 'Social Media estratégico com foco em conteúdo que gera vendas', description: 'Planejamento mensal, linha editorial e acompanhamento de métricas. Contrato recorrente para crescimento da marca.', specialty: 'SOCIAL_MEDIA', model: 'MENSAL', location: 'Remoto' }
     ];
 
     for (const vaga of vagas) {
@@ -263,7 +292,7 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
           .maybeSingle();
 
         if (!existing) {
-          await supabase.from('tinder_jobs').insert({
+          const { error: jobError } = await supabase.from('tinder_jobs').insert({
             creator_id: expertId,
             title: vaga.title,
             description: vaga.description,
@@ -272,7 +301,14 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
             location: vaga.location,
             status: 'OPEN'
           });
+          if (jobError) {
+            console.error(`[SEED] Erro ao criar vaga para ${vaga.expert}:`, jobError);
+          } else {
+            console.log(`[SEED] Vaga criada: ${vaga.title} (${vaga.expert})`);
+          }
         }
+      } else {
+        console.warn(`[SEED] Expert não encontrado para vaga: ${vaga.expert}`);
       }
     }
   }
