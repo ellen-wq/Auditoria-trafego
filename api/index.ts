@@ -1,7 +1,8 @@
-import type { Request, Response } from 'express';
+import serverless from 'serverless-http';
 
 let initPromise: Promise<void> | null = null;
 let appInstance: any = null;
+let serverlessHandler: any = null;
 
 async function getAppInstance() {
   if (!appInstance) {
@@ -67,7 +68,7 @@ async function ensureDbInit(): Promise<void> {
   await initPromise;
 }
 
-export default async function handler(req: Request, res: Response): Promise<void> {
+export default async function handler(req: any, res: any): Promise<void> {
   try {
     // Health check endpoint
     if (req.url === '/api/health' || req.url === '/health') {
@@ -146,25 +147,16 @@ export default async function handler(req: Request, res: Response): Promise<void
     await ensureDbInit();
     console.log('DB initialized, getting app instance...');
     const app = await getAppInstance();
-    console.log('App instance obtained, calling app handler...');
+    console.log('App instance obtained, creating serverless handler...');
     
-    // Call Express app - it should handle the request/response
-    return new Promise<void>((resolve) => {
-      app(req as any, res as any, () => {
-        resolve();
-      });
-      
-      // Timeout fallback
-      setTimeout(() => {
-        if (!res.headersSent) {
-          console.error('App handler timeout - response not sent');
-          if (!res.headersSent) {
-            res.status(500).json({ error: 'Handler timeout' });
-          }
-          resolve();
-        }
-      }, 25000);
-    });
+    // Create serverless handler if not exists
+    if (!serverlessHandler) {
+      serverlessHandler = serverless(app);
+    }
+    
+    console.log('Calling serverless handler...');
+    // Use serverless-http to bridge Vercel and Express
+    return serverlessHandler(req, res);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
