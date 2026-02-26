@@ -7,8 +7,14 @@ let appInstance: ExpressAppLike | null = null;
 
 async function getAppInstance(): Promise<ExpressAppLike> {
   if (!appInstance) {
-    const appModule = await import('../src/app');
-    appInstance = appModule.default as ExpressAppLike;
+    // Try dist first (production build), fallback to src (dev)
+    try {
+      const appModule = await import('../dist/app');
+      appInstance = appModule.default as ExpressAppLike;
+    } catch {
+      const appModule = await import('../src/app');
+      appInstance = appModule.default as ExpressAppLike;
+    }
   }
   return appInstance;
 }
@@ -16,7 +22,13 @@ async function getAppInstance(): Promise<ExpressAppLike> {
 async function ensureDbInit(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
-      const dbModule = await import('../src/db/database');
+      // Try dist first (production build), fallback to src (dev)
+      let dbModule;
+      try {
+        dbModule = await import('../dist/db/database');
+      } catch {
+        dbModule = await import('../src/db/database');
+      }
       await dbModule.initDb({ seedUsers: false, ensureStorageBucket: false });
     })().catch((err) => {
       initPromise = null;

@@ -171,30 +171,32 @@ export default function CriativosPage() {
 
       {/* Audit selector when no audit_id */}
       {!auditId && (
-        <div className="card" style={{ maxWidth: 480 }}>
-          <div className="card-header">
-            <span className="card-title">Selecione uma Auditoria</span>
-          </div>
-          {loadingAudits ? (
-            <div style={{ textAlign: 'center', padding: 24 }}>
-              <div className="loading-spinner" />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+          <div className="card" style={{ maxWidth: 700, width: '100%', margin: '0 auto', padding: '32px' }}>
+            <div className="card-header">
+              <span className="card-title" style={{ fontSize: '20px' }}>Selecione uma Auditoria</span>
             </div>
-          ) : audits.length === 0 ? (
-            <div className="empty-state" style={{ padding: 24 }}>
-              <h3>Nenhuma auditoria encontrada</h3>
-              <p>Faça uma auditoria primeiro.</p>
-              <Link to="/app/upload" className="btn btn-primary" style={{ width: 'auto', display: 'inline-flex' }}>
-                Nova Auditoria
-              </Link>
-            </div>
-          ) : (
-            <div className="form-group">
-              <label htmlFor="auditSelect">Auditoria</label>
-              <select
-                id="auditSelect"
-                defaultValue=""
-                onChange={(e) => handleSelectAudit(e.target.value)}
-              >
+            {loadingAudits ? (
+              <div style={{ textAlign: 'center', padding: 32 }}>
+                <div className="loading-spinner" />
+              </div>
+            ) : audits.length === 0 ? (
+              <div className="empty-state" style={{ padding: 32 }}>
+                <h3>Nenhuma auditoria encontrada</h3>
+                <p>Faça uma auditoria primeiro.</p>
+                <Link to="/app/upload" className="btn btn-primary" style={{ width: 'auto', display: 'inline-flex' }}>
+                  Nova Auditoria
+                </Link>
+              </div>
+            ) : (
+              <div className="form-group" style={{ marginTop: 20 }}>
+                <label htmlFor="auditSelect" style={{ fontSize: '15px', marginBottom: 12 }}>Auditoria</label>
+                <select
+                  id="auditSelect"
+                  defaultValue=""
+                  onChange={(e) => handleSelectAudit(e.target.value)}
+                  style={{ fontSize: '15px', padding: '12px' }}
+                >
                 <option value="" disabled>Selecione...</option>
                 {audits.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -204,6 +206,7 @@ export default function CriativosPage() {
               </select>
             </div>
           )}
+          </div>
         </div>
       )}
 
