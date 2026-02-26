@@ -52,7 +52,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         password_hash: hash,
         role
       })
-      .select('id, name, email, role, has_seen_tinder_do_fluxo_tutorial, created_at')
+      .select('id, name, email, role, created_at')
       .single();
 
     if (error) {
@@ -208,7 +208,7 @@ router.post('/register-prestador', async (req: Request, res: Response): Promise<
         password_hash: hash,
         role: 'PRESTADOR'
       })
-      .select('id, name, email, role, has_seen_tinder_do_fluxo_tutorial, created_at')
+      .select('id, name, email, role, created_at')
       .single();
 
     if (error || !newUser) {
