@@ -1,20 +1,18 @@
-import type { Request, Response } from 'express';
-
-type ExpressAppLike = (req: Request, res: Response) => void;
+import type { IncomingMessage, ServerResponse } from 'http';
 
 let initPromise: Promise<void> | null = null;
-let appInstance: ExpressAppLike | null = null;
+let appInstance: any = null;
 
-async function getAppInstance(): Promise<ExpressAppLike> {
+async function getAppInstance() {
   if (!appInstance) {
     // Try dist first (production build), fallback to src (dev/Vercel auto-compile)
     try {
       const appModule = await import('../dist/app');
-      appInstance = appModule.default as ExpressAppLike;
+      appInstance = appModule.default;
     } catch (distErr) {
       try {
         const appModule = await import('../src/app');
-        appInstance = appModule.default as ExpressAppLike;
+        appInstance = appModule.default;
       } catch (srcErr) {
         console.error('Failed to import app from dist:', distErr);
         console.error('Failed to import app from src:', srcErr);
@@ -51,45 +49,45 @@ async function ensureDbInit(): Promise<void> {
   await initPromise;
 }
 
-export default function handler(req: Request, res: Response): void {
-  void (async () => {
-    try {
-      // Health check endpoint
-      if (req.url === '/api/health' || req.url === '/health') {
-        res.status(200).json({ ok: true, env: !!process.env.SUPABASE_URL });
-        return;
-      }
-
-      // Debug endpoint
-      if (req.url === '/api/debug') {
-        const cwd = process.cwd();
-        const fs = await import('fs');
-        const path = await import('path');
-        const distExists = fs.existsSync(path.join(cwd, 'dist', 'app.js'));
-        const srcExists = fs.existsSync(path.join(cwd, 'src', 'app.ts'));
-        res.status(200).json({
-          cwd,
-          distExists,
-          srcExists,
-          hasSupabaseUrl: !!process.env.SUPABASE_URL,
-          hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-          nodeEnv: process.env.NODE_ENV
-        });
-        return;
-      }
-
-      await ensureDbInit();
-      const app = await getAppInstance();
-      app(req, res);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      const stack = err instanceof Error ? err.stack : undefined;
-      console.error('Handler error:', message);
-      console.error('Stack:', stack);
-      res.status(500).json({ 
-        error: 'Erro ao iniciar aplicação: ' + message,
-        details: process.env.NODE_ENV === 'development' ? stack : undefined
-      });
+export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  try {
+    // Health check endpoint
+    if (req.url === '/api/health' || req.url === '/health') {
+      res.status(200).json({ ok: true, env: !!process.env.SUPABASE_URL });
+      return;
     }
-  })();
+
+    // Debug endpoint
+    if (req.url === '/api/debug') {
+      const cwd = process.cwd();
+      const fs = await import('fs');
+      const path = await import('path');
+      const distExists = fs.existsSync(path.join(cwd, 'dist', 'app.js'));
+      const srcExists = fs.existsSync(path.join(cwd, 'src', 'app.ts'));
+      res.status(200).json({
+        cwd,
+        distExists,
+        srcExists,
+        hasSupabaseUrl: !!process.env.SUPABASE_URL,
+        hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        nodeEnv: process.env.NODE_ENV
+      });
+      return;
+    }
+
+    await ensureDbInit();
+    const app = await getAppInstance();
+    
+    // Convert Vercel request/response to Express-like format
+    app(req as any, res as any);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error('Handler error:', message);
+    console.error('Stack:', stack);
+    res.status(500).json({ 
+      error: 'Erro ao iniciar aplicação: ' + message,
+      details: process.env.NODE_ENV === 'development' ? stack : undefined
+    });
+  }
 }
