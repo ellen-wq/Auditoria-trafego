@@ -1,11 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
 export default function AuditoriaUploadPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialMode = searchParams.get('modo') === 'planilha' ? 'spreadsheet' : null;
+  const [selectedInputMode, setSelectedInputMode] = useState<'spreadsheet' | null>(initialMode);
 
   const [productPrice, setProductPrice] = useState('');
   const [productType, setProductType] = useState('low_ticket');
@@ -125,6 +128,74 @@ export default function AuditoriaUploadPage() {
     }
   }, []);
 
+  const handleConnectMetaAds = useCallback(() => {
+    navigate('/app/metaads/connect');
+  }, [navigate]);
+
+  const handleChooseSpreadsheet = useCallback(() => {
+    setSelectedInputMode('spreadsheet');
+    setSearchParams({ modo: 'planilha' });
+  }, [setSearchParams]);
+
+  const handleBackToModeSelect = useCallback(() => {
+    setSelectedInputMode(null);
+    setSearchParams({});
+  }, [setSearchParams]);
+
+  if (!selectedInputMode) {
+    return (
+      <AppLayout breadcrumbs={[
+        { label: 'Análises', href: '/app/upload' },
+        { label: 'Auditoria de Tráfego' },
+      ]}>
+        <div
+          style={{
+            minHeight: 'calc(100vh - 220px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div style={{ width: '100%', maxWidth: 980 }}>
+            <h1 className="page-title" style={{ fontSize: 40, textAlign: 'center', marginBottom: 8 }}>
+              Nova Auditoria de Tráfego
+            </h1>
+            <p className="page-subtitle" style={{ textAlign: 'center', fontSize: 20, marginBottom: 28 }}>
+              Escolha como deseja iniciar a auditoria
+            </p>
+
+            <div className="card" style={{ maxWidth: 980, margin: '0 auto', padding: '26px 22px' }}>
+              <div className="card-header">
+                <span className="card-title" style={{ fontSize: 22 }}>Fonte de dados</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleChooseSpreadsheet}
+                  style={{ height: 56, fontSize: 18 }}
+                >
+                  Usar Planilha
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleConnectMetaAds}
+                  style={{ height: 56, fontSize: 18 }}
+                >
+                  Conectar MetaAds
+                </button>
+              </div>
+              <p style={{ marginTop: 14, fontSize: 15, color: 'var(--text-muted)', textAlign: 'center' }}>
+                Em “Usar Planilha”, você envia o arquivo exportado. Em “Conectar MetaAds”, você segue para a tela de conexão com OAuth e visualização do token.
+              </p>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout breadcrumbs={[
       { label: 'Análises', href: '/app/upload' },
@@ -134,6 +205,12 @@ export default function AuditoriaUploadPage() {
       <p className="page-subtitle">
         Envie a planilha exportada do Gerenciador de Anúncios do Facebook
       </p>
+
+      <div style={{ marginBottom: 14 }}>
+        <button type="button" className="btn btn-outline" onClick={handleBackToModeSelect}>
+          Voltar
+        </button>
+      </div>
 
       <div className={`alert alert-error${error ? ' visible' : ''}`}>{error}</div>
 

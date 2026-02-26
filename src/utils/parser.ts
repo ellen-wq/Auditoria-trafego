@@ -9,6 +9,8 @@ const COLUMN_MAP: Record<string, string> = {
   'Nome da campanha': 'campaign_name',
   'Veiculação da campanha': 'delivery',
   'Orçamento do conjunto de anúncios': 'adset_budget',
+  'Orçamento': 'budget_raw',
+  'Tipo de orçamento': 'budget_type_general',
   'Tipo de orçamento do conjunto de anúncios': 'budget_type',
   'Valor usado (BRL)': 'spend',
   'Resultados': 'results',
@@ -36,6 +38,8 @@ const EN_ALIASES: Record<string, string> = {
   'Campaign name': 'campaign_name',
   'Campaign delivery': 'delivery',
   'Ad set budget': 'adset_budget',
+  'Budget': 'budget_raw',
+  'Budget type': 'budget_type_general',
   'Ad set budget type': 'budget_type',
   'Amount spent (BRL)': 'spend',
   'Results': 'results',
@@ -55,6 +59,60 @@ const EN_ALIASES: Record<string, string> = {
 };
 
 const FULL_MAP: Record<string, string> = { ...COLUMN_MAP, ...EN_ALIASES };
+
+function normalizeHeader(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function resolveMappedKey(originalHeader: string): string | null {
+  const trimmed = originalHeader.trim();
+  const direct = FULL_MAP[trimmed];
+  if (direct) return direct;
+
+  const normalized = normalizeHeader(trimmed);
+
+  if (normalized.includes('orcamento do conjunto')) return 'adset_budget';
+  if (normalized === 'orcamento' || normalized.includes('orcamento da campanha') || normalized.includes('campaign budget')) {
+    return 'budget_raw';
+  }
+  if (normalized.includes('tipo de orcamento')) return 'budget_type_general';
+  if (normalized.includes('ad set budget type')) return 'budget_type';
+  if (normalized.includes('ad set budget')) return 'adset_budget';
+
+  return null;
+}
+
+function detectBudgetStructureFromRow(row: Record<string, unknown>): 'CBO' | 'ABO' | null {
+  const budgetRawNormalized = normalizeHeader(String(row.budget_raw ?? ''));
+  const budgetTypeNormalized = normalizeHeader(String(row.budget_type ?? row.budget_type_general ?? ''));
+  const adsetBudgetNormalized = normalizeHeader(String(row.adset_budget ?? ''));
+
+  const isAboText = (value: string) =>
+    value.includes('usando o orcamento do conjunto de anuncios') ||
+    value.includes('using ad set budget');
+
+  if (isAboText(budgetRawNormalized)) return 'ABO';
+  if (isAboText(budgetTypeNormalized)) return 'ABO';
+  if (isAboText(adsetBudgetNormalized)) return 'ABO';
+
+  // Regra solicitada: qualquer outro caso classifica como CBO.
+  return 'CBO';
+}
+
+function mergeBudgetStructure(
+  current: 'CBO' | 'ABO' | undefined,
+  next: 'CBO' | 'ABO' | null
+): 'CBO' | 'ABO' | undefined {
+  if (!next) return current;
+  if (!current) return next;
+  // Em caso de conflito no mesmo agrupamento, prioriza ABO por ser mais restritivo.
+  if (current !== next) return 'ABO';
+  return current;
+}
 
 function parseNumber(val: unknown): number {
   if (val === null || val === undefined || val === '') return 0;
@@ -99,8 +157,7 @@ function parseSpreadsheetBuffer(fileBuffer: Buffer, originalName: string): Parse
   const mapped = rawRows.map(row => {
     const obj: Record<string, unknown> = {};
     for (const [origCol, value] of Object.entries(row)) {
-      const trimmed = origCol.trim();
-      const key = FULL_MAP[trimmed];
+      const key = resolveMappedKey(origCol);
       if (key) {
         obj[key] = value;
       }
@@ -121,9 +178,11 @@ function parseSpreadsheetBuffer(fileBuffer: Buffer, originalName: string): Parse
   const campaigns: Record<string, ParsedCampaign & { _ctr_sum: number; _cpc_sum: number; _lp_rate_sum: number; _hook_sum: number; _count: number }> = {};
   for (const row of mapped) {
     const name = (row.campaign_name as string) || 'Sem nome';
+    const rowBudgetStructure = detectBudgetStructureFromRow(row);
     if (!campaigns[name]) {
       campaigns[name] = {
         campaign_name: name,
+        budget_structure: rowBudgetStructure ?? undefined,
         spend: 0,
         ctr_link: 0,
         link_clicks: 0,
@@ -143,6 +202,7 @@ function parseSpreadsheetBuffer(fileBuffer: Buffer, originalName: string): Parse
       };
     }
     const c = campaigns[name];
+    c.budget_structure = mergeBudgetStructure(c.budget_structure, rowBudgetStructure);
     c.spend += parseNumber(row.spend);
     c.link_clicks += parseNumber(row.link_clicks);
     c.lp_views += parseNumber(row.lp_views);

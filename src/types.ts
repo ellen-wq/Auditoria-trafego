@@ -3,7 +3,8 @@ export interface User {
   name: string;
   email: string;
   password_hash: string;
-  role: 'LIDERANCA' | 'MENTORADO';
+  role: 'LIDERANCA' | 'MENTORADO' | 'PRESTADOR';
+  has_seen_tinder_do_fluxo_tutorial?: boolean;
   created_at: string;
 }
 
@@ -86,6 +87,7 @@ export interface AnalyzedCampaign {
 
 export interface ParsedCampaign {
   campaign_name: string;
+  budget_structure?: 'CBO' | 'ABO';
   spend: number;
   ctr_link: number;
   link_clicks: number;

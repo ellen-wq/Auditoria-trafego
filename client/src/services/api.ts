@@ -4,12 +4,46 @@ interface User {
   id: number;
   name: string;
   email: string;
-  role: 'MENTORADO' | 'LIDERANCA';
+  role: 'MENTORADO' | 'LIDERANCA' | 'PRESTADOR';
+  has_seen_tinder_do_fluxo_tutorial?: boolean;
   created_at?: string;
 }
 
 class ApiService {
-  private token: string | null = localStorage.getItem('token');
+  private token: string | null = this.readToken();
+
+  private safeGet(key: string): string | null {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  private safeSet(key: string, value: string): void {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Ignora bloqueio de storage no navegador.
+    }
+  }
+
+  private safeRemove(key: string): void {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Ignora bloqueio de storage no navegador.
+    }
+  }
+
+  private clearAuthStorage(): void {
+    this.safeRemove('token');
+    this.safeRemove('user');
+  }
+
+  private readToken(): string | null {
+    return this.safeGet('token');
+  }
 
   async request<T = any>(url: string, options: RequestInit = {}): Promise<T> {
     const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) };
@@ -27,8 +61,7 @@ class ApiService {
     }
     if (!res.ok) {
       if (res.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        this.clearAuthStorage();
         window.location.href = '/login';
         throw new Error(data.error || 'Não autenticado');
       }
@@ -48,13 +81,29 @@ class ApiService {
 
   setAuth(token: string, user: User) {
     this.token = token;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    this.safeSet('token', token);
+    this.safeSet('user', JSON.stringify(user));
+  }
+
+  setUser(user: User) {
+    this.safeSet('user', JSON.stringify(user));
   }
 
   getUser(): User | null {
-    const u = localStorage.getItem('user');
-    return u ? JSON.parse(u) : null;
+    try {
+      const u = this.safeGet('user');
+      if (!u) return null;
+      const parsed = JSON.parse(u);
+      if (!parsed || typeof parsed !== 'object' || !parsed.role) {
+        this.safeRemove('user');
+        return null;
+      }
+      return parsed as User;
+    } catch {
+      this.clearAuthStorage();
+      this.token = null;
+      return null;
+    }
   }
 
   getToken(): string | null { return this.token; }
@@ -62,8 +111,7 @@ class ApiService {
   logout() {
     this.request('/api/auth/logout', { method: 'POST' }).catch(() => {});
     this.token = null;
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    this.clearAuthStorage();
     window.location.href = '/login';
   }
 }

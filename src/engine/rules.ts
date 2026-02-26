@@ -17,9 +17,9 @@ function normalizeName(value: string): string {
   return (value || '').trim().toLowerCase();
 }
 
-function detectBudgetStructure(campaignName: string): 'CBO' | 'ABO' {
-  const upper = (campaignName || '').toUpperCase();
-  return upper.includes('ABO') ? 'ABO' : 'CBO';
+function detectBudgetStructure(_campaignName: string, parsedBudgetStructure?: 'CBO' | 'ABO'): 'CBO' | 'ABO' {
+  // Regra low ticket: se não vier "orçamento do conjunto" na planilha, trata como CBO.
+  return parsedBudgetStructure ?? 'CBO';
 }
 
 function isAdvantagePlusCampaign(campaignName: string, selectedCampaigns: string[]): boolean {
@@ -148,7 +148,7 @@ function analyzeLowTicketCampaign(campaign: ParsedCampaign, productPrice: number
   const { campaign_name, spend, purchases, cpa } = campaign;
   const cpaTarget = productPrice * 0.6;
   const cpaValue = cpa || 0;
-  const budgetStructure = detectBudgetStructure(campaign_name);
+  const budgetStructure = detectBudgetStructure(campaign_name, campaign.budget_structure);
   const hasAdvantagePlus = isAdvantagePlusCampaign(campaign_name, options.advantagePlusCampaigns);
 
   if (!productPrice || productPrice <= 0) {
@@ -160,96 +160,107 @@ function analyzeLowTicketCampaign(campaign: ParsedCampaign, productPrice: number
     };
   }
 
-  const diagnostics = [
-    'Diagnóstico Geral',
-    `Valor do Produto: R$ ${productPrice.toFixed(2).replace('.', ',')}`,
-    `CPA Alvo (60%): R$ ${cpaTarget.toFixed(2).replace('.', ',')}`,
-    `Compras últimos 28 dias: ${options.hasMoreThan50Sales28d ? 'Mais de 50' : '50 ou menos'}`,
-    `Estrutura atual (CBO ou ABO): ${budgetStructure}`,
-    `Possui Advantage+ ativa?: ${options.hasAnyAdvantagePlus ? 'Sim' : 'Não'}`,
-    'Período analisado: Últimos 7 dias'
-  ];
-
-  const nonNegotiables = [
-    'Regras Inegociáveis',
-    'Sempre considerar últimos 7 dias.',
-    'Sempre validar compras dos últimos 28 dias.',
-    'Sempre validar se é CBO ou ABO.',
-    'Sempre validar se já existe Advantage+.',
-    'Nunca misturar estratégias.',
-    'Nunca inventar métricas.',
-    'Apenas ações executáveis.'
-  ];
+  const noSales = purchases <= 0;
+  const spentAboveProductWithoutSales = spend > productPrice && purchases <= 0;
+  const cpaAboveProduct = purchases > 0 && cpaValue > productPrice;
+  const isSemPerformance = noSales || spentAboveProductWithoutSales || cpaAboveProduct;
 
   if (purchases > 0 && cpaValue <= cpaTarget) {
-    const scaleSteps: string[] = [];
-    scaleSteps.push('Escalar');
-    if (budgetStructure === 'CBO') {
+    const scaleSteps: string[] = budgetStructure === 'CBO'
+      ? [
+          'Aumentar orçamento da campanha em 20%.',
+          'Desativar anúncios que não venderam.',
+          'Desativar anúncios com CPA acima do valor do produto.',
+          'Subir novos anúncios como Teste A/B a nível de anúncio.'
+        ]
+      : [
+          'Aumentar orçamento do conjunto em 20%.',
+          'Manter apenas conjuntos com CPA abaixo de 60% do valor do produto.',
+          'Desativar conjuntos que não venderam.',
+          'Desativar conjuntos com CPA acima do valor do produto.',
+          'Subir novos anúncios como Teste A/B a nível de anúncio.'
+        ];
+
+    if (!hasAdvantagePlus) {
       scaleSteps.push(
-        'CBO: aumentar 20% do orçamento da campanha.',
-        'CBO: desativar anúncios que não gastaram ou não performaram.',
-        'CBO: subir novos anúncios como teste A/B no nível de anúncio.'
+        'Passo 5: criar nova campanha teste (1 campanha, estrutura CBO, 1 conjunto, mínimo 3 criativos com ângulos diferentes, evitar similaridade).'
       );
-    } else {
+    }
+
+    if (!options.hasAnyAdvantagePlus && options.hasMoreThan50Sales28d) {
       scaleSteps.push(
-        'ABO: aumentar 20% do orçamento.',
-        'ABO: manter apenas conjunto(s) com melhor performance.',
-        'ABO: subir novos anúncios como teste A/B no nível de anúncio.'
+        `Passo 6: subir campaign Advantage+ (estrutura CBO, 1 conjunto, público comprador + engajamento, mínimo 3 criativos diferentes, orçamento diário de 50% do valor do produto: R$ ${(productPrice * 0.5).toFixed(2).replace('.', ',')}).`
+      );
+    }
+
+    if (hasAdvantagePlus) {
+      scaleSteps.push(
+        'Campanha já é Advantage+: não criar nova campanha.',
+        'Aumentar orçamento em 20% se CPA <= 60% do valor do produto.',
+        'Desativar anúncios sem venda.',
+        'Desativar anúncios com CPA acima do valor do produto.',
+        'Desativar anúncios sem gasto e com CTR abaixo de 1% nos últimos 7 dias.',
+        'Se não vendeu e CTR >= 1%, manter ativo.',
+        'Subir novos anúncios como Teste A/B.'
       );
     }
 
     scaleSteps.push(
-      'Nova Campanha Teste: criar 1 campanha com 1 conjunto e pelo menos 3 criativos com ângulos diferentes.'
+      'Regra final (últimos 7 dias): desativar qualquer conjunto que gastou mais que o valor do produto sem vender ou com CPA acima do valor do produto.'
     );
-
-    if (options.hasMoreThan50Sales28d && !options.hasAnyAdvantagePlus) {
-      scaleSteps.push(
-        'Advantage+ (condição 50+): criar 1 campanha CBO do tipo Advantage+.',
-        'Advantage+ (condição 50+): usar público comprador + público de engajamento.',
-        `Advantage+ (condição 50+): orçamento diário de 50% do valor do produto (R$ ${(productPrice * 0.5).toFixed(2).replace('.', ',')}).`
-      );
-    }
-
-    if (options.hasAnyAdvantagePlus && hasAdvantagePlus) {
-      scaleSteps.push(
-        'Como já existe Advantage+ ativa: não criar nova Advantage+.',
-        budgetStructure === 'CBO'
-          ? 'Aplicar otimização atual (Advantage+ CBO): aumentar 20%, pausar anúncios sem performance e subir novos testes A/B.'
-          : 'Aplicar otimização atual (Advantage+ ABO): aumentar 20%, manter conjuntos vencedores e subir novos testes A/B.'
-      );
-    }
 
     return {
       scenario: 1,
-      title: 'Campanha vendendo bem — Escalar!',
-      message: `A campanha ${campaign_name} está dentro do CPA alvo de low ticket.`,
-      steps: [
-        ...diagnostics,
-        ...scaleSteps,
-        'Ajustar: sem conjuntos acima do CPA nesta campanha.',
-        'Desativar: sem conjuntos para pausar nesta campanha.',
-        'Plano de Ação (Passo a Passo): executar escala, criar campanha teste e monitorar por 7 dias.',
-        ...nonNegotiables
-      ]
+      title: 'Escalar — Campanha vendendo bem — Escalar!',
+      message: 'Executar ações abaixo.',
+      steps: scaleSteps
     };
   }
 
-  const mustPause = (spend > productPrice && purchases === 0) || (purchases > 0 && cpaValue > productPrice);
-  const adjustSteps = [
-    'Escalar: não aplicável enquanto estiver acima do CPA alvo.',
-    'Ajustar',
-    'Reduzir 20% do orçamento.',
-    mustPause
-      ? 'Desativar: pausar este conjunto (gastou mais que o valor do produto sem venda ou com CPA acima do valor do produto).'
-      : 'Desativar: pausar somente conjuntos que gastaram mais que o valor do produto sem venda ou com CPA acima do valor do produto.',
-    'Plano de Ação (Passo a Passo): reduzir orçamento, pausar conjuntos fora da regra e reavaliar nos próximos 7 dias.'
-  ];
+  if (isSemPerformance) {
+    const conditionParts: string[] = [];
+    if (noSales) conditionParts.push('não gerou vendas');
+    if (spentAboveProductWithoutSales) conditionParts.push('gastou mais que o valor do produto sem vender');
+    if (cpaAboveProduct) conditionParts.push('CPA acima do valor do produto');
+
+    const attentionSteps: string[] = [
+      `Baixa performance identificada: ${conditionParts.join('; ')}.`,
+      'Desativar conjuntos que gastaram mais que o valor do produto sem vender.',
+      'Desativar anúncios que não venderam.',
+      'Criar novos criativos com abordagem diferente.',
+      'Regra final (últimos 7 dias): desativar qualquer conjunto que gastou mais que o valor do produto sem vender ou com CPA acima do valor do produto.'
+    ];
+
+    return {
+      scenario: 3,
+      title: 'Sem performance — ação imediata',
+      message: 'Executar ações abaixo.',
+      steps: attentionSteps
+    };
+  }
+
+  if (purchases > 0 && cpaValue > cpaTarget) {
+    const optimizeSteps: string[] = [
+      'Reduzir orçamento em 20%.',
+      'Desativar anúncios que não venderam.',
+      'Desativar anúncios com CPA acima do valor do produto.',
+      'Subir novos anúncios como Teste A/B.',
+      'Regra final (últimos 7 dias): desativar qualquer conjunto que gastou mais que o valor do produto sem vender ou com CPA acima do valor do produto.'
+    ];
+
+    return {
+      scenario: 2,
+      title: 'Otimizar — Vendendo, mas CPA alto — Otimizar',
+      message: 'Executar ações abaixo.',
+      steps: optimizeSteps
+    };
+  }
 
   return {
-    scenario: mustPause ? 3 : 2,
-    title: mustPause ? 'Conjunto acima do CPA — Desativar' : 'Conjunto acima do CPA — Ajustar',
-    message: `A campanha ${campaign_name} está acima do CPA alvo para low ticket e precisa de ajuste.`,
-    steps: [...diagnostics, ...adjustSteps, ...nonNegotiables]
+    scenario: 0,
+    title: 'Sem dados suficientes',
+    message: `A campanha ${campaign_name} não possui dados suficientes para análise.`,
+    steps: []
   };
 }
 

@@ -7,6 +7,7 @@ import authRoutes from './routes/auth';
 import auditRoutes from './routes/audits';
 import adminRoutes from './routes/admin';
 import creativesRoutes from './routes/creatives';
+import tinderRoutes from './routes/tinder';
 import './types';
 
 dotenv.config();
@@ -23,6 +24,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/audits', auditRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/creatives', creativesRoutes);
+app.use('/api/tinder-do-fluxo', tinderRoutes);
 
 // Serve static files (CSS, JS, images, etc.)
 app.use(express.static(path.join(rootDir, 'public_dist')));

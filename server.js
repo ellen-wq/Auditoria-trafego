@@ -1,43 +1,35 @@
-const express = require('express');
-const path = require('path');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
-const { initDb } = require('./db/database');
-const authRoutes = require('./routes/auth');
-const auditRoutes = require('./routes/audits');
-const adminRoutes = require('./routes/admin');
-const creativesRoutes = require('./routes/creatives');
+let initPromise = null;
+let appInstance = null;
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
-app.use(cookieParser());
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/api/auth', authRoutes);
-app.use('/api/audits', auditRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/creatives', creativesRoutes);
-
-app.get('/app/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', req.path));
-});
-app.get('/admin/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', req.path));
-});
-
-async function start() {
-  await initDb();
-  app.listen(PORT, () => {
-    console.log(`Fluxer Auditoria rodando em http://localhost:${PORT}`);
-  });
+async function ensureApp() {
+  if (!appInstance) {
+    const appModule = require('./dist/app');
+    appInstance = appModule.default || appModule;
+  }
+  return appInstance;
 }
 
-start().catch(err => {
-  console.error('Erro ao iniciar servidor:', err);
-  process.exit(1);
-});
+async function ensureDbInit() {
+  if (!initPromise) {
+    initPromise = (async () => {
+      const dbModule = require('./dist/db/database');
+      await dbModule.initDb({ seedUsers: false, ensureStorageBucket: false });
+    })().catch((err) => {
+      initPromise = null;
+      throw err;
+    });
+  }
+  return initPromise;
+}
+
+module.exports = async function handler(req, res) {
+  try {
+    await ensureDbInit();
+    const app = await ensureApp();
+    return app(req, res);
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Erro ao iniciar aplicação: ' + (err && err.message ? err.message : String(err))
+    });
+  }
+};
