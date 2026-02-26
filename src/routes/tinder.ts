@@ -748,6 +748,135 @@ router.post('/jobs/:id/apply', async (req: Request, res: Response): Promise<void
   res.json({ ok: true });
 });
 
+// Admin - Criar tabelas do Tinder do Fluxo
+router.post('/admin/create-tables', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['LIDERANCA'])) return;
+  
+  const supabase = getSupabase();
+  const results: any[] = [];
+  
+  try {
+    // Criar tinder_mentor_profiles
+    const mentorTableSQL = `
+      CREATE TABLE IF NOT EXISTS tinder_mentor_profiles (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        photo_url TEXT DEFAULT '',
+        city TEXT DEFAULT '',
+        instagram TEXT DEFAULT '',
+        niche TEXT DEFAULT '',
+        nivel_fluxo TEXT DEFAULT '',
+        bio TEXT DEFAULT '',
+        whatsapp TEXT DEFAULT '',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+    
+    const { error: mentorError } = await supabase.rpc('exec_sql', { sql: mentorTableSQL });
+    if (mentorError) {
+      // Tentar verificar se a tabela já existe
+      const { error: checkError } = await supabase.from('tinder_mentor_profiles').select('id').limit(1);
+      if (checkError && checkError.message?.includes('does not exist')) {
+        results.push({ table: 'tinder_mentor_profiles', status: 'error', message: mentorError.message });
+      } else {
+        results.push({ table: 'tinder_mentor_profiles', status: 'exists' });
+      }
+    } else {
+      results.push({ table: 'tinder_mentor_profiles', status: 'created' });
+    }
+    
+    // Criar tinder_expert_profiles
+    const expertTableSQL = `
+      CREATE TABLE IF NOT EXISTS tinder_expert_profiles (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        is_expert BOOLEAN DEFAULT FALSE,
+        is_coproducer BOOLEAN DEFAULT FALSE,
+        goal_text TEXT DEFAULT '',
+        search_bio TEXT DEFAULT '',
+        preferences_json JSONB DEFAULT '{}'::JSONB,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+    
+    const { error: expertError } = await supabase.rpc('exec_sql', { sql: expertTableSQL });
+    if (expertError) {
+      const { error: checkError } = await supabase.from('tinder_expert_profiles').select('id').limit(1);
+      if (checkError && checkError.message?.includes('does not exist')) {
+        results.push({ table: 'tinder_expert_profiles', status: 'error', message: expertError.message });
+      } else {
+        results.push({ table: 'tinder_expert_profiles', status: 'exists' });
+      }
+    } else {
+      results.push({ table: 'tinder_expert_profiles', status: 'created' });
+    }
+    
+    // Criar tinder_service_profiles
+    const serviceTableSQL = `
+      CREATE TABLE IF NOT EXISTS tinder_service_profiles (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        photo_url TEXT DEFAULT '',
+        city TEXT DEFAULT '',
+        instagram TEXT DEFAULT '',
+        whatsapp TEXT DEFAULT '',
+        specialty TEXT DEFAULT '',
+        certification TEXT DEFAULT '',
+        portfolio TEXT DEFAULT '',
+        experience TEXT DEFAULT '',
+        bio TEXT DEFAULT '',
+        rating_avg REAL DEFAULT 0,
+        rating_count INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+    
+    const { error: serviceError } = await supabase.rpc('exec_sql', { sql: serviceTableSQL });
+    if (serviceError) {
+      const { error: checkError } = await supabase.from('tinder_service_profiles').select('id').limit(1);
+      if (checkError && checkError.message?.includes('does not exist')) {
+        results.push({ table: 'tinder_service_profiles', status: 'error', message: serviceError.message });
+      } else {
+        results.push({ table: 'tinder_service_profiles', status: 'exists' });
+      }
+    } else {
+      results.push({ table: 'tinder_service_profiles', status: 'created' });
+    }
+    
+    // Como o Supabase não permite execução direta de SQL via RPC sem função customizada,
+    // vamos tentar uma abordagem diferente: verificar e criar via queries diretas
+    // Se as tabelas não existem, vamos retornar instruções
+    
+    const allExist = results.every(r => r.status === 'exists' || r.status === 'created');
+    
+    if (!allExist) {
+      res.status(200).json({
+        success: false,
+        message: 'Não foi possível criar as tabelas automaticamente. Execute o script SQL manualmente no Supabase Dashboard.',
+        results,
+        instructions: 'Acesse o Supabase Dashboard > SQL Editor e execute o conteúdo do arquivo create-tinder-tables.sql'
+      });
+    } else {
+      res.json({
+        success: true,
+        message: 'Tabelas verificadas/criadas com sucesso',
+        results
+      });
+    }
+  } catch (err: any) {
+    console.error('[POST /admin/create-tables] Erro:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Erro ao criar tabelas',
+      results,
+      instructions: 'Execute o script SQL manualmente no Supabase Dashboard usando o arquivo create-tinder-tables.sql'
+    });
+  }
+});
+
 // Admin
 router.get('/admin/dashboard', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['LIDERANCA'])) return;
