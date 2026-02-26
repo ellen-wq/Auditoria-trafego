@@ -141,6 +141,27 @@ export default async function handler(req: any, res: any): Promise<void> {
       }
       return;
     }
+    
+    // Test serverless handler endpoint
+    if (req.url === '/api/test-serverless') {
+      try {
+        await ensureDbInit();
+        const app = await getAppInstance();
+        const handler = serverless(app);
+        res.status(200).json({ 
+          success: true, 
+          message: 'Serverless handler created',
+          handlerType: typeof handler
+        });
+      } catch (err: any) {
+        res.status(500).json({
+          success: false,
+          error: err.message,
+          stack: err.stack
+        });
+      }
+      return;
+    }
 
     // Initialize DB and app
     console.log('Initializing DB...');
@@ -151,12 +172,26 @@ export default async function handler(req: any, res: any): Promise<void> {
     
     // Create serverless handler if not exists
     if (!serverlessHandler) {
-      serverlessHandler = serverless(app);
+      serverlessHandler = serverless(app, {
+        binary: ['image/*', 'application/pdf']
+      });
     }
     
     console.log('Calling serverless handler...');
     // Use serverless-http to bridge Vercel and Express
-    return serverlessHandler(req, res);
+    // Wrap in Promise to ensure proper handling
+    try {
+      const result = await serverlessHandler(req, res);
+      return result;
+    } catch (handlerErr: any) {
+      console.error('Serverless handler error:', handlerErr);
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: 'Handler execution failed: ' + (handlerErr.message || String(handlerErr))
+        });
+      }
+      throw handlerErr;
+    }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
