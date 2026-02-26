@@ -20,6 +20,102 @@ interface InitDbOptions {
   ensureStorageBucket?: boolean;
 }
 
+async function ensureTables(): Promise<void> {
+  if (!supabase) return;
+  
+  // Verificar e criar tabelas do Tinder do Fluxo se não existirem
+  const tables = [
+    {
+      name: 'tinder_mentor_profiles',
+      sql: `
+        CREATE TABLE IF NOT EXISTS tinder_mentor_profiles (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+          photo_url TEXT DEFAULT '',
+          city TEXT DEFAULT '',
+          instagram TEXT DEFAULT '',
+          niche TEXT DEFAULT '',
+          nivel_fluxo TEXT DEFAULT '',
+          bio TEXT DEFAULT '',
+          whatsapp TEXT DEFAULT '',
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `
+    },
+    {
+      name: 'tinder_expert_profiles',
+      sql: `
+        CREATE TABLE IF NOT EXISTS tinder_expert_profiles (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+          is_expert BOOLEAN DEFAULT FALSE,
+          is_coproducer BOOLEAN DEFAULT FALSE,
+          goal_text TEXT DEFAULT '',
+          search_bio TEXT DEFAULT '',
+          preferences_json JSONB DEFAULT '{}'::JSONB,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `
+    },
+    {
+      name: 'tinder_service_profiles',
+      sql: `
+        CREATE TABLE IF NOT EXISTS tinder_service_profiles (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+          photo_url TEXT DEFAULT '',
+          city TEXT DEFAULT '',
+          instagram TEXT DEFAULT '',
+          whatsapp TEXT DEFAULT '',
+          specialty TEXT DEFAULT '',
+          certification TEXT DEFAULT '',
+          portfolio TEXT DEFAULT '',
+          experience TEXT DEFAULT '',
+          bio TEXT DEFAULT '',
+          rating_avg REAL DEFAULT 0,
+          rating_count INTEGER DEFAULT 0,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `
+    }
+  ];
+  
+  for (const table of tables) {
+    try {
+      // Verificar se a tabela existe
+      const { error: checkError } = await supabase
+        .from(table.name)
+        .select('id')
+        .limit(1);
+      
+      // Se não existe, criar
+      if (checkError && checkError.message?.includes('does not exist')) {
+        console.log(`[initDb] Criando tabela ${table.name}...`);
+        const { error: createError } = await supabase.rpc('exec_sql', { sql: table.sql });
+        
+        if (createError) {
+          // Tentar criar via query direta
+          const { error: directError } = await supabase
+            .from(table.name)
+            .select('*')
+            .limit(0);
+          
+          if (directError && directError.message?.includes('does not exist')) {
+            console.warn(`[initDb] Não foi possível criar ${table.name} automaticamente. Execute a migration SQL manualmente.`);
+          }
+        } else {
+          console.log(`[initDb] Tabela ${table.name} criada com sucesso.`);
+        }
+      }
+    } catch (err) {
+      console.warn(`[initDb] Erro ao verificar/criar tabela ${table.name}:`, err);
+    }
+  }
+}
+
 async function initDb(options: InitDbOptions = {}): Promise<void> {
   const seedUsers = options.seedUsers ?? true;
   const ensureStorageBucket = options.ensureStorageBucket ?? true;
@@ -33,6 +129,11 @@ async function initDb(options: InitDbOptions = {}): Promise<void> {
     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false }
     });
+  }
+
+  // Garantir que as tabelas existem
+  if (!initialized) {
+    await ensureTables();
   }
 
   if (ensureStorageBucket && !initialized) {

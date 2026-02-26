@@ -117,6 +117,21 @@ router.post('/mentor-profile', async (req: Request, res: Response): Promise<void
   }
   
   const supabase = getSupabase();
+  
+  // Verificar se a tabela existe, se não, tentar criar
+  const { error: tableCheckError } = await supabase
+    .from('tinder_mentor_profiles')
+    .select('id')
+    .limit(1);
+  
+  if (tableCheckError && tableCheckError.message?.includes('does not exist')) {
+    console.error('[POST /mentor-profile] Tabela não existe. Execute a migration SQL no Supabase.');
+    res.status(500).json({ 
+      error: 'Tabela não encontrada. Por favor, execute a migration SQL no Supabase Dashboard. Verifique o arquivo supabase-migration.sql' 
+    });
+    return;
+  }
+  
   const payload = {
     user_id: userId, // Sempre da sessão
     photo_url: cleanString(req.body.photoUrl || '', 1000),
