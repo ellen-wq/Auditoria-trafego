@@ -26,27 +26,27 @@ app.use('/api/audits', auditRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/creatives', creativesRoutes);
 
-app.get('/app/*', (req, res) => {
-  const builtIndex = path.join(rootDir, 'public_dist', 'index.html');
-  const fallback = path.join(rootDir, 'public', req.path);
-  res.sendFile(builtIndex, (err) => {
-    if (err) res.sendFile(fallback);
-  });
+// Serve static files first (CSS, JS, images, etc.)
+app.get(/\.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$/, (req, res, next) => {
+  next();
 });
 
-app.get('/admin/*', (req, res) => {
-  const builtIndex = path.join(rootDir, 'public_dist', 'index.html');
-  const fallback = path.join(rootDir, 'public', req.path);
-  res.sendFile(builtIndex, (err) => {
-    if (err) res.sendFile(fallback);
-  });
+// API routes
+app.use('/api', (req, res, next) => {
+  next();
 });
 
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api/')) return next();
+// Serve index.html for all non-API routes (React Router handles routing)
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
   const indexPath = path.join(rootDir, 'public_dist', 'index.html');
   res.sendFile(indexPath, (err) => {
-    if (err) next();
+    if (err) {
+      console.error('Error serving index.html:', err);
+      res.status(500).send('Error loading application');
+    }
   });
 });
 
