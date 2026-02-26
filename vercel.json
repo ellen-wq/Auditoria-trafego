@@ -7,14 +7,6 @@
       "includeFiles": "public_dist/**,dist/**,src/**"
     }
   },
-  "ignore": [
-    "server.js",
-    "db/database.js",
-    "routes/*.js",
-    "middleware/*.js",
-    "utils/parser.js",
-    "engine/rules.js"
-  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
