@@ -172,7 +172,6 @@ export default function Sidebar({ user }: SidebarProps) {
               <NavLink to="/tinder-do-fluxo/vagas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Vagas</NavLink>
               <NavLink to="/tinder-do-fluxo/matches" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Matches</NavLink>
               <NavLink to="/tinder-do-fluxo/favoritos" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Favoritos</NavLink>
-              <NavLink to="/tinder-do-fluxo/perfil" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Meu Perfil</NavLink>
               <NavLink to="/tinder-do-fluxo/avaliacoes" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Avaliações de Prestador</NavLink>
 
               <div className="sidebar-subgroup-title">Admin</div>

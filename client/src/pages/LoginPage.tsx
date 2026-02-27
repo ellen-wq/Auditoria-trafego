@@ -11,7 +11,8 @@ export default function LoginPage() {
 
   function homeByRole(role: string): string {
     if (role === 'LIDERANCA') return '/admin/dashboard';
-    if (role === 'PRESTADOR') return '/tinder-do-fluxo/perfil';
+    // MENTORADO and PRESTADOR must create profile first
+    if (role === 'PRESTADOR' || role === 'MENTORADO') return '/tinder-do-fluxo/perfil';
     return '/app/upload';
   }
 

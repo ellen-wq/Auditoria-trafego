@@ -2,20 +2,23 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { api } from '../services/api';
 import type { User } from '../services/api';
+import ProfileRequired from './ProfileRequired';
 
 interface Props {
   children: React.ReactNode;
   requiredRole?: 'MENTORADO' | 'LIDERANCA';
   allowedRoles?: Array<'MENTORADO' | 'LIDERANCA' | 'PRESTADOR'>;
   redirectTo?: string;
+  skipProfileCheck?: boolean; // For profile page itself
 }
 
 function getMainDashboardPath(role?: string): string {
   if (role === 'LIDERANCA') return '/admin/dashboard';
-  return '/app/upload';
+  if (role === 'PRESTADOR') return '/tinder-do-fluxo/perfil';
+  return '/tinder-do-fluxo/perfil'; // MENTORADO must create profile first
 }
 
-export default function ProtectedRoute({ children, requiredRole, allowedRoles, redirectTo }: Props) {
+export default function ProtectedRoute({ children, requiredRole, allowedRoles, redirectTo, skipProfileCheck }: Props) {
   const [user, setUser] = useState<User | null>(null);
   const [isChecking, setIsChecking] = useState(true);
 
@@ -94,6 +97,11 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles, r
   }
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to={redirectTo || getMainDashboardPath(user.role)} replace />;
+  }
+
+  // Check profile requirement (except for profile page itself)
+  if (!skipProfileCheck) {
+    return <ProfileRequired user={user}>{children}</ProfileRequired>;
   }
 
   return <>{children}</>;

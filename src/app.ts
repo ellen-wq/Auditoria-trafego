@@ -17,6 +17,7 @@ const rootDir = process.cwd();
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 // API routes must come before static files

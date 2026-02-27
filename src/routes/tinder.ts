@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
 import { getSupabase } from '../db/database';
 import { requireAuth } from '../middleware/auth';
 
@@ -65,6 +66,12 @@ async function logAction(actorUserId: string | null, action: string, meta: Recor
 
 router.use(requireAuth);
 
+// Configurar multer para upload de arquivos (temporário, será usado quando implementar upload)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
+
 // Tutorial status
 router.get('/tutorial-status', async (req: Request, res: Response): Promise<void> => {
   res.json({ hasSeen: !!req.user?.has_seen_tinder_do_fluxo_tutorial });
@@ -83,6 +90,62 @@ router.post('/tutorial-status', async (req: Request, res: Response): Promise<voi
   } catch (err: unknown) {
     res.status(500).json({ error: 'Erro ao atualizar status do tutorial.' });
   }
+});
+
+// Check if profile exists (for MENTORADO and PRESTADOR)
+router.get('/profile-check', async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: 'Não autenticado' });
+    return;
+  }
+
+  const userId = req.user.id;
+  const role = req.user.role;
+  const supabase = getSupabase();
+
+  // LIDERANCA doesn't need a profile
+  if (role === 'LIDERANCA') {
+    res.json({ hasProfile: true, profileRequired: false });
+    return;
+  }
+
+  // MENTORADO needs tinder_mentor_profiles
+  if (role === 'MENTORADO') {
+    const { data, error } = await supabase
+      .from('tinder_mentor_profiles')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('[GET /profile-check] Erro ao verificar perfil mentor:', error);
+      res.status(500).json({ error: 'Erro ao verificar perfil.' });
+      return;
+    }
+    
+    res.json({ hasProfile: !!data, profileRequired: true });
+    return;
+  }
+
+  // PRESTADOR needs tinder_service_profiles
+  if (role === 'PRESTADOR') {
+    const { data, error } = await supabase
+      .from('tinder_service_profiles')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('[GET /profile-check] Erro ao verificar perfil prestador:', error);
+      res.status(500).json({ error: 'Erro ao verificar perfil.' });
+      return;
+    }
+    
+    res.json({ hasProfile: !!data, profileRequired: true });
+    return;
+  }
+
+  res.json({ hasProfile: false, profileRequired: false });
 });
 
 // Mentor profile
@@ -443,14 +506,23 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
   try {
     const supabase = getSupabase();
-    console.log('[Feed Expert] Iniciando busca...');
+    const searchQuery = cleanString(req.query.q as string, 200);
+    const tipoPerfil = req.query.tipo_perfil ? String(req.query.tipo_perfil).split(',') : [];
+    
+    console.log('[Feed Expert] Iniciando busca...', { searchQuery, tipoPerfil });
     
     // Buscar MENTORADOS primeiro (sem joins para evitar problemas de RLS)
-    const { data: mentorados, error: mentoradosError } = await supabase
+    let mentoradosQuery = supabase
       .from('user_roles')
       .select('user_id, name, role, created_at')
       .eq('role', 'MENTORADO')
-      .neq('user_id', req.user!.id)
+      .neq('user_id', req.user!.id);
+    
+    if (searchQuery) {
+      mentoradosQuery = mentoradosQuery.ilike('name', `%${searchQuery}%`);
+    }
+    
+    const { data: mentorados, error: mentoradosError } = await mentoradosQuery
       .order('created_at', { ascending: false })
       .limit(80);
     
@@ -504,17 +576,53 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
     const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) || []);
     
     // Combinar dados - mostrar TODOS os mentorados com perfil mentor
-    const users = (mentorados || [])
+    let users = (mentorados || [])
       .filter((u: any) => mentorMap.has(u.user_id)) // Apenas quem tem perfil mentor
-      .map((u: any) => ({
-        id: u.user_id,
-        name: u.name,
-        email: emailMap.get(u.user_id) || '',
-        role: u.role,
-        created_at: u.created_at,
-        tinder_mentor_profiles: mentorMap.get(u.user_id) || null,
-        tinder_expert_profiles: expertMap.get(u.user_id) || null
-      }));
+      .map((u: any) => {
+        const expertProfile = expertMap.get(u.user_id);
+        return {
+          id: u.user_id,
+          name: u.name,
+          email: emailMap.get(u.user_id) || '',
+          role: u.role,
+          created_at: u.created_at,
+          tinder_mentor_profiles: mentorMap.get(u.user_id) || null,
+          tinder_expert_profiles: expertProfile || null
+        };
+      });
+    
+    // Filtro por tipo de perfil (expert/coprodutor)
+    if (tipoPerfil.length > 0) {
+      users = users.filter((u: any) => {
+        const expertProfile = u.tinder_expert_profiles;
+        if (!expertProfile) return false;
+        
+        if (tipoPerfil.includes('expert') && tipoPerfil.includes('coprodutor')) {
+          return expertProfile.is_expert || expertProfile.is_coproducer;
+        }
+        if (tipoPerfil.includes('expert')) {
+          return expertProfile.is_expert;
+        }
+        if (tipoPerfil.includes('coprodutor')) {
+          return expertProfile.is_coproducer;
+        }
+        return true;
+      });
+    }
+    
+    // Busca adicional por objetivo/bio se houver searchQuery
+    if (searchQuery) {
+      users = users.filter((u: any) => {
+        const expertProfile = u.tinder_expert_profiles;
+        if (!expertProfile) return false;
+        
+        const goalMatch = expertProfile.goal_text?.toLowerCase().includes(searchQuery.toLowerCase());
+        const bioMatch = expertProfile.search_bio?.toLowerCase().includes(searchQuery.toLowerCase());
+        const nameMatch = u.name?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        return goalMatch || bioMatch || nameMatch;
+      });
+    }
     
     console.log('[Feed Expert] Retornando', users.length, 'usuários (todos os mentorados com perfil)');
     res.json({ users });
@@ -532,21 +640,36 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
 router.get('/services', async (req: Request, res: Response): Promise<void> => {
   try {
     const supabase = getSupabase();
-    const { specialty, certification, city, query } = req.query;
-    console.log('[Services] Iniciando busca de prestadores...', { specialty, certification, city, query });
+    const { specialty, certification, city, query, q, tipo_servico, rating_min, modo_trabalho } = req.query;
+    const searchQuery = cleanString((q || query) as string, 200);
+    const tipoServicoArray = tipo_servico ? String(tipo_servico).split(',').map(s => cleanString(s, 20)) : [];
+    const ratingMin = rating_min ? Number(rating_min) : null;
+    const modoTrabalhoArray = modo_trabalho ? String(modo_trabalho).split(',').map(m => cleanString(m, 20)) : [];
     
-    let q = supabase
+    console.log('[Services] Iniciando busca de prestadores...', { 
+      specialty, certification, city, searchQuery, tipoServicoArray, ratingMin, modoTrabalhoArray 
+    });
+    
+    let qry = supabase
       .from('tinder_service_profiles')
       .select('*')
       .order('rating_avg', { ascending: false })
       .order('rating_count', { ascending: false });
 
-    if (specialty) q = q.eq('specialty', cleanString(specialty, 60));
-    if (certification) q = q.eq('certification', cleanString(certification, 100));
-    if (city) q = q.ilike('city', `%${cleanString(city, 120)}%`);
-    if (query) q = q.or(`bio.ilike.%${cleanString(query, 120)}%,experience.ilike.%${cleanString(query, 120)}%`);
+    if (specialty) qry = qry.eq('specialty', cleanString(specialty, 60));
+    if (certification) qry = qry.eq('certification', cleanString(certification, 100));
+    if (city) qry = qry.ilike('city', `%${cleanString(city, 120)}%`);
+    if (searchQuery) {
+      qry = qry.or(`bio.ilike.%${searchQuery}%,experience.ilike.%${searchQuery}%,specialty.ilike.%${searchQuery}%`);
+    }
+    if (tipoServicoArray.length > 0) {
+      qry = qry.in('specialty', tipoServicoArray);
+    }
+    if (modoTrabalhoArray.length > 0) {
+      qry = qry.in('modo_trabalho', modoTrabalhoArray);
+    }
 
-    const { data: services, error } = await q.limit(120);
+    const { data: services, error } = await qry.limit(120);
     
     console.log('[Services] Query resultado:', { 
       dataCount: services?.length || 0, 
@@ -588,7 +711,7 @@ router.get('/services', async (req: Request, res: Response): Promise<void> => {
     const userMap = new Map((userRoles || []).map((u: any) => [u.user_id, u]));
     const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) || []);
     
-    const servicesWithUsers = (services || []).map((s: any) => {
+    let servicesWithUsers = (services || []).map((s: any) => {
       const user = userMap.get(s.user_id);
       return {
         ...s,
@@ -600,6 +723,21 @@ router.get('/services', async (req: Request, res: Response): Promise<void> => {
         } : null
       };
     });
+    
+    // Filtro por rating mínimo (aplicado após buscar dados)
+    if (ratingMin !== null) {
+      servicesWithUsers = servicesWithUsers.filter((s: any) => (s.rating_avg || 0) >= ratingMin);
+    }
+    
+    // Busca adicional por nome do usuário se houver searchQuery
+    if (searchQuery) {
+      servicesWithUsers = servicesWithUsers.filter((s: any) => {
+        const nameMatch = s.users?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+        const bioMatch = s.bio?.toLowerCase().includes(searchQuery.toLowerCase());
+        const specialtyMatch = s.specialty?.toLowerCase().includes(searchQuery.toLowerCase());
+        return nameMatch || bioMatch || specialtyMatch;
+      });
+    }
     
     console.log('[Services] Retornando', servicesWithUsers.length, 'prestadores');
     res.json({ services: servicesWithUsers });
@@ -1479,6 +1617,575 @@ router.get('/admin/logs', async (req: Request, res: Response): Promise<void> => 
     res.json({ logs: data || [] });
   } catch (err: any) {
     console.error('[Admin Logs] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// ============================================================
+// COMUNIDADE ROUTES
+// ============================================================
+
+// GET /comunidade/temas
+router.get('/comunidade/temas', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('temas')
+      .select('*')
+      .order('nome', { ascending: true });
+    
+    if (error) {
+      console.error('[Comunidade Temas] Erro:', error);
+      res.status(500).json({ error: 'Erro ao buscar temas.' });
+      return;
+    }
+    
+    res.json({ temas: data || [] });
+  } catch (err: any) {
+    console.error('[Comunidade Temas] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// GET /comunidade/posts (feed com paginação e filtro por tema)
+router.get('/comunidade/posts', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const supabase = getSupabase();
+    const userId = req.user!.id;
+    const temaId = isValidUUID(req.query.tema_id as string) || null;
+    const searchQuery = cleanString(req.query.q as string, 200);
+    const page = toPositiveInt(req.query.page) || 1;
+    const perPage = toPositiveInt(req.query.per_page) || 10;
+    const offset = (page - 1) * perPage;
+
+    // Query base
+    let query = supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + perPage - 1);
+
+    // Filtro por tema
+    if (temaId) {
+      query = query.eq('tema_id', temaId);
+    }
+
+    // Busca textual (título ou conteúdo)
+    if (searchQuery) {
+      query = query.or(`titulo.ilike.%${searchQuery}%,conteudo.ilike.%${searchQuery}%`);
+    }
+
+    const { data: posts, error: postsError } = await query;
+
+    if (postsError) {
+      console.error('[Comunidade Posts] Erro:', postsError);
+      res.status(500).json({ error: 'Erro ao buscar posts.' });
+      return;
+    }
+
+    // Buscar temas e nomes de usuários
+    const temaIds = [...new Set((posts || []).map((p: any) => p.tema_id).filter(Boolean))];
+    const autorIds = [...new Set((posts || []).map((p: any) => p.autor_id))];
+
+    const { data: temas } = await supabase
+      .from('temas')
+      .select('id, nome')
+      .in('id', temaIds);
+
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('user_id, name')
+      .in('user_id', autorIds);
+
+    const temaMap = new Map(temas?.map((t: any) => [t.id, t.nome]) || []);
+    const userMap = new Map(userRoles?.map((u: any) => [u.user_id, u.name]) || []);
+
+    // Buscar media, likes, saves e comentários para cada post
+    const postsWithCounts = await Promise.all(
+      (posts || []).map(async (post: any) => {
+        const postId = post.id;
+
+        // Media
+        const { data: media } = await supabase
+          .from('post_media')
+          .select('*')
+          .eq('post_id', postId);
+
+        // Likes
+        const { data: likes } = await supabase
+          .from('post_likes')
+          .select('user_id')
+          .eq('post_id', postId);
+
+        // Saves
+        const { data: saves } = await supabase
+          .from('post_saves')
+          .select('user_id')
+          .eq('post_id', postId);
+
+        // Comentários
+        const { data: comentarios } = await supabase
+          .from('comentarios')
+          .select('id')
+          .eq('post_id', postId);
+
+        const likedByMe = likes?.some((l: any) => l.user_id === userId) || false;
+        const savedByMe = saves?.some((s: any) => s.user_id === userId) || false;
+
+        return {
+          id: post.id,
+          tema_id: post.tema_id,
+          autor_id: post.autor_id,
+          titulo: post.titulo,
+          conteudo: post.conteudo,
+          created_at: post.created_at,
+          tema_nome: post.tema_id ? (temaMap.get(post.tema_id) || 'Sem tema') : 'Sem tema',
+          autor_nome: userMap.get(post.autor_id) || 'Usuário',
+          media: media || [],
+          total_curtidas: likes?.length || 0,
+          total_comentarios: comentarios?.length || 0,
+          total_salvos: saves?.length || 0,
+          liked_by_me: likedByMe,
+          saved_by_me: savedByMe,
+        };
+      })
+    );
+
+    // Verificar se há mais posts
+    let countQuery = supabase.from('posts').select('id', { count: 'exact', head: true });
+    if (temaId) {
+      countQuery = countQuery.eq('tema_id', temaId);
+    }
+    const { count } = await countQuery;
+    const hasMore = (count || 0) > offset + perPage;
+
+    res.json({ posts: postsWithCounts, hasMore });
+  } catch (err: any) {
+    console.error('[Comunidade Posts] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// GET /comunidade/trending (top 5 por score)
+router.get('/comunidade/trending', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const supabase = getSupabase();
+    const userId = req.user!.id;
+
+    // Buscar todos os posts com contadores
+    const { data: posts, error: postsError } = await supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100); // Buscar mais para calcular score
+
+    if (postsError) {
+      console.error('[Comunidade Trending] Erro:', postsError);
+      res.status(500).json({ error: 'Erro ao buscar posts.' });
+      return;
+    }
+
+    // Buscar temas e nomes de usuários
+    const temaIds = [...new Set((posts || []).map((p: any) => p.tema_id).filter(Boolean))];
+    const autorIds = [...new Set((posts || []).map((p: any) => p.autor_id))];
+
+    const { data: temas } = await supabase
+      .from('temas')
+      .select('id, nome')
+      .in('id', temaIds);
+
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('user_id, name')
+      .in('user_id', autorIds);
+
+    const temaMap = new Map(temas?.map((t: any) => [t.id, t.nome]) || []);
+    const userMap = new Map(userRoles?.map((u: any) => [u.user_id, u.name]) || []);
+
+    // Calcular score para cada post
+    const postsWithScores = await Promise.all(
+      (posts || []).map(async (post: any) => {
+        const postId = post.id;
+
+        const { data: likes } = await supabase
+          .from('post_likes')
+          .select('user_id')
+          .eq('post_id', postId);
+
+        const { data: comentarios } = await supabase
+          .from('comentarios')
+          .select('id')
+          .eq('post_id', postId);
+
+        const { data: saves } = await supabase
+          .from('post_saves')
+          .select('user_id')
+          .eq('post_id', postId);
+
+        const { data: media } = await supabase
+          .from('post_media')
+          .select('*')
+          .eq('post_id', postId);
+
+        const totalCurtidas = likes?.length || 0;
+        const totalComentarios = comentarios?.length || 0;
+        const totalSalvos = saves?.length || 0;
+
+        // Score = (curtidas * 1) + (comentarios * 2) + (saves * 3)
+        const score = totalCurtidas * 1 + totalComentarios * 2 + totalSalvos * 3;
+
+        const likedByMe = likes?.some((l: any) => l.user_id === userId) || false;
+        const savedByMe = saves?.some((s: any) => s.user_id === userId) || false;
+
+        return {
+          id: post.id,
+          tema_id: post.tema_id,
+          autor_id: post.autor_id,
+          titulo: post.titulo,
+          conteudo: post.conteudo,
+          created_at: post.created_at,
+          tema_nome: post.tema_id ? (temaMap.get(post.tema_id) || 'Sem tema') : 'Sem tema',
+          autor_nome: userMap.get(post.autor_id) || 'Usuário',
+          media: media || [],
+          total_curtidas: totalCurtidas,
+          total_comentarios: totalComentarios,
+          total_salvos: totalSalvos,
+          liked_by_me: likedByMe,
+          saved_by_me: savedByMe,
+          score,
+        };
+      })
+    );
+
+    // Ordenar por score e pegar top 5
+    const top5 = postsWithScores
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(({ score, ...post }) => post); // Remover score do resultado
+
+    res.json({ posts: top5 });
+  } catch (err: any) {
+    console.error('[Comunidade Trending] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// POST /comunidade/posts (criar post)
+// Usar multer para processar FormData (mesmo que não tenha arquivos ainda)
+router.post('/comunidade/posts', upload.any(), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const supabase = getSupabase();
+    const userId = req.user!.id;
+    
+    // Extrair dados do body (pode ser FormData ou JSON)
+    const temaIdRaw = req.body.tema_id || req.body['tema_id'];
+    const tituloRaw = req.body.titulo || req.body['titulo'];
+    const conteudoRaw = req.body.conteudo || req.body['conteudo'];
+    
+    console.log('[Comunidade Create Post] Body recebido:', {
+      tema_id: temaIdRaw,
+      titulo: tituloRaw?.substring(0, 50),
+      conteudo: conteudoRaw?.substring(0, 50),
+      bodyKeys: Object.keys(req.body)
+    });
+    
+    const temaId = isValidUUID(temaIdRaw);
+    const titulo = cleanString(tituloRaw, 200);
+    const conteudo = cleanString(conteudoRaw, 5000);
+
+    // Validação mais detalhada
+    if (!temaId) {
+      console.log('[Comunidade Create Post] Validação falhou: temaId inválido', temaIdRaw);
+      res.status(400).json({ error: 'Tema é obrigatório e deve ser válido.' });
+      return;
+    }
+    
+    if (!titulo || titulo.trim().length === 0) {
+      console.log('[Comunidade Create Post] Validação falhou: título vazio');
+      res.status(400).json({ error: 'Título é obrigatório.' });
+      return;
+    }
+    
+    if (!conteudo || conteudo.trim().length === 0) {
+      console.log('[Comunidade Create Post] Validação falhou: conteúdo vazio');
+      res.status(400).json({ error: 'Conteúdo é obrigatório.' });
+      return;
+    }
+
+    // Verificar se tema permite postagem e buscar nome
+    const { data: tema, error: temaError } = await supabase
+      .from('temas')
+      .select('permite_postagem, nome')
+      .eq('id', temaId)
+      .single();
+
+    if (temaError || !tema) {
+      res.status(404).json({ error: 'Tema não encontrado.' });
+      return;
+    }
+
+    if (!tema.permite_postagem) {
+      res.status(403).json({ error: 'Este tema não permite postagens.' });
+      return;
+    }
+
+    // Criar post
+    const { data: post, error: postError } = await supabase
+      .from('posts')
+      .insert({
+        tema_id: temaId,
+        autor_id: userId,
+        titulo,
+        conteudo,
+      })
+      .select('*')
+      .single();
+
+    if (postError || !post) {
+      console.error('[Comunidade Create Post] Erro:', postError);
+      res.status(500).json({ error: 'Erro ao criar post.' });
+      return;
+    }
+
+    // Buscar nome do usuário
+
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('name')
+      .eq('user_id', userId)
+      .single();
+
+    // TODO: Upload de mídia será implementado com Supabase Storage
+    // Por enquanto, retornar post sem media
+
+    const postWithCounts = {
+      id: post.id,
+      tema_id: post.tema_id,
+      autor_id: post.autor_id,
+      titulo: post.titulo,
+      conteudo: post.conteudo,
+      created_at: post.created_at,
+      tema_nome: tema?.nome || 'Sem tema',
+      autor_nome: userRole?.name || 'Usuário',
+      media: [],
+      total_curtidas: 0,
+      total_comentarios: 0,
+      total_salvos: 0,
+      liked_by_me: false,
+      saved_by_me: false,
+    };
+
+    await logAction(userId, 'COMUNIDADE_POST_CREATED', { postId: post.id });
+    res.json({ post: postWithCounts });
+  } catch (err: any) {
+    console.error('[Comunidade Create Post] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// POST /comunidade/posts/:id/like
+router.post('/comunidade/posts/:id/like', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const supabase = getSupabase();
+    const userId = req.user!.id;
+    const postId = isValidUUID(req.params.id);
+
+    if (!postId) {
+      res.status(400).json({ error: 'ID do post inválido.' });
+      return;
+    }
+
+    // Verificar se já curtiu
+    const { data: existingLike } = await supabase
+      .from('post_likes')
+      .select('user_id')
+      .eq('post_id', postId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existingLike) {
+      // Remover like
+      const { error } = await supabase
+        .from('post_likes')
+        .delete()
+        .eq('post_id', postId)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('[Comunidade Like] Erro ao remover like:', error);
+        res.status(500).json({ error: 'Erro ao remover curtida.' });
+        return;
+      }
+    } else {
+      // Adicionar like
+      const { error } = await supabase
+        .from('post_likes')
+        .insert({ post_id: postId, user_id: userId });
+
+      if (error) {
+        console.error('[Comunidade Like] Erro ao adicionar like:', error);
+        res.status(500).json({ error: 'Erro ao curtir post.' });
+        return;
+      }
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('[Comunidade Like] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// POST /comunidade/posts/:id/save
+router.post('/comunidade/posts/:id/save', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const supabase = getSupabase();
+    const userId = req.user!.id;
+    const postId = isValidUUID(req.params.id);
+
+    if (!postId) {
+      res.status(400).json({ error: 'ID do post inválido.' });
+      return;
+    }
+
+    // Verificar se já salvou
+    const { data: existingSave } = await supabase
+      .from('post_saves')
+      .select('user_id')
+      .eq('post_id', postId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existingSave) {
+      // Remover save
+      const { error } = await supabase
+        .from('post_saves')
+        .delete()
+        .eq('post_id', postId)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('[Comunidade Save] Erro ao remover save:', error);
+        res.status(500).json({ error: 'Erro ao remover salvamento.' });
+        return;
+      }
+    } else {
+      // Adicionar save
+      const { error } = await supabase
+        .from('post_saves')
+        .insert({ post_id: postId, user_id: userId });
+
+      if (error) {
+        console.error('[Comunidade Save] Erro ao adicionar save:', error);
+        res.status(500).json({ error: 'Erro ao salvar post.' });
+        return;
+      }
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('[Comunidade Save] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// GET /comunidade/posts/:id/comentarios
+router.get('/comunidade/posts/:id/comentarios', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const supabase = getSupabase();
+    const postId = isValidUUID(req.params.id);
+
+    if (!postId) {
+      res.status(400).json({ error: 'ID do post inválido.' });
+      return;
+    }
+
+    const { data: comentarios, error } = await supabase
+      .from('comentarios')
+      .select('*')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+
+    // Buscar nomes dos autores
+    const autorIds = [...new Set((comentarios || []).map((c: any) => c.autor_id))];
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('user_id, name')
+      .in('user_id', autorIds);
+
+    const userMap = new Map(userRoles?.map((u: any) => [u.user_id, u.name]) || []);
+
+    if (error) {
+      console.error('[Comunidade Comentarios] Erro:', error);
+      res.status(500).json({ error: 'Erro ao buscar comentários.' });
+      return;
+    }
+
+    const comentariosWithAuthor = (comentarios || []).map((c: any) => ({
+      id: c.id,
+      post_id: c.post_id,
+      autor_id: c.autor_id,
+      conteudo: c.conteudo,
+      created_at: c.created_at,
+      autor_nome: userMap.get(c.autor_id) || 'Usuário',
+    }));
+
+    res.json({ comentarios: comentariosWithAuthor });
+  } catch (err: any) {
+    console.error('[Comunidade Comentarios] Erro geral:', err);
+    res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// POST /comunidade/posts/:id/comentarios
+router.post('/comunidade/posts/:id/comentarios', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const supabase = getSupabase();
+    const userId = req.user!.id;
+    const postId = isValidUUID(req.params.id);
+    const conteudo = cleanString(req.body.conteudo, 2000);
+
+    if (!postId || !conteudo) {
+      res.status(400).json({ error: 'ID do post e conteúdo são obrigatórios.' });
+      return;
+    }
+
+    const { data: comentario, error } = await supabase
+      .from('comentarios')
+      .insert({
+        post_id: postId,
+        autor_id: userId,
+        conteudo,
+      })
+      .select('*')
+      .single();
+
+    // Buscar nome do autor
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('name')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !comentario) {
+      console.error('[Comunidade Create Comentario] Erro:', error);
+      res.status(500).json({ error: 'Erro ao criar comentário.' });
+      return;
+    }
+
+    const comentarioWithAuthor = {
+      id: comentario.id,
+      post_id: comentario.post_id,
+      autor_id: comentario.autor_id,
+      conteudo: comentario.conteudo,
+      created_at: comentario.created_at,
+      autor_nome: userRole?.name || 'Usuário',
+    };
+
+    await logAction(userId, 'COMUNIDADE_COMENTARIO_CREATED', { postId, comentarioId: comentario.id });
+    res.json({ comentario: comentarioWithAuthor });
+  } catch (err: any) {
+    console.error('[Comunidade Create Comentario] Erro geral:', err);
     res.status(500).json({ error: 'Erro interno.' });
   }
 });

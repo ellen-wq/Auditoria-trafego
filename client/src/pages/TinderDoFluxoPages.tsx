@@ -1,36 +1,97 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import TinderDoFluxoPageShell from '../components/tinder-do-fluxo/TinderDoFluxoPageShell';
 import { api } from '../services/api';
+import TemaSidebar from '../components/comunidade/TemaSidebar';
+import FeedHeader from '../components/comunidade/FeedHeader';
+import PostCard from '../components/comunidade/PostCard';
+import TrendingPosts from '../components/comunidade/TrendingPosts';
+import GlobalSearch from '../components/search/GlobalSearch';
+import GlobalSkeleton from '../components/skeletons/GlobalSkeleton';
+import { useDebounce } from '../hooks/useDebounce';
+import type { PostWithCounts } from '../types/comunidade';
 
 function EmptyState({ text }: { text: string }) {
   return <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{text}</p>;
 }
 
 export function TinderComunidadePage() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    api.get<{ users: any[] }>('/api/tinder-do-fluxo/feed/comunidade')
-      .then((r) => setUsers(r.users || []))
-      .finally(() => setLoading(false));
-  }, []);
+  const [selectedTemaId, setSelectedTemaId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'recent' | 'trending'>('recent');
+  const [searchText, setSearchText] = useState('');
+  const debouncedSearchText = useDebounce(searchText, 400);
+  
+  const { data: feedData, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ['feed', selectedTemaId, sortBy, debouncedSearchText],
+    queryFn: async ({ pageParam = 1 }) => {
+      const params = new URLSearchParams();
+      if (selectedTemaId) params.append('tema_id', selectedTemaId);
+      if (debouncedSearchText) params.append('q', debouncedSearchText);
+      params.append('page', String(pageParam));
+      params.append('per_page', '10');
+      
+      const res = await api.get<{ posts: PostWithCounts[]; hasMore: boolean }>(
+        `/api/tinder-do-fluxo/comunidade/posts?${params.toString()}`
+      );
+      return res;
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.hasMore ? allPages.length + 1 : undefined;
+    },
+    initialPageParam: 1,
+  });
+
+  const posts = feedData?.pages.flatMap((page) => page.posts) || [];
+
   return (
-    <TinderDoFluxoPageShell title="Comunidade" subtitle="Conexões mentorado ↔ mentorado">
-      <div className="card">
-        {loading ? <EmptyState text="Carregando comunidade..." /> : users.length === 0 ? <EmptyState text="Nenhum perfil encontrado." /> : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {users.map((u) => (
-              <div key={u.id} className="quick-action">
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700 }}>{u.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{u.tinder_mentor_profiles?.city || 'Sem cidade'} • {u.tinder_mentor_profiles?.niche || 'Sem nicho'}</div>
+    <TinderDoFluxoPageShell title="Comunidade">
+      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 300px', gap: 20, alignItems: 'start' }}>
+        {/* Sidebar de Temas */}
+        <TemaSidebar selectedTemaId={selectedTemaId} onSelectTema={setSelectedTemaId} />
+
+        {/* Feed Principal */}
+        <div>
+          <GlobalSearch
+            placeholder="Buscar por tema, autor, título ou conteúdo..."
+            onSearch={setSearchText}
+          />
+          
+          <FeedHeader 
+            selectedTemaId={selectedTemaId}
+            onSortChange={setSortBy}
+            sortBy={sortBy}
+          />
+
+          {isLoading ? (
+            <GlobalSkeleton type="feed" />
+          ) : posts.length === 0 ? (
+            <div className="card">
+              <EmptyState text={debouncedSearchText ? "Nenhuma publicação encontrada para sua busca." : "Nenhuma publicação encontrada."} />
+            </div>
+          ) : (
+            <>
+              {posts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+              
+              {hasNextPage && (
+                <div style={{ textAlign: 'center', marginTop: 20 }}>
+                  <button
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    className="btn btn-outline"
+                  >
+                    {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
+                  </button>
                 </div>
-                <Link className="btn btn-outline" to={`/tinder-do-fluxo/u/${u.id}`}>Ver perfil</Link>
-              </div>
-            ))}
-          </div>
-        )}
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Trending Sidebar */}
+        <TrendingPosts />
       </div>
     </TinderDoFluxoPageShell>
   );
@@ -38,13 +99,84 @@ export function TinderComunidadePage() {
 
 export function TinderExpertPage() {
   const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState('');
+  const [filters, setFilters] = useState({
+    tipo_perfil: [] as string[], // 'expert' | 'coprodutor'
+  });
+  const debouncedSearchText = useDebounce(searchText, 400);
+
   useEffect(() => {
-    api.get<{ users: any[] }>('/api/tinder-do-fluxo/feed/expert').then((r) => setUsers(r.users || []));
-  }, []);
+    loadUsers();
+  }, [debouncedSearchText, filters]);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (debouncedSearchText) params.append('q', debouncedSearchText);
+      if (filters.tipo_perfil.length > 0) {
+        params.append('tipo_perfil', filters.tipo_perfil.join(','));
+      }
+      
+      const res = await api.get<{ users: any[] }>(`/api/tinder-do-fluxo/feed/expert?${params.toString()}`);
+      setUsers(res.users || []);
+    } catch (err) {
+      console.error('Erro ao carregar experts:', err);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <TinderDoFluxoPageShell title="Expert & Coprodutor" subtitle="Parcerias estratégicas">
+      <GlobalSearch
+        placeholder="Buscar por objetivo, nome..."
+        onSearch={setSearchText}
+      />
+      
+      {/* Filtros */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <label style={{ fontSize: 14, fontWeight: 600 }}>Tipo de perfil:</label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={filters.tipo_perfil.includes('expert')}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setFilters({ ...filters, tipo_perfil: [...filters.tipo_perfil, 'expert'] });
+                } else {
+                  setFilters({ ...filters, tipo_perfil: filters.tipo_perfil.filter(t => t !== 'expert') });
+                }
+              }}
+            />
+            <span>Expert</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={filters.tipo_perfil.includes('coprodutor')}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setFilters({ ...filters, tipo_perfil: [...filters.tipo_perfil, 'coprodutor'] });
+                } else {
+                  setFilters({ ...filters, tipo_perfil: filters.tipo_perfil.filter(t => t !== 'coprodutor') });
+                }
+              }}
+            />
+            <span>Coprodutor</span>
+          </label>
+        </div>
+      </div>
+
       <div className="card">
-        {users.length === 0 ? <EmptyState text="Nenhum perfil expert/coprodutor encontrado." /> : (
+        {loading ? (
+          <GlobalSkeleton type="list" />
+        ) : users.length === 0 ? (
+          <EmptyState text={debouncedSearchText ? "Nenhum perfil encontrado para sua busca." : "Nenhum perfil expert/coprodutor encontrado."} />
+        ) : (
           <div style={{ display: 'grid', gap: 10 }}>
             {users.map((u) => (
               <div key={u.id} className="quick-action">
@@ -64,13 +196,109 @@ export function TinderExpertPage() {
 
 export function TinderPrestadoresPage() {
   const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState('');
+  const [filters, setFilters] = useState({
+    tipo_servico: [] as string[],
+    rating_min: null as number | null,
+    modo_trabalho: [] as string[],
+  });
+  const debouncedSearchText = useDebounce(searchText, 400);
+
   useEffect(() => {
-    api.get<{ services: any[] }>('/api/tinder-do-fluxo/services').then((r) => setServices(r.services || []));
-  }, []);
+    loadServices();
+  }, [debouncedSearchText, filters]);
+
+  const loadServices = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (debouncedSearchText) params.append('q', debouncedSearchText);
+      if (filters.tipo_servico.length > 0) {
+        params.append('tipo_servico', filters.tipo_servico.join(','));
+      }
+      if (filters.rating_min) {
+        params.append('rating_min', filters.rating_min.toString());
+      }
+      if (filters.modo_trabalho.length > 0) {
+        params.append('modo_trabalho', filters.modo_trabalho.join(','));
+      }
+      
+      const res = await api.get<{ services: any[] }>(`/api/tinder-do-fluxo/services?${params.toString()}`);
+      setServices(res.services || []);
+    } catch (err) {
+      console.error('Erro ao carregar prestadores:', err);
+      setServices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <TinderDoFluxoPageShell title="Prestadores" subtitle="Diretório por especialidade e avaliação">
+      <GlobalSearch
+        placeholder="Buscar por nome, especialidade..."
+        onSearch={setSearchText}
+      />
+      
+      {/* Filtros */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: 14, fontWeight: 600 }}>Tipo de serviço:</label>
+            {['COPY', 'TRAFEGO', 'AUTOMACAO'].map((tipo) => (
+              <label key={tipo} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={filters.tipo_servico.includes(tipo)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setFilters({ ...filters, tipo_servico: [...filters.tipo_servico, tipo] });
+                    } else {
+                      setFilters({ ...filters, tipo_servico: filters.tipo_servico.filter(t => t !== tipo) });
+                    }
+                  }}
+                />
+                <span>{tipo === 'TRAFEGO' ? 'Tráfego' : tipo === 'AUTOMACAO' ? 'Automação' : tipo}</span>
+              </label>
+            ))}
+          </div>
+          
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: 14, fontWeight: 600 }}>Avaliação mínima:</label>
+            {[5, 4, 3, 2, 1].map((rating) => (
+              <button
+                key={rating}
+                type="button"
+                onClick={() => {
+                  setFilters({ 
+                    ...filters, 
+                    rating_min: filters.rating_min === rating ? null : rating 
+                  });
+                }}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius)',
+                  border: `1px solid ${filters.rating_min === rating ? 'var(--accent-dark)' : 'var(--border)'}`,
+                  background: filters.rating_min === rating ? 'var(--accent-light)' : 'var(--bg-white)',
+                  color: filters.rating_min === rating ? 'var(--accent-dark)' : 'var(--text-primary)',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                }}
+              >
+                {Array.from({ length: rating }).map((_, i) => '★')} {rating}+
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="card">
-        {services.length === 0 ? <EmptyState text="Nenhum prestador encontrado." /> : (
+        {loading ? (
+          <GlobalSkeleton type="list" />
+        ) : services.length === 0 ? (
+          <EmptyState text={debouncedSearchText ? "Nenhum prestador encontrado para sua busca." : "Nenhum prestador encontrado."} />
+        ) : (
           <div style={{ display: 'grid', gap: 10 }}>
             {services.map((s) => (
               <div key={s.id} className="quick-action">
@@ -183,20 +411,17 @@ export function TinderVagasPage() {
 
   return (
     <TinderDoFluxoPageShell title="Vagas">
-      {/* Header com busca */}
-      <div className="card" style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input
-            type="text"
-            placeholder="Buscar vagas..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ flex: 1, minWidth: 200, padding: '10px 12px', fontSize: 14 }}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <GlobalSearch
+            placeholder="Buscar vagas por título, empresa, cidade..."
+            onSearch={setSearchQuery}
+            initialValue={searchQuery}
           />
-          {(user?.role === 'MENTORADO' || user?.role === 'LIDERANCA') && (
-            <Link className="btn btn-primary" to="/tinder-do-fluxo/vagas/criar">Criar vaga</Link>
-          )}
         </div>
+        {(user?.role === 'MENTORADO' || user?.role === 'LIDERANCA') && (
+          <Link className="btn btn-primary" to="/tinder-do-fluxo/vagas/criar">Criar vaga</Link>
+        )}
       </div>
 
       {/* Contador de vagas */}
@@ -499,8 +724,9 @@ export function TinderFavoritosPage() {
 
 export function TinderPerfilPage() {
   const user = api.getUser();
-  const isMentorado = user?.role === 'MENTORADO' || user?.role === 'LIDERANCA';
+  const isMentorado = user?.role === 'MENTORADO';
   const isPrestador = user?.role === 'PRESTADOR';
+  const isLideranca = user?.role === 'LIDERANCA';
   
   // Form base (comum a todos)
   const [form, setForm] = useState({ 
@@ -600,7 +826,7 @@ export function TinderPerfilPage() {
     };
     
     loadProfiles();
-  }, [isMentorado, isPrestador]);
+  }, [isMentorado, isPrestador, isLideranca]);
 
   const formatPhoneNumber = (value: string): string => {
     const numbers = value.replace(/\D/g, '');
@@ -752,9 +978,31 @@ export function TinderPerfilPage() {
     );
   }
 
+  // LIDERANCA doesn't need a profile
+  if (isLideranca) {
+    return (
+      <TinderDoFluxoPageShell title="Meu Perfil">
+        <div className="card">
+          <div style={{ padding: 24, textAlign: 'center' }}>
+            <p style={{ fontSize: 16, color: 'var(--text-secondary)' }}>
+              Como Liderança, você não precisa criar um perfil. Você tem acesso total ao sistema.
+            </p>
+          </div>
+        </div>
+      </TinderDoFluxoPageShell>
+    );
+  }
+
   return (
     <TinderDoFluxoPageShell title="Meu Perfil">
       <form className="card" onSubmit={save}>
+        {!loading && (
+          <div style={{ marginBottom: 20, padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0 }}>
+              <strong>⚠️ Perfil obrigatório:</strong> Você precisa criar seu perfil antes de acessar outras áreas do sistema.
+            </p>
+          </div>
+        )}
         {/* Campos comuns */}
         <div className="form-group">
           <label>Cidade</label>
