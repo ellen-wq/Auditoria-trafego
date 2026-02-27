@@ -860,7 +860,8 @@ router.get('/matches', async (req: Request, res: Response): Promise<void> => {
   const matchesList = rows || [];
   const otherUserIds = [...new Set(matchesList.map((m: any) => m.user1_id === req.user!.id ? m.user2_id : m.user1_id))];
   if (otherUserIds.length === 0) {
-    return res.json({ matches: matchesList.map((m: any) => ({ ...m, otherUser: null })) });
+    res.json({ matches: matchesList.map((m: any) => ({ ...m, otherUser: null })) });
+    return;
   }
   const { data: rolesData } = await supabase.from('user_roles').select('user_id, name').in('user_id', otherUserIds);
   const { data: mentorData } = await supabase.from('tinder_mentor_profiles').select('user_id, city, photo_url, whatsapp').in('user_id', otherUserIds);
