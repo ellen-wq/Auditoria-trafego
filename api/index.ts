@@ -36,6 +36,13 @@ export default function handler(req: Request, res: Response): void {
           return req.url || '/';
         }
       })();
+      const search = (() => {
+        try {
+          return new URL(req.url || '/', 'http://localhost').search;
+        } catch {
+          return (req.url && req.url.includes('?')) ? '?' + req.url.split('?')[1] : '';
+        }
+      })();
 
       if (requestPath === '/api/health' || requestPath === '/health') {
         res.status(200).json({ ok: true });
@@ -46,6 +53,12 @@ export default function handler(req: Request, res: Response): void {
       // Inicializamos conexão apenas quando a rota é realmente de API.
       if (requestPath.startsWith('/api/')) {
         await ensureDbInit();
+      }
+
+      // Na Vercel, req.url pode vir como URL completa; Express espera path + query.
+      const pathAndQuery = requestPath + search;
+      if (req.url !== pathAndQuery) {
+        req.url = pathAndQuery;
       }
 
       const app = await getAppInstance();

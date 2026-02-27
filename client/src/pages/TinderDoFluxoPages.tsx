@@ -132,8 +132,10 @@ export function TinderExpertPage() {
     const params = new URLSearchParams();
     if (typeFilter) params.set('type', typeFilter);
     if (search.trim()) params.set('search', search.trim());
-    api.get<{ users: ExpertUser[] }>(`/api/tinder-do-fluxo/feed/expert?${params.toString()}`)
-      .then((r) => setUsers(r.users || []))
+    api
+      .get<{ users?: ExpertUser[] }>(`/api/tinder-do-fluxo/feed/expert?${params.toString()}`)
+      .then((r) => setUsers(Array.isArray(r?.users) ? r.users : []))
+      .catch(() => setUsers([]))
       .finally(() => setLoading(false));
   }, [typeFilter, search]);
 

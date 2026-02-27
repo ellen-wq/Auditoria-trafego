@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import express from 'express';
+import fs from 'fs';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -13,7 +14,15 @@ import './types';
 dotenv.config();
 
 const app = express();
-const rootDir = process.cwd();
+// Vercel: process.cwd() é a raiz do projeto; fallback para __dirname (build serverless)
+const rootDir = (() => {
+  const cwd = process.cwd();
+  const publicDistInCwd = path.join(cwd, 'public_dist');
+  if (fs.existsSync(publicDistInCwd)) return cwd;
+  const parent = path.join(__dirname, '..');
+  if (fs.existsSync(path.join(parent, 'public_dist'))) return parent;
+  return cwd;
+})();
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
@@ -37,10 +46,21 @@ app.get('*', (req, res) => {
     return res.status(404).json({ error: 'Not found' });
   }
   const indexPath = path.join(rootDir, 'public_dist', 'index.html');
+  if (!fs.existsSync(indexPath)) {
+    console.error('index.html not found at:', indexPath);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.status(200).send(
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fluxer</title></head><body style="font-family:sans-serif;padding:2rem;text-align:center;"><p>Carregando aplicação...</p><p><a href="/login">Ir para o login</a></p><script>setTimeout(function(){ window.location.href="/login"; }, 2000);</script></body></html>'
+    );
+    return;
+  }
   res.sendFile(indexPath, (err) => {
     if (err) {
       console.error('Error serving index.html:', err);
-      res.status(500).send('Error loading application');
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.status(200).send(
+        '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fluxer</title></head><body style="font-family:sans-serif;padding:2rem;text-align:center;"><p>Erro ao carregar. <a href="/login">Fazer login</a></p></body></html>'
+      );
     }
   });
 });
