@@ -1,7 +1,8 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import TinderDoFluxoPageShell from '../components/tinder-do-fluxo/TinderDoFluxoPageShell';
+import { ExpertSwipeDeck, type ExpertUser } from '../components/tinder-do-fluxo/ExpertSwipeDeck';
 import { api } from '../services/api';
 import TemaSidebar from '../components/comunidade/TemaSidebar';
 import FeedHeader from '../components/comunidade/FeedHeader';
@@ -97,100 +98,200 @@ export function TinderComunidadePage() {
   );
 }
 
+function ExpertDeckSkeleton() {
+  return (
+    <div className="tinder-deck-wrap">
+      <div className="tinder-deck">
+        <div className="tinder-card tinder-card-skeleton">
+          <div className="skeleton-line" style={{ width: '60%', height: 20 }} />
+          <div className="skeleton-line" style={{ width: '40%', height: 14, marginTop: 8 }} />
+          <div className="skeleton-line" style={{ width: '100%', height: 14, marginTop: 12 }} />
+          <div className="skeleton-line" style={{ width: '80%', height: 14, marginTop: 6 }} />
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <div className="skeleton-line" style={{ width: 60, height: 36, borderRadius: 8 }} />
+            <div className="skeleton-line" style={{ width: 60, height: 36, borderRadius: 8 }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TinderExpertPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const [users, setUsers] = useState<ExpertUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchText, setSearchText] = useState('');
-  const [filters, setFilters] = useState({
-    tipo_perfil: [] as string[], // 'expert' | 'coprodutor'
-  });
-  const debouncedSearchText = useDebounce(searchText, 400);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('');
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [profileUserId, setProfileUserId] = useState<number | string | null>(null);
+  const [isSendingInterest, setIsSendingInterest] = useState(false);
+
+  const fetchUsers = useCallback(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (typeFilter) params.set('type', typeFilter);
+    if (search.trim()) params.set('search', search.trim());
+    api.get<{ users: ExpertUser[] }>(`/api/tinder-do-fluxo/feed/expert?${params.toString()}`)
+      .then((r) => setUsers(r.users || []))
+      .finally(() => setLoading(false));
+  }, [typeFilter, search]);
 
   useEffect(() => {
-    loadUsers();
-  }, [debouncedSearchText, filters]);
+    const id = setTimeout(() => fetchUsers(), search ? 400 : 0);
+    return () => clearTimeout(id);
+  }, [typeFilter, search, fetchUsers]);
 
-  const loadUsers = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (debouncedSearchText) params.append('q', debouncedSearchText);
-      if (filters.tipo_perfil.length > 0) {
-        params.append('tipo_perfil', filters.tipo_perfil.join(','));
-      }
-      
-      const res = await api.get<{ users: any[] }>(`/api/tinder-do-fluxo/feed/expert?${params.toString()}`);
-      setUsers(res.users || []);
-    } catch (err) {
-      console.error('Erro ao carregar experts:', err);
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const removeTop = useCallback(() => {
+    setUsers((prev) => prev.slice(1));
+  }, []);
+
+  const handleMatch = useCallback((_matchId: number | null) => {
+    setShowMatchModal(true);
+  }, []);
+
+  const handleOpenProfile = useCallback((user: ExpertUser) => {
+    setProfileUserId(user.id);
+  }, []);
+
+  const deckUsers = users;
 
   return (
     <TinderDoFluxoPageShell title="Expert & Coprodutor" subtitle="Parcerias estratégicas">
-      <GlobalSearch
-        placeholder="Buscar por objetivo, nome..."
-        onSearch={setSearchText}
-      />
-      
-      {/* Filtros */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <label style={{ fontSize: 14, fontWeight: 600 }}>Tipo de perfil:</label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+      <div className="tinder-expert-header">
+        <div className="tinder-expert-header-row">
+          <Link to="/tinder-do-fluxo/matches" className="btn btn-outline tinder-btn-matches">
+            ❤️ Ver Matches
+          </Link>
+          <div className="tinder-expert-filters">
             <input
-              type="checkbox"
-              checked={filters.tipo_perfil.includes('expert')}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setFilters({ ...filters, tipo_perfil: [...filters.tipo_perfil, 'expert'] });
-                } else {
-                  setFilters({ ...filters, tipo_perfil: filters.tipo_perfil.filter(t => t !== 'expert') });
-                }
-              }}
+              type="text"
+              className="form-group input"
+              placeholder="Buscar por objetivo, nome…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ minWidth: 220 }}
             />
-            <span>Expert</span>
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={filters.tipo_perfil.includes('coprodutor')}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setFilters({ ...filters, tipo_perfil: [...filters.tipo_perfil, 'coprodutor'] });
-                } else {
-                  setFilters({ ...filters, tipo_perfil: filters.tipo_perfil.filter(t => t !== 'coprodutor') });
-                }
-              }}
-            />
-            <span>Coprodutor</span>
-          </label>
+            <select
+              className="form-group input"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              style={{ minWidth: 160 }}
+            >
+              <option value="">Tipo: Todos</option>
+              <option value="EXPERT">Expert</option>
+              <option value="COPRODUTOR">Coprodutor</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div className="card">
-        {loading ? (
-          <GlobalSkeleton type="list" />
-        ) : users.length === 0 ? (
-          <EmptyState text={debouncedSearchText ? "Nenhum perfil encontrado para sua busca." : "Nenhum perfil expert/coprodutor encontrado."} />
-        ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {users.map((u) => (
-              <div key={u.id} className="quick-action">
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700 }}>{u.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{u.tinder_expert_profiles?.goal_text || 'Sem objetivo cadastrado'}</div>
-                </div>
-                <Link className="btn btn-outline" to={`/tinder-do-fluxo/u/${u.id}`}>Ver perfil</Link>
-              </div>
-            ))}
+      {loading ? (
+        <ExpertDeckSkeleton />
+      ) : deckUsers.length === 0 ? (
+        <div className="card tinder-empty-state">
+          <p className="tinder-empty-text">Sem mais perfis por enquanto</p>
+          <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+            <button type="button" className="btn btn-primary" onClick={fetchUsers}>
+              Recarregar
+            </button>
+            <Link to="/tinder-do-fluxo/matches" className="btn btn-outline">
+              Ver Matches
+            </Link>
           </div>
+        </div>
+      ) : (
+        <ExpertSwipeDeck
+          users={deckUsers}
+          onRemoveTop={removeTop}
+          onMatch={handleMatch}
+          onOpenProfile={handleOpenProfile}
+          isSendingInterest={isSendingInterest}
+          setIsSendingInterest={setIsSendingInterest}
+        />
+      )}
+
+      {showMatchModal && (
+        <div className="tinder-modal-overlay" onClick={() => setShowMatchModal(false)} role="dialog" aria-modal="true">
+          <div className="tinder-modal card" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginBottom: 8 }}>Deu match!</h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>Vocês demonstraram interesse. Confira em Matches.</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="button" className="btn btn-primary" onClick={() => { setShowMatchModal(false); navigate('/tinder-do-fluxo/matches'); }}>
+                Ver Matches
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => setShowMatchModal(false)}>
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {profileUserId != null && (
+        <ExpertProfileDrawer
+          userId={profileUserId}
+          onClose={() => setProfileUserId(null)}
+        />
+      )}
+    </TinderDoFluxoPageShell>
+  );
+}
+
+function ExpertProfileDrawer({ userId, onClose }: { userId: number | string; onClose: () => void }) {
+  const [data, setData] = useState<{
+    user: { name?: string };
+    mentorProfile?: { city?: string; niche?: string; instagram?: string; bio?: string };
+    expertProfile?: { goal_text?: string; search_bio?: string; is_expert?: boolean; is_coproducer?: boolean };
+    canSeeWhatsapp?: boolean;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get(`/api/tinder-do-fluxo/users/${userId}`)
+      .then((r: any) => setData(r))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  return (
+    <div className="tinder-drawer-overlay" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="tinder-drawer card" onClick={(e) => e.stopPropagation()}>
+        <div className="tinder-drawer-header">
+          <h3>Perfil</h3>
+          <button type="button" className="tinder-drawer-close" onClick={onClose} aria-label="Fechar">×</button>
+        </div>
+        {loading ? (
+          <div className="tinder-drawer-body">
+            <div className="skeleton-line" style={{ width: '50%', height: 20 }} />
+            <div className="skeleton-line" style={{ width: '80%', height: 14, marginTop: 12 }} />
+          </div>
+        ) : data?.user ? (
+          <div className="tinder-drawer-body">
+            <p style={{ fontWeight: 700, fontSize: 18 }}>{data.user.name}</p>
+            {data.expertProfile && (
+              <>
+                <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>
+                  {data.expertProfile.is_expert && 'Expert'}
+                  {data.expertProfile.is_expert && data.expertProfile.is_coproducer && ' / '}
+                  {data.expertProfile.is_coproducer && 'Coprodutor'}
+                </p>
+                <p style={{ marginTop: 12 }}>{data.expertProfile.goal_text || '—'}</p>
+                <p style={{ marginTop: 8, fontSize: 13, color: 'var(--text-secondary)' }}>{data.expertProfile.search_bio || '—'}</p>
+              </>
+            )}
+            {data.mentorProfile && (
+              <p style={{ marginTop: 8, fontSize: 13 }}>{data.mentorProfile.city || ''} • {data.mentorProfile.niche || ''}</p>
+            )}
+            <Link to={`/tinder-do-fluxo/u/${userId}`} className="btn btn-outline" style={{ marginTop: 16 }} onClick={onClose}>
+              Abrir perfil completo
+            </Link>
+          </div>
+        ) : (
+          <div className="tinder-drawer-body"><EmptyState text="Perfil não encontrado." /></div>
         )}
       </div>
-    </TinderDoFluxoPageShell>
+    </div>
   );
 }
 
