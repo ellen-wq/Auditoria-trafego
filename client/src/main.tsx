@@ -79,6 +79,10 @@ ReactDOM.createRoot(rootElement).render(
   </React.StrictMode>
 )
 
+// Esconde o fallback "página não carregou" quando o app monta com sucesso
+const loadFallback = document.getElementById('load-fallback')
+if (loadFallback) loadFallback.remove()
+
 setTimeout(() => {
   try {
     sessionStorage.removeItem(CHUNK_RELOAD_KEY)

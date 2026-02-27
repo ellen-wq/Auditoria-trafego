@@ -4,7 +4,7 @@ import { api } from '../../services/api';
 export type ExpertUser = {
   id: number | string;
   name: string;
-  tinder_mentor_profiles?: { city?: string; niche?: string } | null;
+  tinder_mentor_profiles?: { city?: string; niche?: string; photo_url?: string } | null;
   tinder_expert_profiles?: {
     is_expert?: boolean;
     is_coproducer?: boolean;
@@ -35,6 +35,19 @@ function getTypeLabel(u: ExpertUser): string {
   if (e.is_expert) parts.push('Expert');
   if (e.is_coproducer) parts.push('Coprodutor');
   return parts.join(' / ') || 'Perfil';
+}
+
+function getMentorProfile(u: ExpertUser) {
+  const m = Array.isArray(u.tinder_mentor_profiles) ? u.tinder_mentor_profiles[0] : u.tinder_mentor_profiles;
+  return m;
+}
+
+function getCity(u: ExpertUser): string {
+  return getMentorProfile(u)?.city ?? '';
+}
+
+function getPhotoUrl(u: ExpertUser): string {
+  return getMentorProfile(u)?.photo_url ?? '';
 }
 
 interface ExpertSwipeDeckProps {
@@ -175,12 +188,22 @@ export function ExpertSwipeDeck({
         >
           <div className="tinder-card-inner">
             <div className="tinder-card-header">
-              <h3 className="tinder-card-name">{top.name}</h3>
               <span className="tinder-card-type">{getTypeLabel(top)}</span>
+              <h3 className="tinder-card-name">{top.name}</h3>
+            </div>
+            <div className="tinder-card-photo">
+              {getPhotoUrl(top) ? (
+                <img src={getPhotoUrl(top)} alt="" className="tinder-card-avatar-img" />
+              ) : (
+                <span className="tinder-card-avatar-placeholder">{top.name.charAt(0).toUpperCase()}</span>
+              )}
             </div>
             <p className="tinder-card-objective">
               {getExpertProfile(top)?.goal_text || 'Sem objetivo cadastrado'}
             </p>
+            {getCity(top) ? (
+              <p className="tinder-card-city">{getCity(top)}</p>
+            ) : null}
             <div className="tinder-card-tags">
               {getTags(top).map((tag) => (
                 <span key={tag} className="tinder-tag">{tag}</span>

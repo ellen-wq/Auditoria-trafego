@@ -852,12 +852,46 @@ router.get('/matches', async (req: Request, res: Response): Promise<void> => {
     .or(`user1_id.eq.${req.user!.id},user2_id.eq.${req.user!.id}`)
     .order('created_at', { ascending: false });
   if (type) q = q.eq('type', type);
-  const { data, error } = await q;
+  const { data: rows, error } = await q;
   if (error) {
     res.status(500).json({ error: 'Erro ao buscar matches.' });
     return;
   }
-  res.json({ matches: data || [] });
+  const matchesList = rows || [];
+  const otherUserIds = [...new Set(matchesList.map((m: any) => m.user1_id === req.user!.id ? m.user2_id : m.user1_id))];
+  if (otherUserIds.length === 0) {
+    return res.json({ matches: matchesList.map((m: any) => ({ ...m, otherUser: null })) });
+  }
+  const { data: rolesData } = await supabase.from('user_roles').select('user_id, name').in('user_id', otherUserIds);
+  const { data: mentorData } = await supabase.from('tinder_mentor_profiles').select('user_id, city, photo_url, whatsapp').in('user_id', otherUserIds);
+  const { data: expertData } = await supabase.from('tinder_expert_profiles').select('user_id, goal_text, is_expert, is_coproducer').in('user_id', otherUserIds);
+  const rolesMap = new Map((rolesData || []).map((r: any) => [r.user_id, r]));
+  const mentorMap = new Map((mentorData || []).map((m: any) => [m.user_id, m]));
+  const expertMap = new Map((expertData || []).map((e: any) => [e.user_id, e]));
+  const getTypeLabel = (ep: any) => {
+    if (!ep) return '';
+    const parts: string[] = [];
+    if (ep.is_expert) parts.push('Expert');
+    if (ep.is_coproducer) parts.push('Coprodutor');
+    return parts.join(' / ') || '';
+  };
+  const matches = matchesList.map((m: any) => {
+    const otherId = m.user1_id === req.user!.id ? m.user2_id : m.user1_id;
+    const role = rolesMap.get(otherId);
+    const mentor = mentorMap.get(otherId);
+    const expert = expertMap.get(otherId);
+    const otherUser = {
+      id: otherId,
+      name: role?.name || 'Usuário',
+      type: getTypeLabel(expert) || m.type,
+      goal_text: expert?.goal_text || '',
+      city: mentor?.city || '',
+      photo_url: mentor?.photo_url || '',
+      whatsapp: mentor?.whatsapp || ''
+    };
+    return { ...m, otherUser };
+  });
+  res.json({ matches });
 });
 
 router.post('/favorite', async (req: Request, res: Response): Promise<void> => {

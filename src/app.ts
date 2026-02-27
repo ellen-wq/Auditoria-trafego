@@ -67,6 +67,9 @@ app.get('*', (req, res) => {
     );
     return;
   }
+  // Evita cache do HTML para que o usuário sempre receba a versão atual (evita tela em branco por HTML antigo)
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
   res.sendFile(indexPath, (err) => {
     if (err) {
       console.error('Error serving index.html:', err);

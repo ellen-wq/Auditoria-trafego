@@ -789,6 +789,13 @@ export function TinderJobDetailPage() {
   );
 }
 
+function whatsappLink(whatsapp: string): string {
+  const digits = (whatsapp || '').replace(/\D/g, '');
+  if (!digits.length) return '';
+  const withCountry = digits.length <= 11 && !digits.startsWith('55') ? '55' + digits : digits;
+  return `https://wa.me/${withCountry}`;
+}
+
 export function TinderMatchesPage() {
   const [matches, setMatches] = useState<any[]>([]);
   useEffect(() => {
@@ -798,8 +805,40 @@ export function TinderMatchesPage() {
     <TinderDoFluxoPageShell title="Matches" subtitle="Conexões confirmadas">
       <div className="card">
         {matches.length === 0 ? <EmptyState text="Você ainda não possui matches." /> : (
-          <div style={{ display: 'grid', gap: 8 }}>
-            {matches.map((m) => <div key={m.id} className="quick-action">Match #{m.id} • {m.type}</div>)}
+          <div className="match-cards">
+            {matches.map((m) => {
+              const ou = m.otherUser;
+              const name = ou?.name ?? 'Usuário';
+              const typeLabel = ou?.type || m.type;
+              const goalText = ou?.goal_text || '';
+              const city = ou?.city || '';
+              const photoUrl = ou?.photo_url || '';
+              const waUrl = ou?.whatsapp ? whatsappLink(ou.whatsapp) : '';
+              return (
+                <div key={m.id} className="match-card">
+                  <div className="match-card-header">
+                    <span className="match-card-type">{typeLabel}</span>
+                    <h3 className="match-card-name">{name}</h3>
+                  </div>
+                  <div className="match-card-photo">
+                    {photoUrl ? (
+                      <img src={photoUrl} alt="" className="match-card-avatar-img" />
+                    ) : (
+                      <span className="match-card-avatar-placeholder">{name.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  {goalText ? <p className="match-card-bio">{goalText}</p> : null}
+                  {city ? <p className="match-card-city">{city}</p> : null}
+                  {waUrl ? (
+                    <a href={waUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary match-card-whatsapp">
+                      WhatsApp
+                    </a>
+                  ) : (
+                    <span className="match-card-no-whatsapp">WhatsApp não informado</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
