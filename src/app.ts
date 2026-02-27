@@ -14,14 +14,19 @@ import './types';
 dotenv.config();
 
 const app = express();
-// Vercel: process.cwd() é a raiz do projeto; fallback para __dirname (build serverless)
-const rootDir = (() => {
+// Caminho para public_dist: no serverless (Vercel) api/index.ts define __PUBLIC_DIST__ (caminho da pasta)
+const { rootDir, publicDistDir } = (() => {
+  const explicit = typeof (global as any).__PUBLIC_DIST__ === 'string' ? (global as any).__PUBLIC_DIST__ : null;
+  if (explicit && fs.existsSync(path.join(explicit, 'index.html'))) {
+    return { rootDir: path.dirname(explicit), publicDistDir: explicit };
+  }
   const cwd = process.cwd();
-  const publicDistInCwd = path.join(cwd, 'public_dist');
-  if (fs.existsSync(publicDistInCwd)) return cwd;
+  const pd = path.join(cwd, 'public_dist');
+  if (fs.existsSync(pd)) return { rootDir: cwd, publicDistDir: pd };
   const parent = path.join(__dirname, '..');
-  if (fs.existsSync(path.join(parent, 'public_dist'))) return parent;
-  return cwd;
+  const pdParent = path.join(parent, 'public_dist');
+  if (fs.existsSync(pdParent)) return { rootDir: parent, publicDistDir: pdParent };
+  return { rootDir: cwd, publicDistDir: pd };
 })();
 
 app.use(cors({ origin: true, credentials: true }));
@@ -37,7 +42,7 @@ app.use('/api/creatives', creativesRoutes);
 app.use('/api/tinder-do-fluxo', tinderRoutes);
 
 // Serve static files (CSS, JS, images, etc.)
-app.use(express.static(path.join(rootDir, 'public_dist')));
+app.use(express.static(publicDistDir));
 app.use(express.static(path.join(rootDir, 'public')));
 
 // Serve index.html for all non-API routes (React Router handles routing)
@@ -45,8 +50,16 @@ app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Not found' });
   }
-  const indexPath = path.join(rootDir, 'public_dist', 'index.html');
-  if (!fs.existsSync(indexPath)) {
+  const indexPath = path.join(publicDistDir, 'index.html');
+  const loginHtmlPath = path.join(rootDir, 'public', 'login.html');
+  const spaNotBuilt = !fs.existsSync(indexPath);
+
+  // Quando a SPA não foi buildada (ex.: só backend rodando), servir login legado em / e /login
+  if (spaNotBuilt && (req.path === '/' || req.path === '/login') && fs.existsSync(loginHtmlPath)) {
+    return res.sendFile(loginHtmlPath);
+  }
+
+  if (spaNotBuilt) {
     console.error('index.html not found at:', indexPath);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.status(200).send(

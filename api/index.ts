@@ -1,3 +1,5 @@
+import path from 'path';
+import fs from 'fs';
 import type { Request, Response } from 'express';
 
 type ExpressAppLike = (req: Request, res: Response) => void;
@@ -5,8 +7,31 @@ type ExpressAppLike = (req: Request, res: Response) => void;
 let initPromise: Promise<void> | null = null;
 let appInstance: ExpressAppLike | null = null;
 
+function resolvePublicDist(): string {
+  if (typeof (global as any).__PUBLIC_DIST__ === 'string') {
+    return (global as any).__PUBLIC_DIST__;
+  }
+  const candidates = [
+    path.join(process.cwd(), 'public_dist'),
+    path.join(process.cwd(), '..', 'public_dist'),
+    path.join(__dirname, '..', 'public_dist'),
+    path.join(__dirname, '..', '..', 'public_dist'),
+    path.join(__dirname, 'public_dist'),
+  ];
+  for (const dir of candidates) {
+    const indexPath = path.join(dir, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      (global as any).__PUBLIC_DIST__ = dir;
+      return dir;
+    }
+  }
+  (global as any).__PUBLIC_DIST__ = path.join(process.cwd(), 'public_dist');
+  return (global as any).__PUBLIC_DIST__;
+}
+
 async function getAppInstance(): Promise<ExpressAppLike> {
   if (!appInstance) {
+    resolvePublicDist();
     const appModule = await import('../src/app');
     appInstance = appModule.default as ExpressAppLike;
   }
