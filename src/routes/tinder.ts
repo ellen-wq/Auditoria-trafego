@@ -171,6 +171,29 @@ router.post('/mentor-profile', async (req: Request, res: Response): Promise<void
   }
   
   console.log('[POST /mentor-profile] Perfil salvo com sucesso:', data.id);
+  
+  // Se for MENTORADO, garantir que tem perfil expert (criar padrão se não existir)
+  if (req.user!.role === 'MENTORADO') {
+    const { data: existingExpert } = await supabase
+      .from('tinder_expert_profiles')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (!existingExpert) {
+      console.log('[POST /mentor-profile] Criando perfil expert padrão para MENTORADO');
+      await supabase.from('tinder_expert_profiles').upsert({
+        user_id: userId,
+        is_expert: true,
+        is_coproducer: true,
+        goal_text: 'Objetivo: escalar meu negócio e criar parcerias estratégicas',
+        search_bio: 'Busco parcerias estratégicas e oportunidades de coprodução para escalar.',
+        preferences_json: {},
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+    }
+  }
+  
   await logAction(userId, 'TINDER_MENTOR_PROFILE_UPSERT', { userId });
   res.json({ profile: data });
 });
@@ -215,6 +238,12 @@ router.post('/expert-profile', async (req: Request, res: Response): Promise<void
   // Validação: prestador não pode ser expert/coprodutor
   if (req.user!.role === 'PRESTADOR') {
     res.status(403).json({ error: 'Prestadores de serviço não podem ser experts/coprodutores.' });
+    return;
+  }
+  
+  // VALIDAÇÃO: Expert/Coprodutor é obrigatório para MENTORADOS
+  if (req.user!.role === 'MENTORADO' && !req.body.isExpert && !req.body.isCoproducer) {
+    res.status(400).json({ error: 'Você deve selecionar pelo menos uma opção: Expert OU Coprodutor (ou ambos).' });
     return;
   }
   
@@ -338,52 +367,65 @@ router.get('/feed/comunidade', async (req: Request, res: Response): Promise<void
     const supabase = getSupabase();
     console.log('[Feed Comunidade] Iniciando busca...');
     
-    const { data, error } = await supabase
+    // Buscar MENTORADOS primeiro (sem joins para evitar problemas de RLS)
+    const { data: mentorados, error: mentoradosError } = await supabase
       .from('user_roles')
-      .select('user_id, name, role, created_at, tinder_mentor_profiles(*)')
+      .select('user_id, name, role, created_at')
       .eq('role', 'MENTORADO')
       .neq('user_id', req.user!.id)
       .order('created_at', { ascending: false })
       .limit(80);
     
-    console.log('[Feed Comunidade] Query resultado:', { 
-      dataCount: data?.length || 0, 
-      error: error,
-      errorCode: error?.code,
-      errorMessage: error?.message,
-      errorDetails: error?.details,
-      errorHint: error?.hint
+    console.log('[Feed Comunidade] Query mentorados:', { 
+      dataCount: mentorados?.length || 0, 
+      error: mentoradosError,
+      errorCode: mentoradosError?.code,
+      errorMessage: mentoradosError?.message
     });
     
-    if (error) {
-      console.error('[Feed Comunidade] Erro na query:', error);
+    if (mentoradosError) {
+      console.error('[Feed Comunidade] Erro na query mentorados:', mentoradosError);
       res.status(500).json({ 
         error: 'Erro ao buscar comunidade.',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        code: error.code
+        details: process.env.NODE_ENV === 'development' ? mentoradosError.message : undefined,
+        code: mentoradosError.code
       });
       return;
     }
     
-    // Buscar emails do auth.users
-    const userIds = (data || []).map(u => u.user_id);
-    console.log('[Feed Comunidade] Buscando emails para', userIds.length, 'usuários');
+    // Buscar perfis mentor separadamente
+    const userIds = (mentorados || []).map((u: any) => u.user_id);
+    console.log('[Feed Comunidade] Buscando perfis mentor para', userIds.length, 'usuários');
     
+    const { data: mentorProfiles, error: mentorError } = await supabase
+      .from('tinder_mentor_profiles')
+      .select('*')
+      .in('user_id', userIds);
+    
+    if (mentorError) {
+      console.error('[Feed Comunidade] Erro ao buscar mentor profiles:', mentorError);
+    }
+    
+    // Buscar emails do auth.users
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
     if (authError) {
       console.error('[Feed Comunidade] Erro ao buscar auth.users:', authError);
     }
     
     const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) || []);
+    const mentorMap = new Map((mentorProfiles || []).map((mp: any) => [mp.user_id, mp]));
     
-    const users = (data || []).map(u => ({
-      id: u.user_id,
-      name: u.name,
-      email: emailMap.get(u.user_id) || '',
-      role: u.role,
-      created_at: u.created_at,
-      tinder_mentor_profiles: u.tinder_mentor_profiles
-    }));
+    // Combinar dados - apenas quem tem perfil mentor
+    const users = (mentorados || [])
+      .filter((u: any) => mentorMap.has(u.user_id)) // Apenas quem tem perfil mentor
+      .map((u: any) => ({
+        id: u.user_id,
+        name: u.name,
+        email: emailMap.get(u.user_id) || '',
+        role: u.role,
+        created_at: u.created_at,
+        tinder_mentor_profiles: mentorMap.get(u.user_id) || null
+      }));
     
     console.log('[Feed Comunidade] Retornando', users.length, 'usuários');
     res.json({ users });
@@ -403,40 +445,79 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
     const supabase = getSupabase();
     console.log('[Feed Expert] Iniciando busca...');
     
-    const { data, error } = await supabase
+    // Buscar MENTORADOS primeiro (sem joins para evitar problemas de RLS)
+    const { data: mentorados, error: mentoradosError } = await supabase
       .from('user_roles')
-      .select('user_id, name, role, created_at, tinder_mentor_profiles(*), tinder_expert_profiles(*)')
+      .select('user_id, name, role, created_at')
       .eq('role', 'MENTORADO')
       .neq('user_id', req.user!.id)
       .order('created_at', { ascending: false })
       .limit(80);
     
-    console.log('[Feed Expert] Query resultado:', { 
-      dataCount: data?.length || 0, 
-      error: error,
-      errorCode: error?.code,
-      errorMessage: error?.message,
-      errorDetails: error?.details,
-      errorHint: error?.hint
+    console.log('[Feed Expert] Query mentorados:', { 
+      dataCount: mentorados?.length || 0, 
+      error: mentoradosError,
+      errorCode: mentoradosError?.code,
+      errorMessage: mentoradosError?.message
     });
     
-    if (error) {
-      console.error('[Feed Expert] Erro na query:', error);
+    if (mentoradosError) {
+      console.error('[Feed Expert] Erro na query mentorados:', mentoradosError);
       res.status(500).json({ 
         error: 'Erro ao buscar feed expert/coprodutor.',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        code: error.code
+        details: process.env.NODE_ENV === 'development' ? mentoradosError.message : undefined,
+        code: mentoradosError.code
       });
       return;
     }
     
-    const filtered = (data || []).filter((u: any) => {
-      const e = Array.isArray(u.tinder_expert_profiles) ? u.tinder_expert_profiles[0] : u.tinder_expert_profiles;
-      return !!(e?.is_expert || e?.is_coproducer);
-    });
+    // Buscar perfis mentor e expert separadamente
+    const userIds = (mentorados || []).map((u: any) => u.user_id);
     
-    console.log('[Feed Expert] Retornando', filtered.length, 'usuários (filtrados de', data?.length || 0, ')');
-    res.json({ users: filtered });
+    const { data: mentorProfiles, error: mentorError } = await supabase
+      .from('tinder_mentor_profiles')
+      .select('*')
+      .in('user_id', userIds);
+    
+    if (mentorError) {
+      console.error('[Feed Expert] Erro ao buscar mentor profiles:', mentorError);
+    }
+    
+    const { data: expertProfiles, error: expertError } = await supabase
+      .from('tinder_expert_profiles')
+      .select('*')
+      .in('user_id', userIds);
+    
+    if (expertError) {
+      console.error('[Feed Expert] Erro ao buscar expert profiles:', expertError);
+    }
+    
+    // Criar maps para facilitar lookup
+    const mentorMap = new Map((mentorProfiles || []).map((mp: any) => [mp.user_id, mp]));
+    const expertMap = new Map((expertProfiles || []).map((ep: any) => [ep.user_id, ep]));
+    
+    // Buscar emails
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+    if (authError) {
+      console.error('[Feed Expert] Erro ao buscar auth.users:', authError);
+    }
+    const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) || []);
+    
+    // Combinar dados - mostrar TODOS os mentorados com perfil mentor
+    const users = (mentorados || [])
+      .filter((u: any) => mentorMap.has(u.user_id)) // Apenas quem tem perfil mentor
+      .map((u: any) => ({
+        id: u.user_id,
+        name: u.name,
+        email: emailMap.get(u.user_id) || '',
+        role: u.role,
+        created_at: u.created_at,
+        tinder_mentor_profiles: mentorMap.get(u.user_id) || null,
+        tinder_expert_profiles: expertMap.get(u.user_id) || null
+      }));
+    
+    console.log('[Feed Expert] Retornando', users.length, 'usuários (todos os mentorados com perfil)');
+    res.json({ users });
   } catch (err: any) {
     console.error('[Feed Expert] Erro geral:', err);
     console.error('[Feed Expert] Stack:', err?.stack);

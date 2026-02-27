@@ -618,6 +618,13 @@ export function TinderPerfilPage() {
     
     try {
       if (isMentorado) {
+        // VALIDAÇÃO: Expert/Coprodutor é obrigatório para MENTORADOS
+        if (!form.isExpert && !form.isCoproducer) {
+          setError('Você deve selecionar pelo menos uma opção: Expert OU Coprodutor (ou ambos).');
+          setSaving(false);
+          return;
+        }
+        
         // Salvar mentor profile
         const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
         console.log('[Profile Save] Salvando mentor profile:', { city: form.city, instagram: form.instagram, niche: form.niche });
@@ -633,17 +640,15 @@ export function TinderPerfilPage() {
         
         console.log('[Profile Save] Mentor profile salvo:', mentorRes);
         
-        // Salvar expert profile se selecionado
-        if (form.isExpert || form.isCoproducer) {
-          console.log('[Profile Save] Salvando expert profile:', { isExpert: form.isExpert, isCoproducer: form.isCoproducer });
-          await api.post('/api/tinder-do-fluxo/expert-profile', {
-            isExpert: form.isExpert,
-            isCoproducer: form.isCoproducer,
-            goalText: form.goalText,
-            searchBio: form.searchBio
-          });
-          console.log('[Profile Save] Expert profile salvo');
-        }
+        // SEMPRE salvar expert profile (agora é obrigatório)
+        console.log('[Profile Save] Salvando expert profile (obrigatório):', { isExpert: form.isExpert, isCoproducer: form.isCoproducer });
+        await api.post('/api/tinder-do-fluxo/expert-profile', {
+          isExpert: form.isExpert,
+          isCoproducer: form.isCoproducer,
+          goalText: form.goalText || (form.isExpert && form.isCoproducer ? 'Objetivo: escalar meu negócio e criar parcerias estratégicas' : form.isExpert ? 'Objetivo: escalar meu negócio' : 'Objetivo: criar parcerias estratégicas'),
+          searchBio: form.searchBio || (form.isExpert && form.isCoproducer ? 'Busco parcerias estratégicas e oportunidades de coprodução.' : form.isExpert ? 'Expert em busca de oportunidades de crescimento.' : 'Aberto para coproduções e parcerias.')
+        });
+        console.log('[Profile Save] Expert profile salvo');
       } else if (isPrestador) {
         // Salvar service profile
         const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
@@ -781,10 +786,10 @@ export function TinderPerfilPage() {
               <textarea rows={4} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
             </div>
             
-            {/* Opção para ser Expert/Coprodutor */}
-            <div style={{ marginTop: 16, marginBottom: 16, padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)' }}>
+            {/* Opção para ser Expert/Coprodutor - OBRIGATÓRIO */}
+            <div style={{ marginTop: 16, marginBottom: 16, padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: (!form.isExpert && !form.isCoproducer) ? '2px solid var(--error)' : 'none' }}>
               <label style={{ display: 'block', marginBottom: 12, fontWeight: 600, fontSize: 14 }}>
-                Quero ser Expert / Coprodutor
+                Quero ser Expert / Coprodutor <span style={{ color: 'var(--error)' }}>*</span>
               </label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
@@ -806,18 +811,19 @@ export function TinderPerfilPage() {
                   <span>Coprodutor</span>
                 </label>
               </div>
-              {(form.isExpert || form.isCoproducer) && (
-                <>
-                  <div className="form-group" style={{ marginTop: 16 }}>
-                    <label>Objetivo</label>
-                    <input value={form.goalText} onChange={(e) => setForm({ ...form, goalText: e.target.value })} placeholder="Ex: Escalar produto perpétuo" />
-                  </div>
-                  <div className="form-group">
-                    <label>Bio de busca</label>
-                    <textarea rows={4} value={form.searchBio} onChange={(e) => setForm({ ...form, searchBio: e.target.value })} placeholder="Descreva o que você busca em parcerias..." />
-                  </div>
-                </>
+              {(!form.isExpert && !form.isCoproducer) && (
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--error)' }}>
+                  Você deve selecionar pelo menos uma opção (Expert OU Coprodutor, ou ambos).
+                </div>
               )}
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label>Objetivo</label>
+                <input value={form.goalText} onChange={(e) => setForm({ ...form, goalText: e.target.value })} placeholder="Ex: Escalar produto perpétuo" />
+              </div>
+              <div className="form-group">
+                <label>Bio de busca</label>
+                <textarea rows={4} value={form.searchBio} onChange={(e) => setForm({ ...form, searchBio: e.target.value })} placeholder="Descreva o que você busca em parcerias..." />
+              </div>
             </div>
           </>
         )}
