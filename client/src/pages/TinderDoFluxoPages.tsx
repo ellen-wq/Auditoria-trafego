@@ -210,13 +210,6 @@ export function TinderExpertPage() {
           </div>
         )}
       </div>
-          onRemoveTop={removeTop}
-          onMatch={handleMatch}
-          onOpenProfile={handleOpenProfile}
-          isSendingInterest={isSendingInterest}
-          setIsSendingInterest={setIsSendingInterest}
-        />
-      )}
 
       {showMatchModal && (
         <div className="tinder-modal-overlay" onClick={() => setShowMatchModal(false)} role="dialog" aria-modal="true">
