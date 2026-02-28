@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 import GlobalSearch from '../search/GlobalSearch';
-import GlobalSkeleton from '../skeletons/GlobalSkeleton';
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -39,7 +38,9 @@ export default function PageLayout({
             {filters}
           </div>
         )}
-        <GlobalSkeleton type={skeletonType} />
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <p style={{ color: 'var(--text-secondary)' }}>Carregando...</p>
+        </div>
       </div>
     );
   }

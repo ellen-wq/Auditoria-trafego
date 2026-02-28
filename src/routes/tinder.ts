@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { getSupabase } from '../db/database';
 import { requireAuth } from '../middleware/auth';
+import { ProfileService } from '../services/profile.service';
 
 const router = Router();
 
@@ -210,6 +211,12 @@ router.post('/mentor-profile', async (req: Request, res: Response): Promise<void
     nivel_fluxo: cleanString(req.body.nivelFluxo || '', 50),
     bio: cleanString(req.body.bio || '', 2000),
     whatsapp: cleanString(req.body.whatsapp || '', 40),
+    headline: cleanString(req.body.headline || '', 200),
+    anos_experiencia: req.body.anosExperiencia ? parseInt(req.body.anosExperiencia, 10) : 0,
+    horas_semanais: req.body.horasSemanais ? parseInt(req.body.horasSemanais, 10) : 0,
+    disponivel: req.body.disponivel !== undefined ? !!req.body.disponivel : true,
+    idiomas: Array.isArray(req.body.idiomas) ? req.body.idiomas : [],
+    modelo_trabalho: ['remoto', 'hibrido', 'presencial'].includes(req.body.modeloTrabalho) ? req.body.modeloTrabalho : 'remoto',
     updated_at: new Date().toISOString()
   };
   
@@ -237,23 +244,23 @@ router.post('/mentor-profile', async (req: Request, res: Response): Promise<void
   
   // Se for MENTORADO, garantir que tem perfil expert (criar padrão se não existir)
   if (req.user!.role === 'MENTORADO') {
-    const { data: existingExpert } = await supabase
-      .from('tinder_expert_profiles')
-      .select('user_id')
+    // Verificar se já tem campos de Expert/Coprodutor em tinder_mentor_profiles
+    const { data: existingMentor } = await supabase
+      .from('tinder_mentor_profiles')
+      .select('is_expert, is_coproducer')
       .eq('user_id', userId)
       .maybeSingle();
     
-    if (!existingExpert) {
+    if (!existingMentor || (existingMentor.is_expert === null && existingMentor.is_coproducer === null)) {
       console.log('[POST /mentor-profile] Criando perfil expert padrão para MENTORADO');
-      await supabase.from('tinder_expert_profiles').upsert({
-        user_id: userId,
+      await supabase.from('tinder_mentor_profiles').update({
         is_expert: true,
         is_coproducer: true,
         goal_text: 'Objetivo: escalar meu negócio e criar parcerias estratégicas',
         search_bio: 'Busco parcerias estratégicas e oportunidades de coprodução para escalar.',
         preferences_json: {},
         updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
+      }).eq('user_id', userId);
     }
   }
   
@@ -273,9 +280,10 @@ router.get('/expert-profile', async (req: Request, res: Response): Promise<void>
   }
   
   const supabase = getSupabase();
+  // Buscar campos de Expert/Coprodutor de tinder_mentor_profiles
   const { data, error } = await supabase
-    .from('tinder_expert_profiles')
-    .select('*')
+    .from('tinder_mentor_profiles')
+    .select('is_expert, is_coproducer, goal_text, search_bio, preferences_json')
     .eq('user_id', userId)
     .maybeSingle();
   if (error) {
@@ -318,12 +326,19 @@ router.post('/expert-profile', async (req: Request, res: Response): Promise<void
     goal_text: cleanString(req.body.goalText || '', 400),
     search_bio: cleanString(req.body.searchBio || '', 2000),
     preferences_json: req.body.preferencesJson && typeof req.body.preferencesJson === 'object' ? req.body.preferencesJson : {},
+    headline: cleanString(req.body.headline || '', 200),
+    anos_experiencia: req.body.anosExperiencia ? parseInt(req.body.anosExperiencia, 10) : 0,
+    horas_semanais: req.body.horasSemanais ? parseInt(req.body.horasSemanais, 10) : 0,
+    disponivel: req.body.disponivel !== undefined ? !!req.body.disponivel : true,
+    idiomas: Array.isArray(req.body.idiomas) ? req.body.idiomas : [],
+    modelo_trabalho: ['remoto', 'hibrido', 'presencial'].includes(req.body.modeloTrabalho) ? req.body.modeloTrabalho : 'remoto',
     updated_at: new Date().toISOString()
   };
   
   console.log('[POST /expert-profile] Payload:', payload);
+  // Salvar em tinder_mentor_profiles (campos unificados)
   const { data, error } = await supabase
-    .from('tinder_expert_profiles')
+    .from('tinder_mentor_profiles')
     .upsert(payload, { onConflict: 'user_id' })
     .select('*')
     .single();
@@ -396,6 +411,12 @@ router.post('/service-profile', async (req: Request, res: Response): Promise<voi
     portfolio: cleanString(req.body.portfolio || '', 1000),
     experience: cleanString(req.body.experience || '', 2000),
     bio: cleanString(req.body.bio || '', 2000),
+    headline: cleanString(req.body.headline || '', 200),
+    anos_experiencia: req.body.anosExperiencia ? parseInt(req.body.anosExperiencia, 10) : 0,
+    horas_semanais: req.body.horasSemanais ? parseInt(req.body.horasSemanais, 10) : 0,
+    disponivel: req.body.disponivel !== undefined ? !!req.body.disponivel : true,
+    idiomas: Array.isArray(req.body.idiomas) ? req.body.idiomas : [],
+    modelo_trabalho: ['remoto', 'hibrido', 'presencial'].includes(req.body.modeloTrabalho) ? req.body.modeloTrabalho : 'remoto',
     updated_at: new Date().toISOString()
   };
   console.log('[POST /service-profile] Payload:', payload);
@@ -564,9 +585,8 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
       console.error('[Feed Expert] Erro ao buscar expert profiles:', expertError);
     }
     
-    // Criar maps para facilitar lookup
+    // Criar map para facilitar lookup (campos de Expert/Coprodutor agora estão em tinder_mentor_profiles)
     const mentorMap = new Map((mentorProfiles || []).map((mp: any) => [mp.user_id, mp]));
-    const expertMap = new Map((expertProfiles || []).map((ep: any) => [ep.user_id, ep]));
     
     // Buscar emails
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
@@ -579,15 +599,24 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
     let users = (mentorados || [])
       .filter((u: any) => mentorMap.has(u.user_id)) // Apenas quem tem perfil mentor
       .map((u: any) => {
-        const expertProfile = expertMap.get(u.user_id);
+        const mentorProfile = mentorMap.get(u.user_id);
+        // Extrair campos de Expert/Coprodutor do mentor profile
+        const expertData = mentorProfile ? {
+          is_expert: mentorProfile.is_expert || false,
+          is_coproducer: mentorProfile.is_coproducer || false,
+          goal_text: mentorProfile.goal_text || '',
+          search_bio: mentorProfile.search_bio || '',
+          preferences_json: mentorProfile.preferences_json || {}
+        } : null;
+        
         return {
           id: u.user_id,
           name: u.name,
           email: emailMap.get(u.user_id) || '',
           role: u.role,
           created_at: u.created_at,
-          tinder_mentor_profiles: mentorMap.get(u.user_id) || null,
-          tinder_expert_profiles: expertProfile || null
+          tinder_mentor_profiles: mentorProfile || null,
+          tinder_expert_profiles: expertData // Manter compatibilidade com código existente
         };
       });
     
@@ -983,11 +1012,15 @@ router.get('/users/:id', async (req: Request, res: Response): Promise<void> => {
     .select('*')
     .eq('user_id', targetId)
     .maybeSingle();
-  const { data: expertProfile } = await supabase
-    .from('tinder_expert_profiles')
-    .select('*')
-    .eq('user_id', targetId)
-    .maybeSingle();
+  
+  // Campos de Expert/Coprodutor agora estão em tinder_mentor_profiles
+  const expertProfile = mentorProfile ? {
+    is_expert: mentorProfile.is_expert || false,
+    is_coproducer: mentorProfile.is_coproducer || false,
+    goal_text: mentorProfile.goal_text || '',
+    search_bio: mentorProfile.search_bio || '',
+    preferences_json: mentorProfile.preferences_json || {}
+  } : null;
   const { data: serviceProfile } = await supabase
     .from('tinder_service_profiles')
     .select('*')
@@ -2187,6 +2220,780 @@ router.post('/comunidade/posts/:id/comentarios', async (req: Request, res: Respo
   } catch (err: any) {
     console.error('[Comunidade Create Comentario] Erro geral:', err);
     res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// ============================================
+// PROFILE PROJECTS
+// ============================================
+
+router.get('/profile-projects', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const userId = req.query.userId as string || req.user!.id;
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('profile_projects')
+    .select('*')
+    .eq('user_id', userId)
+    .order('ano', { ascending: false });
+  
+  if (error) {
+    console.error('[GET /profile-projects] Erro:', error);
+    res.status(500).json({ error: 'Erro ao buscar projetos.' });
+    return;
+  }
+  
+  res.json({ projects: data || [] });
+});
+
+router.post('/profile-projects', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const userId = req.user!.id;
+  const supabase = getSupabase();
+  
+  const payload = {
+    user_id: userId,
+    nome: cleanString(req.body.nome || '', 200),
+    descricao: cleanString(req.body.descricao || '', 2000),
+    ano: req.body.ano ? parseInt(req.body.ano, 10) : null,
+    tags: Array.isArray(req.body.tags) ? req.body.tags : [],
+    link_portfolio: cleanString(req.body.linkPortfolio || '', 1000),
+    updated_at: new Date().toISOString()
+  };
+  
+  const { data, error } = await supabase
+    .from('profile_projects')
+    .insert(payload)
+    .select('*')
+    .single();
+  
+  if (error) {
+    console.error('[POST /profile-projects] Erro:', error);
+    res.status(500).json({ error: 'Erro ao criar projeto.' });
+    return;
+  }
+  
+  await logAction(userId, 'PROFILE_PROJECT_CREATED', { projectId: data.id });
+  res.json({ project: data });
+});
+
+router.put('/profile-projects/:id', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const userId = req.user!.id;
+  const projectId = req.params.id;
+  const supabase = getSupabase();
+  
+  // Verificar se o projeto pertence ao usuário
+  const { data: existing } = await supabase
+    .from('profile_projects')
+    .select('user_id')
+    .eq('id', projectId)
+    .single();
+  
+  if (!existing || existing.user_id !== userId) {
+    res.status(403).json({ error: 'Você não tem permissão para editar este projeto.' });
+    return;
+  }
+  
+  const payload = {
+    nome: cleanString(req.body.nome || '', 200),
+    descricao: cleanString(req.body.descricao || '', 2000),
+    ano: req.body.ano ? parseInt(req.body.ano, 10) : null,
+    tags: Array.isArray(req.body.tags) ? req.body.tags : [],
+    link_portfolio: cleanString(req.body.linkPortfolio || '', 1000),
+    updated_at: new Date().toISOString()
+  };
+  
+  const { data, error } = await supabase
+    .from('profile_projects')
+    .update(payload)
+    .eq('id', projectId)
+    .select('*')
+    .single();
+  
+  if (error) {
+    console.error('[PUT /profile-projects] Erro:', error);
+    res.status(500).json({ error: 'Erro ao atualizar projeto.' });
+    return;
+  }
+  
+  await logAction(userId, 'PROFILE_PROJECT_UPDATED', { projectId });
+  res.json({ project: data });
+});
+
+router.delete('/profile-projects/:id', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const userId = req.user!.id;
+  const projectId = req.params.id;
+  const supabase = getSupabase();
+  
+  // Verificar se o projeto pertence ao usuário
+  const { data: existing } = await supabase
+    .from('profile_projects')
+    .select('user_id')
+    .eq('id', projectId)
+    .single();
+  
+  if (!existing || existing.user_id !== userId) {
+    res.status(403).json({ error: 'Você não tem permissão para deletar este projeto.' });
+    return;
+  }
+  
+  const { error } = await supabase
+    .from('profile_projects')
+    .delete()
+    .eq('id', projectId);
+  
+  if (error) {
+    console.error('[DELETE /profile-projects] Erro:', error);
+    res.status(500).json({ error: 'Erro ao deletar projeto.' });
+    return;
+  }
+  
+  await logAction(userId, 'PROFILE_PROJECT_DELETED', { projectId });
+  res.json({ success: true });
+});
+
+// ============================================
+// PROFILE REVIEWS
+// ============================================
+
+router.get('/profile-reviews', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const profileUserId = req.query.userId as string;
+  if (!profileUserId) {
+    res.status(400).json({ error: 'userId é obrigatório.' });
+    return;
+  }
+  
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('profile_reviews')
+    .select('*')
+    .eq('profile_user_id', profileUserId)
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('[GET /profile-reviews] Erro:', error);
+    res.status(500).json({ error: 'Erro ao buscar depoimentos.' });
+    return;
+  }
+  
+  res.json({ reviews: data || [] });
+});
+
+router.post('/profile-reviews', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const userId = req.user!.id;
+  const supabase = getSupabase();
+  
+  const profileUserId = req.body.profileUserId;
+  if (!profileUserId) {
+    res.status(400).json({ error: 'profileUserId é obrigatório.' });
+    return;
+  }
+  
+  const rating = req.body.rating ? parseInt(req.body.rating, 10) : 0;
+  if (rating < 1 || rating > 5) {
+    res.status(400).json({ error: 'Rating deve ser entre 1 e 5.' });
+    return;
+  }
+  
+  // Buscar nome do usuário
+  const { data: userRole } = await supabase
+    .from('user_roles')
+    .select('name')
+    .eq('user_id', userId)
+    .single();
+  
+  const payload = {
+    profile_user_id: profileUserId,
+    rating,
+    depoimento: cleanString(req.body.depoimento || '', 2000),
+    autor_nome: cleanString(req.body.autorNome || userRole?.name || 'Usuário', 200),
+    autor_user_id: userId,
+    updated_at: new Date().toISOString()
+  };
+  
+  const { data, error } = await supabase
+    .from('profile_reviews')
+    .insert(payload)
+    .select('*')
+    .single();
+  
+  if (error) {
+    console.error('[POST /profile-reviews] Erro:', error);
+    res.status(500).json({ error: 'Erro ao criar depoimento.' });
+    return;
+  }
+  
+  await logAction(userId, 'PROFILE_REVIEW_CREATED', { reviewId: data.id, profileUserId });
+  res.json({ review: data });
+});
+
+router.get('/profile-rating', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const profileUserId = req.query.userId as string;
+  if (!profileUserId) {
+    res.status(400).json({ error: 'userId é obrigatório.' });
+    return;
+  }
+  
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('profile_rating')
+    .select('*')
+    .eq('profile_user_id', profileUserId)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    console.error('[GET /profile-rating] Erro:', error);
+    res.status(500).json({ error: 'Erro ao buscar rating.' });
+    return;
+  }
+  
+  res.json({ 
+    rating: data?.rating_avg || 0, 
+    totalReviews: data?.total_reviews || 0 
+  });
+});
+
+// ============================================
+// PROFILE VIEW (COMPLETE)
+// ============================================
+
+router.get('/profile-view', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const userId = req.query.userId as string || req.user!.id;
+  const supabase = getSupabase();
+  
+  try {
+    // Buscar dados do usuário
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('name, role')
+      .eq('user_id', userId)
+      .single();
+    
+    if (!userRole) {
+      res.status(404).json({ error: 'Usuário não encontrado.' });
+      return;
+    }
+    
+    let profileData: any = null;
+    let expertProfile: any = null;
+    let serviceProfile: any = null;
+    
+    // Buscar perfil baseado no role
+    if (userRole.role === 'MENTORADO') {
+      const { data: mentor } = await supabase
+        .from('tinder_mentor_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      profileData = mentor;
+      
+      // Campos de Expert/Coprodutor agora estão em tinder_mentor_profiles
+      expertProfile = mentor ? {
+        is_expert: mentor.is_expert || false,
+        is_coproducer: mentor.is_coproducer || false,
+        goal_text: mentor.goal_text || '',
+        search_bio: mentor.search_bio || '',
+        preferences_json: mentor.preferences_json || {}
+      } : null;
+    } else if (userRole.role === 'PRESTADOR') {
+      const { data: service } = await supabase
+        .from('tinder_service_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      serviceProfile = service;
+      profileData = service;
+    }
+    
+    // Buscar projetos
+    const { data: projects } = await supabase
+      .from('profile_projects')
+      .select('*')
+      .eq('user_id', userId)
+      .order('ano', { ascending: false });
+    
+    // Buscar rating
+    const { data: ratingData } = await supabase
+      .from('profile_rating')
+      .select('*')
+      .eq('profile_user_id', userId)
+      .single();
+    
+    // Buscar depoimentos
+    const { data: reviews } = await supabase
+      .from('profile_reviews')
+      .select('*')
+      .eq('profile_user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    res.json({
+      user: {
+        id: userId,
+        name: userRole.name,
+        role: userRole.role
+      },
+      profile: profileData,
+      expertProfile,
+      serviceProfile,
+      projects: projects || [],
+      rating: ratingData?.rating_avg || 0,
+      totalReviews: ratingData?.total_reviews || 0,
+      reviews: reviews || []
+    });
+  } catch (err: any) {
+    console.error('[GET /profile-view] Erro:', err);
+    res.status(500).json({ error: 'Erro ao buscar perfil completo.' });
+  }
+});
+
+// ============================================
+// PROFILE API (NEW SPECIFICATION)
+// ============================================
+
+// GET /profile/me
+router.get('/profile/me', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  try {
+    // Permitir buscar perfil de outro usuário via query param
+    const targetUserId = req.query.userId as string || req.user!.id;
+    const supabase = getSupabase();
+    
+    // Buscar tipo_usuario
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('tipo_usuario')
+      .eq('user_id', targetUserId)
+      .single();
+    
+    const tipoUsuario = (userRole?.tipo_usuario || 'mentorado') as 'mentorado' | 'aluno';
+    
+    const profileService = new ProfileService();
+    const profile = await profileService.getProfile(targetUserId, tipoUsuario);
+    
+    res.json(profile);
+  } catch (err: any) {
+    console.error('[GET /profile/me] Erro:', err);
+    res.status(500).json({ error: 'Erro ao buscar perfil.' });
+  }
+});
+
+// PUT /profile
+router.put('/profile', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  try {
+    const userId = req.user!.id;
+    const supabase = getSupabase();
+    
+    // Buscar tipo_usuario
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('tipo_usuario')
+      .eq('user_id', userId)
+      .single();
+    
+    const tipoUsuario = (userRole?.tipo_usuario || 'mentorado') as 'mentorado' | 'aluno';
+    
+    const profileService = new ProfileService();
+    await profileService.updateProfile(userId, tipoUsuario, req.body);
+    
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('[PUT /profile] Erro:', err);
+    res.status(500).json({ error: err.message || 'Erro ao atualizar perfil.' });
+  }
+});
+
+// POST /profile/avatar
+router.post('/profile/avatar', upload.single('avatar'), async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  try {
+    const userId = req.user!.id;
+    const file = req.file;
+    
+    if (!file) {
+      res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+      return;
+    }
+    const profileService = new ProfileService();
+    const result = await profileService.uploadAvatar(
+      userId,
+      file.buffer,
+      file.originalname,
+      file.mimetype
+    );
+    
+    res.json(result);
+  } catch (err: any) {
+    console.error('[POST /profile/avatar] Erro:', err);
+    res.status(500).json({ error: err.message || 'Erro ao fazer upload do avatar.' });
+  }
+});
+
+// ============================================
+// PROFILE FORM (OLD - DEPRECATED)
+// ============================================
+
+// Get user tipo_usuario
+router.get('/user-tipo', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const userId = req.user!.id;
+  const supabase = getSupabase();
+  
+  const { data: userRole } = await supabase
+    .from('user_roles')
+    .select('tipo_usuario')
+    .eq('user_id', userId)
+    .single();
+  
+  res.json({ tipo_usuario: userRole?.tipo_usuario || 'mentorado' });
+});
+
+// Get profile form data
+router.get('/profile-form', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const userId = req.query.userId as string || req.user!.id;
+  const supabase = getSupabase();
+  
+  try {
+    // Buscar user role
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('name, role, tipo_usuario')
+      .eq('user_id', userId)
+      .single();
+    
+    if (!userRole) {
+      res.status(404).json({ error: 'Usuário não encontrado.' });
+      return;
+    }
+    
+    const tipoUsuario = userRole.tipo_usuario || 'mentorado';
+    
+    // Buscar perfil base
+    let profile: any = null;
+    let expertProfile: any = null;
+    
+    if (tipoUsuario === 'mentorado') {
+      const { data: mentor } = await supabase
+        .from('tinder_mentor_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      profile = mentor;
+      
+      const { data: expert } = await supabase
+        .from('tinder_expert_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      expertProfile = expert;
+    } else {
+      const { data: service } = await supabase
+        .from('tinder_service_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      profile = service;
+    }
+    
+    // Buscar detalhes específicos
+    const { data: expertDetails } = await supabase
+      .from('expert_details')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    const { data: coprodutorDetails } = await supabase
+      .from('coprodutor_details')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    const { data: prestadorDetails } = await supabase
+      .from('prestador_details')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    // Buscar skills
+    const { data: skills } = await supabase
+      .from('profile_skills')
+      .select('*')
+      .eq('user_id', userId);
+    
+    const { data: skillsExtra } = await supabase
+      .from('profile_skills_extra')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+    
+    // Buscar projetos
+    const { data: projects } = await supabase
+      .from('profile_projects')
+      .select('*')
+      .eq('user_id', userId)
+      .order('ano', { ascending: false });
+    
+    res.json({
+      user: { name: userRole.name, role: userRole.role },
+      tipoUsuario,
+      profile,
+      expertProfile,
+      expertDetails,
+      coprodutorDetails,
+      prestadorDetails,
+      skills: skills || [],
+      skillsExtra: skillsExtra || [],
+      projects: projects || [],
+    });
+  } catch (err: any) {
+    console.error('[GET /profile-form] Erro:', err);
+    res.status(500).json({ error: 'Erro ao buscar dados do formulário.' });
+  }
+});
+
+// Save profile form
+router.post('/profile-form', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const userId = req.user!.id;
+  const supabase = getSupabase();
+  const body = req.body;
+  
+  try {
+    // Buscar tipo_usuario
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('tipo_usuario, role')
+      .eq('user_id', userId)
+      .single();
+    
+    const tipoUsuario = userRole?.tipo_usuario || 'mentorado';
+    
+    // Salvar perfil base
+    if (tipoUsuario === 'mentorado') {
+      // Salvar mentor profile
+      const whatsapp = body.whatsapp || '';
+      await supabase
+        .from('tinder_mentor_profiles')
+        .upsert({
+          user_id: userId,
+          headline: cleanString(body.headline || '', 200),
+          city: cleanString(body.cidade || '', 120),
+          whatsapp: cleanString(whatsapp, 40),
+          idiomas: Array.isArray(body.idiomas) ? body.idiomas : [],
+          anos_experiencia: body.anosExperiencia ? parseInt(body.anosExperiencia, 10) : 0,
+          horas_semanais: body.horasSemanais ? parseInt(body.horasSemanais, 10) : 0,
+          disponivel: body.disponivel !== undefined ? !!body.disponivel : true,
+          bio: cleanString(body.bioBusca || '', 2000),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+      
+      // Salvar expert profile (se necessário)
+      if (body.isExpert || body.isCoprodutor) {
+        await supabase
+          .from('tinder_expert_profiles')
+          .upsert({
+            user_id: userId,
+            is_expert: !!body.isExpert,
+            is_coproducer: !!body.isCoprodutor,
+            goal_text: cleanString(body.objetivo || '', 400),
+            search_bio: cleanString(body.bioBusca || '', 2000),
+            headline: cleanString(body.headline || '', 200),
+            anos_experiencia: body.anosExperiencia ? parseInt(body.anosExperiencia, 10) : 0,
+            horas_semanais: body.horasSemanais ? parseInt(body.horasSemanais, 10) : 0,
+            disponivel: body.disponivel !== undefined ? !!body.disponivel : true,
+            idiomas: Array.isArray(body.idiomas) ? body.idiomas : [],
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+      }
+      
+      // Salvar expert_details (se expert)
+      if (body.isExpert && body.expert) {
+        await supabase
+          .from('expert_details')
+          .upsert({
+            user_id: userId,
+            tipo_produto: cleanString(body.expert.tipoProduto || '', 200),
+            preco: body.expert.preco ? parseFloat(body.expert.preco) : 0,
+            modelo: body.expert.modelo || '',
+            precisa_trafego: !!body.expert.precisaTrafego,
+            precisa_coprodutor: !!body.expert.precisaCoprodutor,
+            precisa_copy: !!body.expert.precisaCopy,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+      }
+      
+      // Salvar coprodutor_details (se coprodutor)
+      if (body.isCoprodutor && body.coprodutor) {
+        await supabase
+          .from('coprodutor_details')
+          .upsert({
+            user_id: userId,
+            faz_trafego: !!body.coprodutor.fazTrafego,
+            faz_lancamento: !!body.coprodutor.fazLancamento,
+            faz_perpetuo: !!body.coprodutor.fazPerpetuo,
+            ticket_minimo: body.coprodutor.ticketMinimo ? parseFloat(body.coprodutor.ticketMinimo) : 0,
+            percentual_minimo: body.coprodutor.percentualMinimo ? parseInt(body.coprodutor.percentualMinimo, 10) : 0,
+            aceita_sociedade: !!body.coprodutor.aceitaSociedade,
+            aceita_fee_percentual: !!body.coprodutor.aceitaFeePercentual,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+      }
+    } else {
+      // Aluno = Prestador
+      await supabase
+        .from('tinder_service_profiles')
+        .upsert({
+          user_id: userId,
+          headline: cleanString(body.headline || '', 200),
+          city: cleanString(body.cidade || '', 120),
+          whatsapp: cleanString(body.whatsapp || '', 40),
+          idiomas: Array.isArray(body.idiomas) ? body.idiomas : [],
+          anos_experiencia: body.anosExperiencia ? parseInt(body.anosExperiencia, 10) : 0,
+          horas_semanais: body.horasSemanais ? parseInt(body.horasSemanais, 10) : 0,
+          disponivel: body.disponivel !== undefined ? !!body.disponivel : true,
+          modelo_trabalho: body.prestador?.modeloContratacao || 'remoto',
+          bio: cleanString(body.bioBusca || '', 2000),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+      
+      // Salvar prestador_details
+      if (body.prestador) {
+        await supabase
+          .from('prestador_details')
+          .upsert({
+            user_id: userId,
+            servicos: Array.isArray(body.prestador.servicos) ? body.prestador.servicos : [],
+            valor_minimo: body.prestador.valorMinimo ? parseFloat(body.prestador.valorMinimo) : 0,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+      }
+    }
+    
+    // Salvar skills principais
+    if (body.skills) {
+      const skillsToSave = [];
+      if (body.skills.copywriter !== undefined) {
+        skillsToSave.push({ user_id: userId, categoria: 'copywriter', nivel: parseInt(body.skills.copywriter, 10) || 0 });
+      }
+      if (body.skills.trafego_pago !== undefined) {
+        skillsToSave.push({ user_id: userId, categoria: 'trafego_pago', nivel: parseInt(body.skills.trafego_pago, 10) || 0 });
+      }
+      if (body.skills.automacao_ia !== undefined) {
+        skillsToSave.push({ user_id: userId, categoria: 'automacao_ia', nivel: parseInt(body.skills.automacao_ia, 10) || 0 });
+      }
+      
+      // Deletar skills existentes e inserir novas
+      await supabase.from('profile_skills').delete().eq('user_id', userId);
+      if (skillsToSave.length > 0) {
+        await supabase.from('profile_skills').insert(skillsToSave);
+      }
+    }
+    
+    // Salvar skills extras
+    if (Array.isArray(body.skillsExtra)) {
+      await supabase.from('profile_skills_extra').delete().eq('user_id', userId);
+      if (body.skillsExtra.length > 0) {
+        const skillsExtraToSave = body.skillsExtra
+          .filter((s: any) => s.nome && s.nome.trim())
+          .map((s: any) => ({
+            user_id: userId,
+            nome: cleanString(s.nome, 200),
+            nivel: parseInt(s.nivel, 10) || 0,
+          }));
+        if (skillsExtraToSave.length > 0) {
+          await supabase.from('profile_skills_extra').insert(skillsExtraToSave);
+        }
+      }
+    }
+    
+    // Salvar projetos
+    if (Array.isArray(body.projetos)) {
+      // Buscar projetos existentes
+      const { data: existingProjects } = await supabase
+        .from('profile_projects')
+        .select('id')
+        .eq('user_id', userId);
+      
+      const projetosComId = body.projetos.filter((p: any) => p.id).map((p: any) => p.id);
+      const idsToDelete = existingProjects
+        ?.filter(p => !projetosComId.includes(p.id))
+        .map(p => p.id) || [];
+      
+      // Deletar projetos removidos
+      if (idsToDelete.length > 0) {
+        for (const id of idsToDelete) {
+          await supabase.from('profile_projects').delete().eq('id', id);
+        }
+      }
+      
+      // Inserir/atualizar projetos
+      for (const projeto of body.projetos) {
+        if (!projeto.nome || !projeto.nome.trim()) continue; // Pular projetos sem nome
+        
+        if (projeto.id) {
+          // Atualizar
+          await supabase
+            .from('profile_projects')
+            .update({
+              nome: cleanString(projeto.nome, 200),
+              descricao: cleanString(projeto.descricao || '', 2000),
+              ano: projeto.ano ? parseInt(projeto.ano, 10) : null,
+              tags: Array.isArray(projeto.tags) ? projeto.tags : [],
+              link_portfolio: cleanString(projeto.linkPortfolio || '', 1000),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', projeto.id);
+        } else {
+          // Inserir
+          await supabase
+            .from('profile_projects')
+            .insert({
+              user_id: userId,
+              nome: cleanString(projeto.nome, 200),
+              descricao: cleanString(projeto.descricao || '', 2000),
+              ano: projeto.ano ? parseInt(projeto.ano, 10) : null,
+              tags: Array.isArray(projeto.tags) ? projeto.tags : [],
+              link_portfolio: cleanString(projeto.linkPortfolio || '', 1000),
+            });
+        }
+      }
+    }
+    
+    await logAction(userId, 'PROFILE_FORM_SAVED', { tipoUsuario });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('[POST /profile-form] Erro:', err);
+    res.status(500).json({ error: 'Erro ao salvar perfil: ' + (err.message || 'Erro desconhecido') });
   }
 });
 

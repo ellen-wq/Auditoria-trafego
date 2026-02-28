@@ -8,7 +8,6 @@ import FeedHeader from '../components/comunidade/FeedHeader';
 import PostCard from '../components/comunidade/PostCard';
 import TrendingPosts from '../components/comunidade/TrendingPosts';
 import GlobalSearch from '../components/search/GlobalSearch';
-import GlobalSkeleton from '../components/skeletons/GlobalSkeleton';
 import { useDebounce } from '../hooks/useDebounce';
 import type { PostWithCounts } from '../types/comunidade';
 
@@ -64,9 +63,11 @@ export function TinderComunidadePage() {
           />
 
           {isLoading ? (
-            <GlobalSkeleton type="feed" />
+            <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+              <p style={{ color: 'var(--text-secondary)' }}>Carregando publicações...</p>
+            </div>
           ) : posts.length === 0 ? (
-            <div className="card">
+      <div className="card">
               <EmptyState text={debouncedSearchText ? "Nenhuma publicação encontrada para sua busca." : "Nenhuma publicação encontrada."} />
             </div>
           ) : (
@@ -88,7 +89,7 @@ export function TinderComunidadePage() {
               )}
             </>
           )}
-        </div>
+              </div>
 
         {/* Trending Sidebar */}
         <TrendingPosts />
@@ -173,7 +174,9 @@ export function TinderExpertPage() {
 
       <div className="card">
         {loading ? (
-          <GlobalSkeleton type="list" />
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <p style={{ color: 'var(--text-secondary)' }}>Carregando perfis...</p>
+          </div>
         ) : users.length === 0 ? (
           <EmptyState text={debouncedSearchText ? "Nenhum perfil encontrado para sua busca." : "Nenhum perfil expert/coprodutor encontrado."} />
         ) : (
@@ -295,7 +298,9 @@ export function TinderPrestadoresPage() {
 
       <div className="card">
         {loading ? (
-          <GlobalSkeleton type="list" />
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <p style={{ color: 'var(--text-secondary)' }}>Carregando prestadores...</p>
+          </div>
         ) : services.length === 0 ? (
           <EmptyState text={debouncedSearchText ? "Nenhum prestador encontrado para sua busca." : "Nenhum prestador encontrado."} />
         ) : (
@@ -564,9 +569,9 @@ export function TinderVagasPage() {
         ) : (
           <>
             <div style={{ display: 'grid', gap: 12 }}>
-              {jobs.map((j) => (
+            {jobs.map((j) => (
                 <div key={j.id} className="quick-action" style={{ padding: 16 }}>
-                  <div style={{ flex: 1 }}>
+                <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{j.title}</div>
                     <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>
                       {j.empresa || j.creator_name || 'Empresa'} • {j.localizacao || j.location || 'Não especificado'}
@@ -582,11 +587,11 @@ export function TinderVagasPage() {
                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                       {formatRelativeDate(j.data_publicacao || j.created_at)}
                     </div>
-                  </div>
-                  <Link className="btn btn-outline" to={`/tinder-do-fluxo/vagas/${j.id}`}>Detalhes</Link>
                 </div>
-              ))}
-            </div>
+                <Link className="btn btn-outline" to={`/tinder-do-fluxo/vagas/${j.id}`}>Detalhes</Link>
+              </div>
+            ))}
+          </div>
             {/* Paginação */}
             {totalVagas > perPage && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 20 }}>
@@ -718,490 +723,6 @@ export function TinderFavoritosPage() {
           </div>
         )}
       </div>
-    </TinderDoFluxoPageShell>
-  );
-}
-
-export function TinderPerfilPage() {
-  const user = api.getUser();
-  const isMentorado = user?.role === 'MENTORADO';
-  const isPrestador = user?.role === 'PRESTADOR';
-  const isLideranca = user?.role === 'LIDERANCA';
-  
-  // Form base (comum a todos)
-  const [form, setForm] = useState({ 
-    city: '', 
-    instagram: '', 
-    niche: '', 
-    nivelFluxo: '', 
-    bio: '', 
-    phoneCountryCode: '+55', 
-    phoneAreaCode: '', 
-    phoneNumber: '',
-    // Expert/Coprodutor fields
-    isExpert: false,
-    isCoproducer: false,
-    goalText: '',
-    searchBio: '',
-    // Prestador fields
-    specialty: '',
-    certification: '',
-    portfolio: '',
-    experience: ''
-  });
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  
-  const nivelOptions = ['Newbie', 'Soft', 'Hard', 'Pro', 'Pro+', 'Master'];
-  const specialtyOptions = ['COPY', 'TRAFEGO', 'AUTOMACAO'];
-  const countryCodes = [
-    { code: '+55', flag: '🇧🇷', label: 'Brasil (+55)' },
-    { code: '+1', flag: '🇺🇸', label: 'EUA/Canadá (+1)' },
-    { code: '+351', flag: '🇵🇹', label: 'Portugal (+351)' }
-  ];
-
-  useEffect(() => {
-    const loadProfiles = async () => {
-      setLoading(true);
-      try {
-        if (isMentorado) {
-          // Carregar mentor profile
-          const mentorRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/mentor-profile');
-          if (mentorRes.profile) {
-            const whatsapp = mentorRes.profile.whatsapp || '';
-            const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
-            setForm(prev => ({
-              ...prev,
-              city: mentorRes.profile.city || '',
-              instagram: mentorRes.profile.instagram || '',
-              niche: mentorRes.profile.niche || '',
-              nivelFluxo: mentorRes.profile.nivel_fluxo || '',
-              bio: mentorRes.profile.bio || '',
-              phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
-              phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
-              phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : ''
-            }));
-          }
-          
-          // Carregar expert profile
-          const expertRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/expert-profile');
-          if (expertRes.profile) {
-            setForm(prev => ({
-              ...prev,
-              isExpert: !!expertRes.profile.is_expert,
-              isCoproducer: !!expertRes.profile.is_coproducer,
-              goalText: expertRes.profile.goal_text || '',
-              searchBio: expertRes.profile.search_bio || ''
-            }));
-          }
-        } else if (isPrestador) {
-          // Carregar service profile
-          const serviceRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/service-profile');
-          if (serviceRes.profile) {
-            const whatsapp = serviceRes.profile.whatsapp || '';
-            const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
-            setForm(prev => ({
-              ...prev,
-              city: serviceRes.profile.city || '',
-              instagram: serviceRes.profile.instagram || '',
-              phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
-              phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
-              phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : '',
-              specialty: serviceRes.profile.specialty || '',
-              certification: serviceRes.profile.certification || '',
-              portfolio: serviceRes.profile.portfolio || '',
-              experience: serviceRes.profile.experience || '',
-              bio: serviceRes.profile.bio || ''
-            }));
-          }
-        }
-      } catch (err) {
-        console.error('Erro ao carregar perfis:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadProfiles();
-  }, [isMentorado, isPrestador, isLideranca]);
-
-  const formatPhoneNumber = (value: string): string => {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length <= 4) return numbers;
-    if (numbers.length <= 8) return `${numbers.slice(0, 4)}-${numbers.slice(4)}`;
-    return `${numbers.slice(0, 5)}-${numbers.slice(5, 9)}`;
-  };
-
-  const save = async (e: FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setSaved(false);
-    setError('');
-    setSuccessMessage('');
-    
-    try {
-      if (isMentorado) {
-        // VALIDAÇÃO: Expert/Coprodutor é obrigatório para MENTORADOS
-        if (!form.isExpert && !form.isCoproducer) {
-          setError('Você deve selecionar pelo menos uma opção: Expert OU Coprodutor (ou ambos).');
-          setSaving(false);
-          return;
-        }
-        
-        // Salvar mentor profile
-        const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
-        console.log('[Profile Save] Salvando mentor profile:', { city: form.city, instagram: form.instagram, niche: form.niche });
-        
-        const mentorRes = await api.post('/api/tinder-do-fluxo/mentor-profile', {
-          city: form.city,
-          instagram: form.instagram,
-          niche: form.niche,
-          nivelFluxo: form.nivelFluxo,
-          bio: form.bio,
-          whatsapp
-        });
-        
-        console.log('[Profile Save] Mentor profile salvo:', mentorRes);
-        
-        // SEMPRE salvar expert profile (agora é obrigatório)
-        console.log('[Profile Save] Salvando expert profile (obrigatório):', { isExpert: form.isExpert, isCoproducer: form.isCoproducer });
-        await api.post('/api/tinder-do-fluxo/expert-profile', {
-          isExpert: form.isExpert,
-          isCoproducer: form.isCoproducer,
-          goalText: form.goalText || (form.isExpert && form.isCoproducer ? 'Objetivo: escalar meu negócio e criar parcerias estratégicas' : form.isExpert ? 'Objetivo: escalar meu negócio' : 'Objetivo: criar parcerias estratégicas'),
-          searchBio: form.searchBio || (form.isExpert && form.isCoproducer ? 'Busco parcerias estratégicas e oportunidades de coprodução.' : form.isExpert ? 'Expert em busca de oportunidades de crescimento.' : 'Aberto para coproduções e parcerias.')
-        });
-        console.log('[Profile Save] Expert profile salvo');
-      } else if (isPrestador) {
-        // Salvar service profile
-        const whatsapp = `${form.phoneCountryCode} ${form.phoneAreaCode} ${formatPhoneNumber(form.phoneNumber)}`;
-        console.log('[Profile Save] Salvando service profile:', { city: form.city, specialty: form.specialty });
-        
-        await api.post('/api/tinder-do-fluxo/service-profile', {
-          city: form.city,
-          instagram: form.instagram,
-          whatsapp,
-          specialty: form.specialty,
-          certification: form.certification,
-          portfolio: form.portfolio,
-          experience: form.experience,
-          bio: form.bio
-        });
-        
-        console.log('[Profile Save] Service profile salvo');
-      }
-      
-      setSaved(true);
-      setSuccessMessage('Perfil salvo com sucesso!');
-      
-      // Recarregar dados após salvar
-      setTimeout(async () => {
-        setLoading(true);
-        try {
-          if (isMentorado) {
-            const mentorRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/mentor-profile');
-            if (mentorRes.profile) {
-              const whatsapp = mentorRes.profile.whatsapp || '';
-              const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
-              setForm(prev => ({
-                ...prev,
-                city: mentorRes.profile.city || '',
-                instagram: mentorRes.profile.instagram || '',
-                niche: mentorRes.profile.niche || '',
-                nivelFluxo: mentorRes.profile.nivel_fluxo || '',
-                bio: mentorRes.profile.bio || '',
-                phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
-                phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
-                phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : ''
-              }));
-            }
-            
-            const expertRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/expert-profile');
-            if (expertRes.profile) {
-              setForm(prev => ({
-                ...prev,
-                isExpert: !!expertRes.profile.is_expert,
-                isCoproducer: !!expertRes.profile.is_coproducer,
-                goalText: expertRes.profile.goal_text || '',
-                searchBio: expertRes.profile.search_bio || ''
-              }));
-            }
-          } else if (isPrestador) {
-            const serviceRes = await api.get<{ profile: any }>('/api/tinder-do-fluxo/service-profile');
-            if (serviceRes.profile) {
-              const whatsapp = serviceRes.profile.whatsapp || '';
-              const phoneMatch = whatsapp.match(/^(\+\d{1,3})\s?(\d{2})\s?(\d{4,5}-?\d{4})$/);
-              setForm(prev => ({
-                ...prev,
-                city: serviceRes.profile.city || '',
-                instagram: serviceRes.profile.instagram || '',
-                phoneCountryCode: phoneMatch ? phoneMatch[1] : '+55',
-                phoneAreaCode: phoneMatch ? phoneMatch[2] : '',
-                phoneNumber: phoneMatch ? phoneMatch[3].replace('-', '') : '',
-                specialty: serviceRes.profile.specialty || '',
-                certification: serviceRes.profile.certification || '',
-                portfolio: serviceRes.profile.portfolio || '',
-                experience: serviceRes.profile.experience || '',
-                bio: serviceRes.profile.bio || ''
-              }));
-            }
-          }
-        } catch (reloadErr) {
-          console.error('Erro ao recarregar perfil:', reloadErr);
-        } finally {
-          setLoading(false);
-        }
-      }, 500);
-      
-    } catch (err: any) {
-      console.error('[Profile Save] Erro ao salvar perfil:', err);
-      const errorMessage = err.message || err.response?.data?.error || 'Erro ao salvar perfil. Tente novamente.';
-      setError(errorMessage);
-      setSuccessMessage('');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <TinderDoFluxoPageShell title="Meu Perfil">
-        <div className="card">
-          <div style={{ textAlign: 'center', padding: 24 }}>
-            <div className="loading-spinner" />
-          </div>
-        </div>
-      </TinderDoFluxoPageShell>
-    );
-  }
-
-  // LIDERANCA doesn't need a profile
-  if (isLideranca) {
-    return (
-      <TinderDoFluxoPageShell title="Meu Perfil">
-        <div className="card">
-          <div style={{ padding: 24, textAlign: 'center' }}>
-            <p style={{ fontSize: 16, color: 'var(--text-secondary)' }}>
-              Como Liderança, você não precisa criar um perfil. Você tem acesso total ao sistema.
-            </p>
-          </div>
-        </div>
-      </TinderDoFluxoPageShell>
-    );
-  }
-
-  return (
-    <TinderDoFluxoPageShell title="Meu Perfil">
-      <form className="card" onSubmit={save}>
-        {!loading && (
-          <div style={{ marginBottom: 20, padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-            <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0 }}>
-              <strong>⚠️ Perfil obrigatório:</strong> Você precisa criar seu perfil antes de acessar outras áreas do sistema.
-            </p>
-          </div>
-        )}
-        {/* Campos comuns */}
-        <div className="form-group">
-          <label>Cidade</label>
-          <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-        </div>
-        <div className="form-group">
-          <label>Instagram</label>
-          <input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} />
-        </div>
-        
-        {/* Seção para MENTORADO */}
-        {isMentorado && (
-          <>
-            <div className="form-group">
-              <label>Nicho</label>
-              <input value={form.niche} onChange={(e) => setForm({ ...form, niche: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>Nível Fluxo</label>
-              <select value={form.nivelFluxo} onChange={(e) => setForm({ ...form, nivelFluxo: e.target.value })}>
-                <option value="">Selecione...</option>
-                {nivelOptions.map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Bio</label>
-              <textarea rows={4} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
-            </div>
-            
-            {/* Opção para ser Expert/Coprodutor - OBRIGATÓRIO */}
-            <div style={{ marginTop: 16, marginBottom: 16, padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: (!form.isExpert && !form.isCoproducer) ? '2px solid var(--error)' : 'none' }}>
-              <label style={{ display: 'block', marginBottom: 12, fontWeight: 600, fontSize: 14 }}>
-                Quero ser Expert / Coprodutor <span style={{ color: 'var(--error)' }}>*</span>
-              </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={form.isExpert} 
-                    onChange={(e) => setForm({ ...form, isExpert: e.target.checked })} 
-                    style={{ cursor: 'pointer' }}
-                  /> 
-                  <span>Expert</span>
-                </label>
-                <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={form.isCoproducer} 
-                    onChange={(e) => setForm({ ...form, isCoproducer: e.target.checked })} 
-                    style={{ cursor: 'pointer' }}
-                  /> 
-                  <span>Coprodutor</span>
-                </label>
-              </div>
-              {(!form.isExpert && !form.isCoproducer) && (
-                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--error)' }}>
-                  Você deve selecionar pelo menos uma opção (Expert OU Coprodutor, ou ambos).
-                </div>
-              )}
-              <div className="form-group" style={{ marginTop: 16 }}>
-                <label>Objetivo</label>
-                <input value={form.goalText} onChange={(e) => setForm({ ...form, goalText: e.target.value })} placeholder="Ex: Escalar produto perpétuo" />
-              </div>
-              <div className="form-group">
-                <label>Bio de busca</label>
-                <textarea rows={4} value={form.searchBio} onChange={(e) => setForm({ ...form, searchBio: e.target.value })} placeholder="Descreva o que você busca em parcerias..." />
-              </div>
-            </div>
-          </>
-        )}
-        
-        {/* Seção para PRESTADOR */}
-        {isPrestador && (
-          <>
-            <div className="form-group">
-              <label>Especialidade</label>
-              <select value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })}>
-                <option value="">Selecione...</option>
-                {specialtyOptions.map(opt => (
-                  <option key={opt} value={opt}>{opt === 'TRAFEGO' ? 'Tráfego Pago' : opt === 'AUTOMACAO' ? 'Automação & IA' : opt}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Certificação</label>
-              <input value={form.certification} onChange={(e) => setForm({ ...form, certification: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>Portfólio</label>
-              <input value={form.portfolio} onChange={(e) => setForm({ ...form, portfolio: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>Experiência</label>
-              <textarea rows={3} value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>Bio</label>
-              <textarea rows={3} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
-            </div>
-          </>
-        )}
-        
-        {/* WhatsApp (comum a todos) */}
-        <div className="form-group">
-          <label>WhatsApp</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <select 
-              value={form.phoneCountryCode} 
-              onChange={(e) => setForm({ ...form, phoneCountryCode: e.target.value })}
-              style={{ width: '140px' }}
-            >
-              {countryCodes.map(cc => (
-                <option key={cc.code} value={cc.code}>{cc.flag} {cc.code}</option>
-              ))}
-            </select>
-            <input
-              type="text"
-              placeholder="DDD"
-              value={form.phoneAreaCode}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 2);
-                setForm({ ...form, phoneAreaCode: val });
-              }}
-              style={{ width: '80px' }}
-              maxLength={2}
-            />
-            <input
-              type="text"
-              placeholder="Número"
-              value={formatPhoneNumber(form.phoneNumber)}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 9);
-                setForm({ ...form, phoneNumber: val });
-              }}
-              style={{ flex: 1 }}
-              maxLength={10}
-            />
-          </div>
-        </div>
-        
-        <button className="btn btn-primary" type="submit" disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar perfil'}
-        </button>
-        
-        {error && (
-          <div className="alert alert-error" style={{ marginTop: 16, display: 'block' }}>
-            {error}
-          </div>
-        )}
-        
-        {successMessage && (
-          <div style={{ 
-            marginTop: 16, 
-            padding: 12, 
-            background: 'var(--green)', 
-            color: 'white', 
-            borderRadius: 'var(--radius)',
-            fontSize: 14,
-            fontWeight: 500
-          }}>
-            ✓ {successMessage}
-          </div>
-        )}
-      </form>
-    </TinderDoFluxoPageShell>
-  );
-}
-
-export function TinderPerfilExpertPage() {
-  const [form, setForm] = useState({ isExpert: false, isCoproducer: false, goalText: '', searchBio: '' });
-  const [saved, setSaved] = useState(false);
-  useEffect(() => {
-    api.get<{ profile: any }>('/api/tinder-do-fluxo/expert-profile').then((r) => {
-      if (!r.profile) return;
-      setForm({
-        isExpert: !!r.profile.is_expert,
-        isCoproducer: !!r.profile.is_coproducer,
-        goalText: r.profile.goal_text || '',
-        searchBio: r.profile.search_bio || ''
-      });
-    });
-  }, []);
-  const save = async (e: FormEvent) => {
-    e.preventDefault();
-    await api.post('/api/tinder-do-fluxo/expert-profile', form);
-    setSaved(true);
-  };
-  return (
-    <TinderDoFluxoPageShell title="Perfil Expert/Coprodutor">
-      <form className="card" onSubmit={save}>
-        <label style={{ display: 'flex', gap: 8, marginBottom: 10 }}><input type="checkbox" checked={form.isExpert} onChange={(e) => setForm({ ...form, isExpert: e.target.checked })} /> Quero aparecer como Expert</label>
-        <label style={{ display: 'flex', gap: 8, marginBottom: 12 }}><input type="checkbox" checked={form.isCoproducer} onChange={(e) => setForm({ ...form, isCoproducer: e.target.checked })} /> Quero aparecer como Coprodutor</label>
-        <div className="form-group"><label>Objetivo</label><input value={form.goalText} onChange={(e) => setForm({ ...form, goalText: e.target.value })} /></div>
-        <div className="form-group"><label>Bio de busca</label><textarea rows={4} value={form.searchBio} onChange={(e) => setForm({ ...form, searchBio: e.target.value })} /></div>
-        <button className="btn btn-primary" type="submit">Salvar</button>
-        {saved && <p style={{ marginTop: 8, color: 'var(--green)' }}>Configuração salva.</p>}
-      </form>
     </TinderDoFluxoPageShell>
   );
 }

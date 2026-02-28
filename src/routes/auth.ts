@@ -97,14 +97,17 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('[Login API] Iniciando login...');
     const { email, password } = req.body;
     if (!email || !password) {
+      console.log('[Login API] Email ou senha faltando');
       res.status(400).json({ error: 'Email e senha são obrigatórios.' });
       return;
     }
 
     const supabase = getSupabase();
     const normalizedEmail = email.toLowerCase().trim();
+    console.log('[Login API] Tentando autenticar:', normalizedEmail);
 
     // 1. Autenticar no Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -113,24 +116,48 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     });
 
     if (authError || !authData.user) {
+      console.error('[Login API] Erro na autenticação:', authError);
       res.status(401).json({ error: 'Email ou senha inválidos.' });
       return;
     }
 
     const userId = authData.user.id;
+    console.log('[Login API] Usuário autenticado, userId:', userId);
 
     // 2. Buscar role do usuário
-    const { data: roleData, error: roleError } = await supabase
+    // Primeiro tenta com tipo_usuario, se falhar tenta sem
+    let roleData: any = null;
+    let roleError: any = null;
+    
+    const firstAttempt = await supabase
       .from('user_roles')
-      .select('*')
+      .select('user_id, name, role, has_seen_tinder_do_fluxo_tutorial, created_at, tipo_usuario')
       .eq('user_id', userId)
       .single();
+    
+    roleData = firstAttempt.data;
+    roleError = firstAttempt.error;
+    
+    // Se falhar por causa de tipo_usuario, tenta sem essa coluna
+    if (roleError && (roleError.code === 'PGRST116' || roleError.message?.includes('tipo_usuario'))) {
+      console.log('[Login API] tipo_usuario não existe, buscando sem essa coluna...');
+      const result = await supabase
+        .from('user_roles')
+        .select('user_id, name, role, has_seen_tinder_do_fluxo_tutorial, created_at')
+        .eq('user_id', userId)
+        .single();
+      roleData = result.data;
+      roleError = result.error;
+    }
 
     if (roleError || !roleData) {
       console.error('[Login API] Erro ao buscar role:', roleError);
+      console.error('[Login API] roleError details:', JSON.stringify(roleError, null, 2));
       res.status(500).json({ error: 'Erro ao buscar perfil do usuário.' });
       return;
     }
+    
+    console.log('[Login API] Role encontrado:', roleData.role);
 
     const safeUser: SafeUser = {
       id: userId,
