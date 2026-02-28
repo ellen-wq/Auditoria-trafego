@@ -527,12 +527,12 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
   try {
     const supabase = getSupabase();
-    const searchQuery = cleanString(req.query.q as string, 200);
+    const searchQuery = cleanString((req.query.q ?? req.query.search) as string, 200);
+    const typeFilter = cleanOptionalString(req.query.type, 20);
     const tipoPerfil = req.query.tipo_perfil ? String(req.query.tipo_perfil).split(',') : [];
     
-    console.log('[Feed Expert] Iniciando busca...', { searchQuery, tipoPerfil });
+    console.log('[Feed Expert] Iniciando busca...', { searchQuery, typeFilter, tipoPerfil });
     
-    // Buscar MENTORADOS primeiro (sem joins para evitar problemas de RLS)
     let mentoradosQuery = supabase
       .from('user_roles')
       .select('user_id, name, role, created_at')
@@ -547,13 +547,6 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
       .order('created_at', { ascending: false })
       .limit(80);
     
-    console.log('[Feed Expert] Query mentorados:', { 
-      dataCount: mentorados?.length || 0, 
-      error: mentoradosError,
-      errorCode: mentoradosError?.code,
-      errorMessage: mentoradosError?.message
-    });
-    
     if (mentoradosError) {
       console.error('[Feed Expert] Erro na query mentorados:', mentoradosError);
       res.status(500).json({ 
@@ -564,7 +557,6 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
       return;
     }
     
-    // Buscar perfis mentor e expert separadamente
     const userIds = (mentorados || []).map((u: any) => u.user_id);
     
     const { data: mentorProfiles, error: mentorError } = await supabase
@@ -572,32 +564,24 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
       .select('*')
       .in('user_id', userIds);
     
-    if (mentorError) {
-      console.error('[Feed Expert] Erro ao buscar mentor profiles:', mentorError);
-    }
+    if (mentorError) console.error('[Feed Expert] Erro ao buscar mentor profiles:', mentorError);
     
     const { data: expertProfiles, error: expertError } = await supabase
       .from('tinder_expert_profiles')
       .select('*')
       .in('user_id', userIds);
     
-    if (expertError) {
-      console.error('[Feed Expert] Erro ao buscar expert profiles:', expertError);
-    }
+    if (expertError) console.error('[Feed Expert] Erro ao buscar expert profiles:', expertError);
     
     // Criar map para facilitar lookup (campos de Expert/Coprodutor agora estão em tinder_mentor_profiles)
     const mentorMap = new Map((mentorProfiles || []).map((mp: any) => [mp.user_id, mp]));
     
-    // Buscar emails
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-    if (authError) {
-      console.error('[Feed Expert] Erro ao buscar auth.users:', authError);
-    }
+    if (authError) console.error('[Feed Expert] Erro ao buscar auth.users:', authError);
     const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) || []);
     
-    // Combinar dados - mostrar TODOS os mentorados com perfil mentor
     let users = (mentorados || [])
-      .filter((u: any) => mentorMap.has(u.user_id)) // Apenas quem tem perfil mentor
+      .filter((u: any) => mentorMap.has(u.user_id))
       .map((u: any) => {
         const mentorProfile = mentorMap.get(u.user_id);
         // Extrair campos de Expert/Coprodutor do mentor profile
@@ -620,44 +604,33 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
         };
       });
     
-    // Filtro por tipo de perfil (expert/coprodutor)
-    if (tipoPerfil.length > 0) {
-      users = users.filter((u: any) => {
-        const expertProfile = u.tinder_expert_profiles;
-        if (!expertProfile) return false;
-        
-        if (tipoPerfil.includes('expert') && tipoPerfil.includes('coprodutor')) {
-          return expertProfile.is_expert || expertProfile.is_coproducer;
-        }
-        if (tipoPerfil.includes('expert')) {
-          return expertProfile.is_expert;
-        }
-        if (tipoPerfil.includes('coprodutor')) {
-          return expertProfile.is_coproducer;
-        }
-        return true;
-      });
+    users = users.filter((u: any) => {
+      const ep = u.tinder_expert_profiles;
+      return !!(ep?.is_expert || ep?.is_coproducer);
+    });
+    
+    if (typeFilter === 'EXPERT' || tipoPerfil.includes('expert')) {
+      users = users.filter((u: any) => !!u.tinder_expert_profiles?.is_expert);
+    }
+    if (typeFilter === 'COPRODUTOR' || tipoPerfil.includes('coprodutor')) {
+      users = users.filter((u: any) => !!u.tinder_expert_profiles?.is_coproducer);
     }
     
-    // Busca adicional por objetivo/bio se houver searchQuery
     if (searchQuery) {
       users = users.filter((u: any) => {
-        const expertProfile = u.tinder_expert_profiles;
-        if (!expertProfile) return false;
-        
-        const goalMatch = expertProfile.goal_text?.toLowerCase().includes(searchQuery.toLowerCase());
-        const bioMatch = expertProfile.search_bio?.toLowerCase().includes(searchQuery.toLowerCase());
-        const nameMatch = u.name?.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        return goalMatch || bioMatch || nameMatch;
+        const ep = u.tinder_expert_profiles;
+        const goal = (ep?.goal_text || '').toLowerCase();
+        const bio = (ep?.search_bio || '').toLowerCase();
+        const name = (u.name || '').toLowerCase();
+        const q = searchQuery.toLowerCase();
+        return name.includes(q) || goal.includes(q) || bio.includes(q);
       });
     }
     
-    console.log('[Feed Expert] Retornando', users.length, 'usuários (todos os mentorados com perfil)');
+    console.log('[Feed Expert] Retornando', users.length, 'usuários');
     res.json({ users });
   } catch (err: any) {
     console.error('[Feed Expert] Erro geral:', err);
-    console.error('[Feed Expert] Stack:', err?.stack);
     res.status(500).json({ 
       error: 'Erro interno.',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -909,12 +882,47 @@ router.get('/matches', async (req: Request, res: Response): Promise<void> => {
     .or(`user1_id.eq.${req.user!.id},user2_id.eq.${req.user!.id}`)
     .order('created_at', { ascending: false });
   if (type) q = q.eq('type', type);
-  const { data, error } = await q;
+  const { data: rows, error } = await q;
   if (error) {
     res.status(500).json({ error: 'Erro ao buscar matches.' });
     return;
   }
-  res.json({ matches: data || [] });
+  const matchesList = rows || [];
+  const otherUserIds = [...new Set(matchesList.map((m: any) => m.user1_id === req.user!.id ? m.user2_id : m.user1_id))];
+  if (otherUserIds.length === 0) {
+    res.json({ matches: matchesList.map((m: any) => ({ ...m, otherUser: null })) });
+    return;
+  }
+  const { data: rolesData } = await supabase.from('user_roles').select('user_id, name').in('user_id', otherUserIds);
+  const { data: mentorData } = await supabase.from('tinder_mentor_profiles').select('user_id, city, photo_url, whatsapp').in('user_id', otherUserIds);
+  const { data: expertData } = await supabase.from('tinder_expert_profiles').select('user_id, goal_text, is_expert, is_coproducer').in('user_id', otherUserIds);
+  const rolesMap = new Map((rolesData || []).map((r: any) => [r.user_id, r]));
+  const mentorMap = new Map((mentorData || []).map((m: any) => [m.user_id, m]));
+  const expertMap = new Map((expertData || []).map((e: any) => [e.user_id, e]));
+  const getTypeLabel = (ep: any) => {
+    if (!ep) return '';
+    const parts: string[] = [];
+    if (ep.is_expert) parts.push('Expert');
+    if (ep.is_coproducer) parts.push('Coprodutor');
+    return parts.join(' / ') || '';
+  };
+  const matches = matchesList.map((m: any) => {
+    const otherId = m.user1_id === req.user!.id ? m.user2_id : m.user1_id;
+    const role = rolesMap.get(otherId);
+    const mentor = mentorMap.get(otherId);
+    const expert = expertMap.get(otherId);
+    const otherUser = {
+      id: otherId,
+      name: role?.name || 'Usuário',
+      type: getTypeLabel(expert) || m.type,
+      goal_text: expert?.goal_text || '',
+      city: mentor?.city || '',
+      photo_url: mentor?.photo_url || '',
+      whatsapp: mentor?.whatsapp || ''
+    };
+    return { ...m, otherUser };
+  });
+  res.json({ matches });
 });
 
 router.post('/favorite', async (req: Request, res: Response): Promise<void> => {
