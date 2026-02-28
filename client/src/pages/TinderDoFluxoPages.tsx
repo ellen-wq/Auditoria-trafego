@@ -195,7 +195,7 @@ export function TinderExpertPage() {
             <p style={{ color: 'var(--text-secondary)' }}>Carregando perfis...</p>
           </div>
         ) : users.length === 0 ? (
-          <EmptyState text={debouncedSearchText ? "Nenhum perfil encontrado para sua busca." : "Nenhum perfil expert/coprodutor encontrado."} />
+          <EmptyState text={search ? "Nenhum perfil encontrado para sua busca." : "Nenhum perfil expert/coprodutor encontrado."} />
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
             {users.map((u) => (
