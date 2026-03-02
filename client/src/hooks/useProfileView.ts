@@ -23,21 +23,23 @@ export interface ProfileViewData {
     idiomas?: string[];
   };
   expertDetails?: {
-    tipo_produto?: string;
-    preco?: number;
-    modelo?: string;
-    precisa_trafego?: boolean;
-    precisa_coprodutor?: boolean;
+    products?: Array<{
+      id?: string;
+      tipo_produto: string;
+      preco: number;
+      modelo: string;
+    }>;
+    precisa_trafego_pago?: boolean;
     precisa_copy?: boolean;
+    precisa_automacoes?: boolean;
+    precisa_estrategista?: boolean;
   };
   coprodutorDetails?: {
-    faz_trafego?: boolean;
-    faz_lancamento?: boolean;
     faz_perpetuo?: boolean;
-    ticket_minimo?: number;
-    percentual_minimo?: number;
-    aceita_sociedade?: boolean;
-    aceita_fee_percentual?: boolean;
+    faz_pico_vendas?: boolean;
+    faz_trafego_pago?: boolean;
+    faz_copy?: boolean;
+    faz_automacoes?: boolean;
   };
   prestadorDetails?: {
     servicos?: string[];

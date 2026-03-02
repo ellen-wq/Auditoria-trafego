@@ -44,7 +44,7 @@ export function AvailabilityStatus({
         {/* Destacar apenas o que está disponível */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>
-            Disponível para:
+            Interesses:
           </span>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {availabilityTags.map((tag, idx) => (

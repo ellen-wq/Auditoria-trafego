@@ -1,4 +1,6 @@
+// VERSION: 2024-02-28-v2
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useProfileView } from '../hooks/useProfileView';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { AvailabilityStatus } from '../components/profile/AvailabilityStatus';
@@ -6,12 +8,12 @@ import { ProfileMetrics } from '../components/profile/ProfileMetrics';
 import { ProfileAbout } from '../components/profile/ProfileAbout';
 import { ProfileProjects } from '../components/profile/ProfileProjects';
 import { ProfileSkills } from '../components/profile/ProfileSkills';
-import { ProfileInterests } from '../components/profile/ProfileInterests';
 import { ProfileReviews } from '../components/profile/ProfileReviews';
-import { ExpertDetailsView } from '../components/profile/ExpertDetailsView';
-import { CoprodutorDetailsView } from '../components/profile/CoprodutorDetailsView';
+import { ExpertProductsList } from '../components/profile/ExpertProductsList';
+import { CoprodutorCapabilitiesList } from '../components/profile/CoprodutorCapabilitiesList';
 import { PrestadorDetailsView } from '../components/profile/PrestadorDetailsView';
 import TinderDoFluxoPageShell from '../components/tinder-do-fluxo/TinderDoFluxoPageShell';
+import { api } from '../services/api';
 
 interface ProfileViewPageProps {
   userId?: string;
@@ -20,6 +22,30 @@ interface ProfileViewPageProps {
 export default function ProfileViewPage({ userId }: ProfileViewPageProps) {
   const navigate = useNavigate();
   const { data: profileData, isLoading, error } = useProfileView(userId);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  // Buscar reviews
+  useEffect(() => {
+    if (!profileData) return;
+    
+    const currentUser = api.getUser();
+    const targetUserId = userId || currentUser?.id;
+    if (!targetUserId) return;
+
+    setReviewsLoading(true);
+    api.get<{ reviews: any[] }>(`/api/tinder-do-fluxo/profile-reviews?userId=${targetUserId}`)
+      .then((res) => {
+        setReviews(res.reviews || []);
+      })
+      .catch((err) => {
+        console.error('Erro ao buscar reviews:', err);
+        setReviews([]);
+      })
+      .finally(() => {
+        setReviewsLoading(false);
+      });
+  }, [profileData, userId]);
 
   if (isLoading) {
     return (
@@ -69,10 +95,17 @@ export default function ProfileViewPage({ userId }: ProfileViewPageProps) {
           headline={profile?.headline || ''}
           photoUrl={profile?.photo_url}
           cidade={profile?.cidade}
-          objetivo={profile?.objetivo}
-          anosExperiencia={profile?.anos_experiencia}
-          horasSemanais={profile?.horas_semanais}
-          modeloTrabalho={profile?.modelo_trabalho}
+          isExpert={profileData.isExpert}
+          isCoprodutor={profileData.isCoprodutor}
+          precisaTrafegoPago={expertDetails?.precisa_trafego_pago || false}
+          precisaCopy={expertDetails?.precisa_copy || false}
+          precisaAutomacoes={expertDetails?.precisa_automacoes || false}
+          precisaEstrategista={expertDetails?.precisa_estrategista || false}
+          fazPerpetuo={coprodutorDetails?.faz_perpetuo || false}
+          fazPicoVendas={coprodutorDetails?.faz_pico_vendas || false}
+          fazTrafegoPago={coprodutorDetails?.faz_trafego_pago || false}
+          fazCopy={coprodutorDetails?.faz_copy || false}
+          fazAutomacoes={coprodutorDetails?.faz_automacoes || false}
           onEdit={() => navigate('/tinder-do-fluxo/perfil?edit=true')}
         />
 
@@ -98,9 +131,10 @@ export default function ProfileViewPage({ userId }: ProfileViewPageProps) {
         )}
 
         {/* Projetos Concluídos */}
-        {projects && projects.length > 0 && (
-          <ProfileProjects projects={projects.map((p, idx) => ({ ...p, id: `project-${idx}` }))} />
-        )}
+        <ProfileProjects 
+          projects={projects ? projects.map((p, idx) => ({ ...p, id: `project-${idx}` })) : []} 
+          isPrestador={!!prestadorDetails}
+        />
 
         {/* Habilidades */}
         <ProfileSkills
@@ -108,33 +142,34 @@ export default function ProfileViewPage({ userId }: ProfileViewPageProps) {
           skillsExtra={skillsExtra}
         />
 
-        {/* Interesses em Parceria - Só mostra se não houver objetivo (objetivo está no header) */}
-        {!profile?.objetivo && (profileData.isExpert || profileData.isCoprodutor) && (
-          <ProfileInterests 
-            objetivo={profile?.objetivo} 
-            isExpert={profileData.isExpert}
-            isCoproducer={profileData.isCoprodutor}
-          />
+        {/* Interesses em Parceria - REMOVIDO: não mostrar mais esta seção */}
+
+        {/* Produtos do Expert - apenas se for Expert */}
+        {profileData.isExpert && expertDetails && expertDetails.products && (
+          <ExpertProductsList products={expertDetails.products} />
         )}
 
-        {/* Dados Específicos por Perfil */}
-        {expertDetails && (
-          <ExpertDetailsView expertDetails={expertDetails} />
+        {/* Capacidades do Coprodutor - apenas se for Coprodutor */}
+        {profileData.isCoprodutor && coprodutorDetails && (
+          <CoprodutorCapabilitiesList capabilities={coprodutorDetails} />
         )}
 
-        {coprodutorDetails && (
-          <CoprodutorDetailsView coprodutorDetails={coprodutorDetails} />
-        )}
-
+        {/* Prestador Details */}
         {prestadorDetails && (
           <PrestadorDetailsView prestadorDetails={prestadorDetails} />
         )}
 
         {/* Depoimentos */}
         <ProfileReviews 
-          reviews={[]} 
+          reviews={reviews.map(r => ({
+            id: r.id,
+            autor_nome: r.autor_nome,
+            rating: r.rating,
+            depoimento: r.depoimento,
+            created_at: r.created_at
+          }))} 
           rating={metrics.rating} 
-          totalReviews={0} 
+          totalReviews={reviews.length} 
         />
 
         {/* CTA Final */}

@@ -92,17 +92,40 @@ export function ProjectsSection({ formData, onChange }: ProjectsSectionProps) {
                 onClick={() => toggleProject(index)}
               >
                 <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{projeto.nome}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleProject(index);
-                  }}
-                  className="btn btn-secondary"
-                  style={{ padding: '4px 12px', fontSize: 12 }}
-                >
-                  Editar
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleProject(index);
+                    }}
+                    className="btn btn-secondary"
+                    style={{ padding: '4px 12px', fontSize: 12 }}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm('Tem certeza que deseja excluir este projeto?')) {
+                        removeProject(index);
+                      }
+                    }}
+                    style={{ 
+                      padding: '4px 12px', 
+                      fontSize: 12,
+                      background: '#ef4444', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: 'var(--radius)', 
+                      cursor: 'pointer',
+                      fontWeight: 500
+                    }}
+                  >
+                    Excluir
+                  </button>
+                </div>
               </div>
             );
           }
@@ -136,12 +159,13 @@ export function ProjectsSection({ formData, onChange }: ProjectsSectionProps) {
                     onClick={() => removeProject(index)}
                     style={{ 
                       padding: '4px 12px', 
-                      background: 'var(--error)', 
+                      background: '#ef4444', 
                       color: 'white', 
                       border: 'none', 
                       borderRadius: 'var(--radius)', 
                       cursor: 'pointer',
-                      fontSize: 12
+                      fontSize: 12,
+                      fontWeight: 500
                     }}
                   >
                     Remover
@@ -206,6 +230,22 @@ export function ProjectsSection({ formData, onChange }: ProjectsSectionProps) {
                   placeholder="marketing, digital, automação"
                   style={{ width: '100%', boxSizing: 'border-box' }}
                 />
+              </div>
+              
+              <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (projeto.nome && projeto.nome.trim()) {
+                      toggleProject(index);
+                    }
+                  }}
+                  className="btn btn-primary"
+                  style={{ padding: '8px 16px', fontSize: 14 }}
+                  disabled={!projeto.nome || !projeto.nome.trim()}
+                >
+                  Salvar Projeto
+                </button>
               </div>
             </div>
           );

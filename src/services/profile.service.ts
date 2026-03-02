@@ -11,29 +11,30 @@ export interface ProfileData {
   whatsapp?: string;
   idiomas?: string[];
   anos_experiencia?: number;
-  objetivo?: string;
   bio_busca?: string;
   disponivel?: boolean;
   horas_semanais?: number;
 }
 
 export interface ExpertDetails {
-  tipo_produto?: string;
-  preco?: number;
-  modelo?: string;
-  precisa_trafego?: boolean;
-  precisa_coprodutor?: boolean;
+  products?: Array<{
+    id?: string;
+    tipo_produto: string;
+    preco: number;
+    modelo: string;
+  }>;
+  precisa_trafego_pago?: boolean;
   precisa_copy?: boolean;
+  precisa_automacoes?: boolean;
+  precisa_estrategista?: boolean;
 }
 
 export interface CoprodutorDetails {
-  faz_trafego?: boolean;
-  faz_lancamento?: boolean;
   faz_perpetuo?: boolean;
-  ticket_minimo?: number;
-  percentual_minimo?: number;
-  aceita_sociedade?: boolean;
-  aceita_fee_percentual?: boolean;
+  faz_pico_vendas?: boolean;
+  faz_trafego_pago?: boolean;
+  faz_copy?: boolean;
+  faz_automacoes?: boolean;
 }
 
 export interface PrestadorDetails {
@@ -140,7 +141,6 @@ export class ProfileService {
           headline: mentorProfile.headline || '',
           cidade: mentorProfile.city || '',
           whatsapp: mentorProfile.whatsapp || '',
-          objetivo: mentorProfile.goal_text || mentorProfile.objetivo || '',
           bio_busca: mentorProfile.search_bio || mentorProfile.bio || '',
           modelo_trabalho: mentorProfile.modelo_trabalho || 'remoto',
           disponivel: mentorProfile.disponivel ?? true,
@@ -151,6 +151,40 @@ export class ProfileService {
         };
         profile.isExpert = mentorProfile.is_expert || false;
         profile.isCoprodutor = mentorProfile.is_coproducer || false;
+        
+        // Buscar produtos do expert
+        const { data: expertProducts } = await this.supabase
+          .from('expert_products')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        
+        if (mentorProfile.is_expert) {
+          profile.expertDetails = {
+            products: (expertProducts || []).map(p => ({
+              id: p.id,
+              tipo_produto: p.tipo_produto || '',
+              preco: p.preco || 0,
+              modelo: p.modelo || '',
+              nicho: p.nicho || '',
+              publico: p.publico || '',
+            })),
+            precisa_trafego_pago: mentorProfile.precisa_trafego_pago || false,
+            precisa_copy: mentorProfile.precisa_copy || false,
+            precisa_automacoes: mentorProfile.precisa_automacoes || false,
+            precisa_estrategista: mentorProfile.precisa_estrategista || false,
+          };
+        }
+        
+        if (mentorProfile.is_coproducer) {
+          profile.coprodutorDetails = {
+            faz_perpetuo: mentorProfile.faz_perpetuo || false,
+            faz_pico_vendas: mentorProfile.faz_pico_vendas || false,
+            faz_trafego_pago: mentorProfile.faz_trafego_pago || false,
+            faz_copy: mentorProfile.faz_copy || false,
+            faz_automacoes: mentorProfile.faz_automacoes || false,
+          };
+        }
       }
     } else {
       const { data: serviceProfile } = await this.supabase
@@ -165,7 +199,6 @@ export class ProfileService {
         headline: serviceProfile?.headline,
         cidade: serviceProfile?.city,
         whatsapp: serviceProfile?.whatsapp,
-        objetivo: serviceProfile?.objetivo,
         bio_busca: serviceProfile?.bio || serviceProfile?.bio_busca,
         modelo_trabalho: serviceProfile?.modelo_trabalho,
         disponivel: serviceProfile?.disponivel,
@@ -176,21 +209,7 @@ export class ProfileService {
       };
     }
 
-    // Buscar detalhes específicos
-    const { data: expertDetails } = await this.supabase
-      .from('expert_details')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-    profile.expertDetails = expertDetails as ExpertDetails | null;
-
-    const { data: coprodutorDetails } = await this.supabase
-      .from('coprodutor_details')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-    profile.coprodutorDetails = coprodutorDetails as CoprodutorDetails | null;
-
+    // Buscar prestador_details (apenas para alunos)
     const { data: prestadorDetails } = await this.supabase
       .from('prestador_details')
       .select('*')
@@ -294,13 +313,46 @@ export class ProfileService {
 
       if (tipoUsuario === 'mentorado') {
         profileData.bio = payload.profile.bio_busca || '';
-        profileData.goal_text = payload.profile.objetivo || '';
         profileData.search_bio = payload.profile.bio_busca || '';
         
         // Campos de Expert/Coprodutor agora são salvos diretamente em tinder_mentor_profiles
+        // IMPORTANTE: Expert e Coprodutor são mutuamente exclusivos
         if (payload.isExpert !== undefined || payload.isCoprodutor !== undefined) {
           profileData.is_expert = payload.isExpert || false;
           profileData.is_coproducer = payload.isCoprodutor || false;
+          
+          // Limpar campos do tipo não selecionado
+          if (payload.isExpert && !payload.isCoprodutor) {
+            // É Expert: limpar campos de Coprodutor
+            profileData.faz_perpetuo = false;
+            profileData.faz_pico_vendas = false;
+            profileData.faz_trafego_pago = false;
+            profileData.faz_copy = false;
+            profileData.faz_automacoes = false;
+          } else if (payload.isCoprodutor && !payload.isExpert) {
+            // É Coprodutor: limpar campos de Expert
+            profileData.precisa_trafego_pago = false;
+            profileData.precisa_copy = false;
+            profileData.precisa_automacoes = false;
+            profileData.precisa_estrategista = false;
+          }
+        }
+        
+        // Salvar capacidades do coprodutor em tinder_mentor_profiles (apenas se for Coprodutor)
+        if (payload.isCoprodutor && payload.coprodutor) {
+          profileData.faz_perpetuo = payload.coprodutor.faz_perpetuo || false;
+          profileData.faz_pico_vendas = payload.coprodutor.faz_pico_vendas || false;
+          profileData.faz_trafego_pago = payload.coprodutor.faz_trafego_pago || false;
+          profileData.faz_copy = payload.coprodutor.faz_copy || false;
+          profileData.faz_automacoes = payload.coprodutor.faz_automacoes || false;
+        }
+        
+        // Salvar necessidades do expert em tinder_mentor_profiles (apenas se for Expert)
+        if (payload.isExpert && payload.expert) {
+          profileData.precisa_trafego_pago = payload.expert.precisa_trafego_pago || false;
+          profileData.precisa_copy = payload.expert.precisa_copy || false;
+          profileData.precisa_automacoes = payload.expert.precisa_automacoes || false;
+          profileData.precisa_estrategista = payload.expert.precisa_estrategista || false;
         }
         
         const { data, error } = await this.supabase
@@ -314,7 +366,6 @@ export class ProfileService {
         console.log('[ProfileService] Perfil mentorado salvo com sucesso:', data);
       } else {
         profileData.bio = payload.profile.bio_busca || '';
-        profileData.objetivo = payload.profile.objetivo || '';
         
         const { data, error } = await this.supabase
           .from('tinder_service_profiles')
@@ -328,37 +379,98 @@ export class ProfileService {
       }
     }
 
-    // 2. Salvar expert_details
-    if (payload.expert && (payload.isExpert || tipoUsuario === 'mentorado')) {
+    // 2. Salvar produtos do expert (expert_products) - apenas se for Expert
+    // Se não for Expert, deletar todos os produtos
+    if (!payload.isExpert) {
+      // Deletar todos os produtos se não for mais Expert
       await this.supabase
-        .from('expert_details')
-        .upsert({
-          user_id: userId,
-          tipo_produto: payload.expert.tipo_produto || '',
-          preco: payload.expert.preco || 0,
-          modelo: payload.expert.modelo || '',
-          precisa_trafego: payload.expert.precisa_trafego || false,
-          precisa_coprodutor: payload.expert.precisa_coprodutor || false,
-          precisa_copy: payload.expert.precisa_copy || false,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id' });
-    }
+        .from('expert_products')
+        .delete()
+        .eq('user_id', userId);
+    } else if (payload.expert && payload.isExpert) {
+      const products = (payload.expert as any)?.products || [];
+      
+      console.log('[ProfileService] Salvando produtos do Expert:', {
+        userId,
+        isExpert: payload.isExpert,
+        productsCount: products.length,
+        products: JSON.stringify(products, null, 2)
+      });
+      
+      // Buscar produtos existentes
+      const { data: existingProducts, error: existingError } = await this.supabase
+        .from('expert_products')
+        .select('id')
+        .eq('user_id', userId);
+      
+      if (existingError) {
+        console.error('[ProfileService] Erro ao buscar produtos existentes:', existingError);
+      }
 
-    // 3. Salvar coprodutor_details
-    if (payload.coprodutor && (payload.isCoprodutor || tipoUsuario === 'mentorado')) {
-      await this.supabase
-        .from('coprodutor_details')
-        .upsert({
-          user_id: userId,
-          faz_trafego: payload.coprodutor.faz_trafego || false,
-          faz_lancamento: payload.coprodutor.faz_lancamento || false,
-          faz_perpetuo: payload.coprodutor.faz_perpetuo || false,
-          ticket_minimo: payload.coprodutor.ticket_minimo || 0,
-          percentual_minimo: payload.coprodutor.percentual_minimo || 0,
-          aceita_sociedade: payload.coprodutor.aceita_sociedade || false,
-          aceita_fee_percentual: payload.coprodutor.aceita_fee_percentual || false,
+      const productIds = products
+        .filter((p: any) => p.id)
+        .map((p: any) => p.id);
+      
+      const idsToDelete = existingProducts
+        ?.filter((p: any) => !productIds.includes(p.id))
+        .map((p: any) => p.id) || [];
+
+      // Deletar produtos removidos
+      if (idsToDelete.length > 0) {
+        const { error: deleteError } = await this.supabase
+          .from('expert_products')
+          .delete()
+          .in('id', idsToDelete);
+        
+        if (deleteError) {
+          console.error('[ProfileService] Erro ao deletar produtos:', deleteError);
+        }
+      }
+
+      // Inserir/atualizar produtos
+      for (const product of products) {
+        if (!product.tipo_produto || !product.tipo_produto.trim()) {
+          console.warn('[ProfileService] Produto sem tipo_produto, pulando:', product);
+          continue;
+        }
+
+        const productData: any = {
+          tipo_produto: product.tipo_produto.trim(),
+          preco: product.preco || 0,
+          modelo: product.modelo || '',
+          nicho: (product as any).nicho || '',
+          publico: (product as any).publico || '',
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id' });
+        };
+
+        if (product.id) {
+          // Atualizar
+          const { data: updateData, error: updateError } = await this.supabase
+            .from('expert_products')
+            .update(productData)
+            .eq('id', product.id)
+            .select();
+          
+          if (updateError) {
+            console.error('[ProfileService] Erro ao atualizar produto:', updateError, product);
+          } else {
+            console.log('[ProfileService] Produto atualizado:', updateData);
+          }
+        } else {
+          // Inserir
+          const { data: insertData, error: insertError } = await this.supabase
+            .from('expert_products')
+            .insert({ user_id: userId, ...productData })
+            .select();
+          
+          if (insertError) {
+            console.error('[ProfileService] Erro ao inserir produto:', insertError, productData);
+            throw new Error(`Erro ao salvar produto: ${insertError.message}`);
+          } else {
+            console.log('[ProfileService] Produto inserido:', insertData);
+          }
+        }
+      }
     }
 
     // 4. Salvar prestador_details

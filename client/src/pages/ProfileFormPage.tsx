@@ -24,13 +24,15 @@ export default function ProfileFormPage() {
   const user = api.getUser();
   const { formData, isLoading, save, isSaving, error, tipoUsuario, isExpert, isCoprodutor } = useProfileForm();
   
-  // Se abriu via ?edit=true, forçar refetch dos dados
+  // Se abriu via ?edit=true, forçar refetch dos dados (apenas uma vez)
+  const hasRefetchedRef = useRef(false);
   useEffect(() => {
-    if (searchParams.get('edit') === 'true') {
+    if (searchParams.get('edit') === 'true' && !hasRefetchedRef.current) {
+      hasRefetchedRef.current = true;
       queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
       queryClient.refetchQueries({ queryKey: ['profile', 'me'] });
     }
-  }, [searchParams, queryClient]);
+  }, [searchParams.get('edit')]); // Remover queryClient das dependências
   
   // Valor padrão inicial para evitar null
   const getDefaultFormData = (): ProfileFormData => ({
@@ -39,7 +41,6 @@ export default function ProfileFormPage() {
     whatsapp: '',
     idiomas: [],
     anos_experiencia: 0,
-    objetivo: '',
     bio_busca: '',
     disponivel: true,
     horas_semanais: 0,
@@ -66,7 +67,6 @@ export default function ProfileFormPage() {
         headline: formData.headline,
         cidade: formData.cidade,
         bio_busca: formData.bio_busca,
-        objetivo: formData.objetivo,
         photo_url: formData.photo_url,
         projectsCount: formData.projects?.length || 0,
       });
@@ -75,7 +75,6 @@ export default function ProfileFormPage() {
         headline: localFormData?.headline,
         cidade: localFormData?.cidade,
         bio_busca: localFormData?.bio_busca,
-        objetivo: localFormData?.objetivo,
         photo_url: localFormData?.photo_url,
         projectsCount: localFormData?.projects?.length || 0,
       });
@@ -85,7 +84,6 @@ export default function ProfileFormPage() {
         headline: '',
         cidade: '',
         bio_busca: '',
-        objetivo: '',
         photo_url: '',
         projectsCount: 0,
       })) {
@@ -146,8 +144,37 @@ export default function ProfileFormPage() {
     
     // Validações
     if (tipoUsuario === 'mentorado' && !isExpertChecked && !isCoprodutorChecked) {
-      setLocalError('Você deve selecionar pelo menos uma opção: Expert OU Coprodutor (ou ambos).');
+      setLocalError('Você deve selecionar uma opção: Expert OU Coprodutor.');
       return;
+    }
+    
+    // Validações específicas para Expert
+    if (tipoUsuario === 'mentorado' && isExpertChecked) {
+      const expert = localFormData.expert || {};
+      const products = (expert as any).products || [];
+      const hasProducts = products.length > 0 && products.some((p: any) => p.tipo_produto && p.tipo_produto.trim());
+      const hasNeeds = expert.precisa_trafego_pago || expert.precisa_copy || expert.precisa_automacoes || expert.precisa_estrategista;
+      
+      if (!hasProducts) {
+        setLocalError('Como Expert, você deve adicionar pelo menos um produto.');
+        return;
+      }
+      
+      if (!hasNeeds) {
+        setLocalError('Como Expert, você deve selecionar pelo menos uma necessidade (Tráfego Pago, Copy, Automações ou Estrategista).');
+        return;
+      }
+    }
+    
+    // Validações específicas para Coprodutor
+    if (tipoUsuario === 'mentorado' && isCoprodutorChecked) {
+      const coprodutor = localFormData.coprodutor || {};
+      const hasCapabilities = coprodutor.faz_perpetuo || coprodutor.faz_pico_vendas || coprodutor.faz_trafego_pago || coprodutor.faz_copy || coprodutor.faz_automacoes;
+      
+      if (!hasCapabilities) {
+        setLocalError('Como Coprodutor, você deve selecionar pelo menos uma capacidade (Faz Perpétuo, Faz Pico de Vendas, Faz Tráfego Pago, Faz Copy ou Faz Automações).');
+        return;
+      }
     }
     
     // Validar se pelo menos um serviço foi selecionado para prestador
@@ -166,13 +193,53 @@ export default function ProfileFormPage() {
     try {
       const whatsapp = `${phoneCountryCode} ${phoneAreaCode} ${formatPhoneNumber(phoneNumber)}`;
       
-      // Preparar dados para salvar
+      // Preparar dados para salvar - garantir que apenas o tipo selecionado tenha dados
+      // IMPORTANTE: Preservar produtos existentes
+      let expertData = localFormData.expert;
+      if (isExpertChecked) {
+        // Se expert não existe, criar com estrutura vazia, mas preservar produtos se existirem
+        if (!expertData) {
+          expertData = {
+            products: [],
+            precisa_trafego_pago: false,
+            precisa_copy: false,
+            precisa_automacoes: false,
+            precisa_estrategista: false,
+          };
+        } else {
+          // Garantir que products existe e não seja perdido
+          expertData = {
+            ...expertData,
+            products: expertData.products || [],
+          };
+        }
+      }
+      
       const dataToSave: ProfileFormData = {
         ...localFormData,
         whatsapp,
         isExpert: isExpertChecked,
         isCoprodutor: isCoprodutorChecked,
+        // Limpar dados do tipo não selecionado, mas preservar produtos do expert
+        expert: isExpertChecked ? expertData : undefined,
+        coprodutor: isCoprodutorChecked ? localFormData.coprodutor : undefined,
       };
+
+      // Debug: verificar se produtos estão sendo incluídos
+      if (isExpertChecked && dataToSave.expert) {
+        console.log('[ProfileFormPage] Salvando perfil com produtos:', {
+          isExpert: isExpertChecked,
+          expertExists: !!dataToSave.expert,
+          productsCount: (dataToSave.expert.products || []).length,
+          products: JSON.stringify(dataToSave.expert.products, null, 2),
+          fullExpert: JSON.stringify(dataToSave.expert, null, 2)
+        });
+      } else {
+        console.log('[ProfileFormPage] Salvando perfil SEM produtos:', {
+          isExpert: isExpertChecked,
+          expertExists: !!dataToSave.expert
+        });
+      }
 
       await save(dataToSave);
       
@@ -393,18 +460,6 @@ export default function ProfileFormPage() {
           </div>
           
           <div className="form-group">
-            <label>Modelo de Trabalho</label>
-            <select
-              value={(localFormData as any)?.modelo_trabalho || 'remoto'}
-              onChange={(e) => updateFormData({ modelo_trabalho: e.target.value } as any)}
-            >
-              <option value="remoto">Online</option>
-              <option value="presencial">Presencial</option>
-              <option value="indiferente">Indiferente</option>
-            </select>
-          </div>
-          
-          <div className="form-group">
             <label>Idiomas</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
               {idiomasOptions.map(idioma => (
@@ -433,17 +488,7 @@ export default function ProfileFormPage() {
           <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Sobre</h3>
           
           <div className="form-group">
-            <label>Objetivo</label>
-            <input
-              type="text"
-              value={localFormData?.objetivo || ''}
-              onChange={(e) => updateFormData({ objetivo: e.target.value })}
-              placeholder="Ex: Escalar produto perpétuo"
-            />
-          </div>
-          
-          <div className="form-group">
-            <label>Bio de Busca</label>
+            <label>Bio</label>
             <textarea
               rows={8}
               style={{ minHeight: '200px', width: '100%', resize: 'vertical', boxSizing: 'border-box' }}
@@ -515,7 +560,7 @@ export default function ProfileFormPage() {
           </div>
         </div>
 
-        {/* MENTORADO: Checkboxes Expert/Coprodutor dentro do formulário */}
+        {/* MENTORADO: Radio buttons Expert/Coprodutor (mutuamente exclusivos) */}
         {tipoUsuario === 'mentorado' && (
           <div style={{ marginBottom: 24, padding: 20, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
             <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>
@@ -524,45 +569,52 @@ export default function ProfileFormPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
                 <input
-                  type="checkbox"
+                  type="radio"
+                  name="tipo-mentorado"
                   checked={isExpertChecked}
                   onChange={(e) => {
-                    setIsExpertChecked(e.target.checked);
-                    if (e.target.checked && !localFormData.expert) {
-                      updateFormData({
-                        expert: {
-                          tipo_produto: '',
-                          preco: 0,
-                          modelo: '',
-                          precisa_trafego: false,
-                          precisa_coprodutor: false,
-                          precisa_copy: false,
-                        }
-                      });
-                    }
+                    setIsExpertChecked(true);
+                    setIsCoprodutorChecked(false);
+                    // Limpar coprodutor completamente e garantir que expert existe
+                    const currentExpert = localFormData.expert || {
+                      products: [],
+                      precisa_trafego_pago: false,
+                      precisa_copy: false,
+                      precisa_automacoes: false,
+                      precisa_estrategista: false,
+                    };
+                    updateFormData({ 
+                      coprodutor: undefined,
+                      expert: currentExpert,
+                      isExpert: true,
+                      isCoprodutor: false
+                    });
                   }}
                 />
                 <span>Expert</span>
               </label>
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
                 <input
-                  type="checkbox"
+                  type="radio"
+                  name="tipo-mentorado"
                   checked={isCoprodutorChecked}
                   onChange={(e) => {
-                    setIsCoprodutorChecked(e.target.checked);
-                    if (e.target.checked && !localFormData.coprodutor) {
-                      updateFormData({
-                        coprodutor: {
-                          faz_trafego: false,
-                          faz_lancamento: false,
-                          faz_perpetuo: false,
-                          ticket_minimo: 0,
-                          percentual_minimo: 0,
-                          aceita_sociedade: false,
-                          aceita_fee_percentual: false,
-                        }
-                      });
-                    }
+                    setIsCoprodutorChecked(true);
+                    setIsExpertChecked(false);
+                    // Limpar expert completamente e garantir que coprodutor existe
+                    const currentCoprodutor = localFormData.coprodutor || {
+                      faz_perpetuo: false,
+                      faz_pico_vendas: false,
+                      faz_trafego_pago: false,
+                      faz_copy: false,
+                      faz_automacoes: false,
+                    };
+                    updateFormData({ 
+                      expert: undefined,
+                      coprodutor: currentCoprodutor,
+                      isExpert: false,
+                      isCoprodutor: true
+                    });
                   }}
                 />
                 <span>Coprodutor</span>
@@ -570,19 +622,19 @@ export default function ProfileFormPage() {
             </div>
             {(!isExpertChecked && !isCoprodutorChecked) && (
               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--error)' }}>
-                Você deve selecionar pelo menos uma opção (Expert OU Coprodutor, ou ambos).
+                Você deve selecionar uma opção: Expert OU Coprodutor.
               </div>
             )}
           </div>
         )}
 
         {/* EXPERT SECTION - Só aparece se Expert estiver marcado */}
-        {tipoUsuario === 'mentorado' && isExpertChecked && localFormData.expert && localFormData && (
+        {tipoUsuario === 'mentorado' && isExpertChecked && (
           <ExpertSection formData={localFormData} onChange={updateFormData} />
         )}
 
         {/* COPRODUTOR SECTION - Só aparece se Coprodutor estiver marcado */}
-        {tipoUsuario === 'mentorado' && isCoprodutorChecked && localFormData.coprodutor && localFormData && (
+        {tipoUsuario === 'mentorado' && isCoprodutorChecked && (
           <CoprodutorSection formData={localFormData} onChange={updateFormData} />
         )}
 

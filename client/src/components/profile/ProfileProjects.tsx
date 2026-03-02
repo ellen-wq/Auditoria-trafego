@@ -12,13 +12,34 @@ interface ProfileProject {
 
 interface ProfileProjectsProps {
   projects: ProfileProject[];
+  isPrestador?: boolean; // Se for prestador, mostra vazio mesmo sem projetos
 }
 
-export function ProfileProjects({ projects }: ProfileProjectsProps) {
+export function ProfileProjects({ projects, isPrestador = false }: ProfileProjectsProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  if (projects.length === 0) {
+  // Se não for prestador e não tiver projetos, não mostrar nada
+  if (!isPrestador && projects.length === 0) {
     return null;
+  }
+
+  // Se for prestador e não tiver projetos, mostrar vazio
+  if (isPrestador && projects.length === 0) {
+    return (
+      <div className="card" style={{ marginBottom: 32, padding: 24 }}>
+        <h2 style={{ margin: 0, marginBottom: 20, fontSize: 20, fontWeight: 600 }}>
+          Projetos Concluídos
+        </h2>
+        <div style={{ 
+          padding: '40px 20px',
+          textAlign: 'center',
+          color: 'var(--text-muted)',
+          fontSize: 14
+        }}>
+          Nenhum projeto cadastrado
+        </div>
+      </div>
+    );
   }
 
   const nextProject = () => {

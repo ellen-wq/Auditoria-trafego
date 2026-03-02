@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 
@@ -16,7 +16,6 @@ export interface ProfileFormData {
   photo_url?: string;
   
   // Sobre
-  objetivo: string;
   bio_busca: string;
   
   // Disponibilidade
@@ -50,23 +49,27 @@ export interface ProfileFormData {
   
   // Mentorado - Expert
   expert?: {
-    tipo_produto: string;
-    preco: number;
-    modelo: string;
-    precisa_trafego: boolean;
-    precisa_coprodutor: boolean;
-    precisa_copy: boolean;
+    products?: Array<{
+      id?: string;
+      tipo_produto: string;
+      preco: number;
+      modelo: string;
+      nicho?: string;
+      publico?: string;
+    }>;
+    precisa_trafego_pago?: boolean;
+    precisa_copy?: boolean;
+    precisa_automacoes?: boolean;
+    precisa_estrategista?: boolean;
   };
   
   // Mentorado - Coprodutor
   coprodutor?: {
-    faz_trafego: boolean;
-    faz_lancamento: boolean;
-    faz_perpetuo: boolean;
-    ticket_minimo: number;
-    percentual_minimo: number;
-    aceita_sociedade: boolean;
-    aceita_fee_percentual: boolean;
+    faz_perpetuo?: boolean;
+    faz_pico_vendas?: boolean;
+    faz_trafego_pago?: boolean;
+    faz_copy?: boolean;
+    faz_automacoes?: boolean;
   };
   
   // Aluno - Prestador
@@ -107,20 +110,29 @@ export function useProfileForm() {
     queryFn: async () => {
       try {
         const res = await api.get<ProfileResponse>('/api/tinder-do-fluxo/profile/me');
-        
-        // Determinar tipo_usuario baseado nos dados (apenas se mudou)
-        const newTipoUsuario = res.prestadorDetails ? 'aluno' : 'mentorado';
-        setTipoUsuario(prev => prev !== newTipoUsuario ? newTipoUsuario : prev);
-        
         return res;
       } catch (err: any) {
         console.error('[useProfileFormNew] Erro ao buscar perfil:', err);
         throw err;
       }
     },
-    staleTime: 2 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    cacheTime: 10 * 60 * 1000, // 10 minutos
     retry: 1,
   });
+  
+  // Determinar tipo_usuario APÓS receber os dados, fora do queryFn
+  useEffect(() => {
+    if (profileData) {
+      const newTipoUsuario = profileData.prestadorDetails ? 'aluno' : 'mentorado';
+      setTipoUsuario(prev => {
+        if (prev !== newTipoUsuario) {
+          return newTipoUsuario;
+        }
+        return prev;
+      });
+    }
+  }, [profileData?.prestadorDetails]); // Só depende de prestadorDetails
   
   // Usar ref para armazenar o último formData calculado e evitar recriações desnecessárias
   const formDataRef = useRef<ProfileFormData | null>(null);
@@ -162,7 +174,6 @@ export function useProfileForm() {
       whatsapp: profileData.profile?.whatsapp || '',
       idiomas: profileData.profile?.idiomas || [],
       anos_experiencia: profileData.profile?.anos_experiencia || 0,
-      objetivo: profileData.profile?.objetivo || profileData.expertDetails?.goal_text || '',
       bio_busca: profileData.profile?.bio || profileData.profile?.search_bio || '',
       disponivel: profileData.profile?.disponivel ?? true,
       horas_semanais: profileData.profile?.horas_semanais || 0,
@@ -186,22 +197,21 @@ export function useProfileForm() {
         tags: p.tags || [],
         link: p.link_portfolio || '',
       })) || [],
-      expert: profileData.expertDetails ? {
-        tipo_produto: profileData.expertDetails.tipo_produto || '',
-        preco: profileData.expertDetails.preco || 0,
-        modelo: profileData.expertDetails.modelo || '',
-        precisa_trafego: profileData.expertDetails.precisa_trafego || false,
-        precisa_coprodutor: profileData.expertDetails.precisa_coprodutor || false,
-        precisa_copy: profileData.expertDetails.precisa_copy || false,
+      // Expert: apenas se isExpert for true
+      expert: (profileData.isExpert && profileData.expertDetails) ? {
+        products: (profileData.expertDetails as any)?.products || [],
+        precisa_trafego_pago: (profileData.profile as any)?.precisa_trafego_pago || false,
+        precisa_copy: (profileData.profile as any)?.precisa_copy || false,
+        precisa_automacoes: (profileData.profile as any)?.precisa_automacoes || false,
+        precisa_estrategista: (profileData.profile as any)?.precisa_estrategista || false,
       } : undefined,
-      coprodutor: profileData.coprodutorDetails ? {
-        faz_trafego: profileData.coprodutorDetails.faz_trafego || false,
-        faz_lancamento: profileData.coprodutorDetails.faz_lancamento || false,
-        faz_perpetuo: profileData.coprodutorDetails.faz_perpetuo || false,
-        ticket_minimo: profileData.coprodutorDetails.ticket_minimo || 0,
-        percentual_minimo: profileData.coprodutorDetails.percentual_minimo || 0,
-        aceita_sociedade: profileData.coprodutorDetails.aceita_sociedade || false,
-        aceita_fee_percentual: profileData.coprodutorDetails.aceita_fee_percentual || false,
+      // Coprodutor: apenas se isCoprodutor for true
+      coprodutor: (profileData.isCoprodutor && profileData.coprodutorDetails) ? {
+        faz_perpetuo: (profileData.profile as any)?.faz_perpetuo || false,
+        faz_pico_vendas: (profileData.profile as any)?.faz_pico_vendas || false,
+        faz_trafego_pago: (profileData.profile as any)?.faz_trafego_pago || false,
+        faz_copy: (profileData.profile as any)?.faz_copy || false,
+        faz_automacoes: (profileData.profile as any)?.faz_automacoes || false,
       } : undefined,
       prestador: profileData.prestadorDetails ? {
         servicos: profileData.prestadorDetails.servicos || [],
@@ -231,7 +241,6 @@ export function useProfileForm() {
           whatsapp: data.whatsapp,
           idiomas: data.idiomas,
           anos_experiencia: data.anos_experiencia,
-          objetivo: data.objetivo,
           bio_busca: data.bio_busca,
           disponivel: data.disponivel,
           horas_semanais: data.horas_semanais,
@@ -250,7 +259,17 @@ export function useProfileForm() {
         payload.isCoprodutor = data.isCoprodutor || false;
         
         if (data.expert && data.isExpert) {
-          payload.expert = data.expert;
+          // Garantir que products seja preservado
+          payload.expert = {
+            ...data.expert,
+            products: data.expert.products || [],
+          };
+          console.log('[useProfileFormNew] Enviando expert com produtos:', {
+            isExpert: data.isExpert,
+            productsCount: (payload.expert.products || []).length,
+            products: JSON.stringify(payload.expert.products, null, 2),
+            fullExpert: JSON.stringify(payload.expert, null, 2)
+          });
         }
         
         if (data.coprodutor && data.isCoprodutor) {
@@ -261,6 +280,8 @@ export function useProfileForm() {
           payload.prestador = data.prestador;
         }
       }
+      
+      console.log('[useProfileFormNew] Payload completo:', JSON.stringify(payload, null, 2));
       
       return await api.request('/api/tinder-do-fluxo/profile', {
         method: 'PUT',

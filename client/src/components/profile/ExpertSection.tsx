@@ -1,4 +1,5 @@
 import { ProfileFormData } from '../../hooks/useProfileFormNew';
+import { ExpertProductsSection } from './ExpertProductsSection';
 
 interface ExpertSectionProps {
   formData: ProfileFormData;
@@ -7,62 +8,29 @@ interface ExpertSectionProps {
 
 export function ExpertSection({ formData, onChange }: ExpertSectionProps) {
   const expert = formData.expert || {
-    tipo_produto: '',
-    preco: 0,
-    modelo: '' as const,
-    precisa_trafego: false,
-    precisa_coprodutor: false,
+    products: [],
+    precisa_trafego_pago: false,
     precisa_copy: false,
+    precisa_automacoes: false,
+    precisa_estrategista: false,
   };
+
+  const products = (expert as any).products || [];
 
   return (
     <div style={{ marginTop: 24, padding: 20, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
       <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>
-        🟣 Expert - Detalhes do Produto
+        🟣 Expert - Produtos e Necessidades
       </h3>
       
-      <div className="form-group">
-        <label>Tipo de Produto</label>
-        <input
-          value={expert.tipo_produto}
-          onChange={(e) => onChange({
-            expert: { ...expert, tipo_produto: e.target.value }
-          })}
-          placeholder="Ex: Curso de Marketing Digital"
-        />
-      </div>
+      <ExpertProductsSection
+        products={products}
+        onChange={(newProducts) => onChange({
+          expert: { ...expert, products: newProducts } as any
+        })}
+      />
       
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div className="form-group">
-          <label>Preço</label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={expert.preco}
-            onChange={(e) => onChange({
-              expert: { ...expert, preco: parseFloat(e.target.value) || 0 }
-            })}
-          />
-        </div>
-        
-        <div className="form-group">
-          <label>Modelo</label>
-          <select
-            value={expert.modelo}
-            onChange={(e) => onChange({
-              expert: { ...expert, modelo: e.target.value as 'perpétuo' | 'lançamento' | 'assinatura' | '' }
-            })}
-          >
-            <option value="">Selecione...</option>
-            <option value="perpétuo">Perpétuo</option>
-            <option value="lançamento">Lançamento</option>
-            <option value="assinatura">Assinatura</option>
-          </select>
-        </div>
-      </div>
-      
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 24 }}>
         <label style={{ display: 'block', marginBottom: 12, fontWeight: 600, fontSize: 14 }}>
           Necessidades
         </label>
@@ -70,32 +38,42 @@ export function ExpertSection({ formData, onChange }: ExpertSectionProps) {
           <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
             <input
               type="checkbox"
-              checked={expert.precisa_trafego}
+              checked={expert.precisa_trafego_pago || false}
               onChange={(e) => onChange({
-                expert: { ...expert, precisa_trafego: e.target.checked }
+                expert: { ...expert, precisa_trafego_pago: e.target.checked } as any
               })}
             />
-            <span>Precisa de tráfego</span>
+            <span>Precisa de Tráfego Pago</span>
           </label>
           <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
             <input
               type="checkbox"
-              checked={expert.precisa_coprodutor}
-              onChange={(e) => onChange({
-                expert: { ...expert, precisa_coprodutor: e.target.checked }
-              })}
-            />
-            <span>Precisa de coprodutor</span>
-          </label>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={expert.precisa_copy}
+              checked={expert.precisa_copy || false}
               onChange={(e) => onChange({
                 expert: { ...expert, precisa_copy: e.target.checked }
               })}
             />
-            <span>Precisa de copy</span>
+            <span>Precisa de Copy</span>
+          </label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={expert.precisa_automacoes || false}
+              onChange={(e) => onChange({
+                expert: { ...expert, precisa_automacoes: e.target.checked } as any
+              })}
+            />
+            <span>Precisa de Automações</span>
+          </label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={expert.precisa_estrategista || false}
+              onChange={(e) => onChange({
+                expert: { ...expert, precisa_estrategista: e.target.checked } as any
+              })}
+            />
+            <span>Precisa de Estrategista</span>
           </label>
         </div>
       </div>
