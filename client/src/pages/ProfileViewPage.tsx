@@ -1,5 +1,5 @@
 // VERSION: 2024-02-28-v2
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useProfileView } from '../hooks/useProfileView';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
@@ -19,17 +19,24 @@ interface ProfileViewPageProps {
   userId?: string;
 }
 
-export default function ProfileViewPage({ userId }: ProfileViewPageProps) {
+export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageProps) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // Pegar userId de prop, query param ou usuário atual
+  const currentUser = api.getUser();
+  const userId = userIdProp || searchParams.get('userId') || undefined;
+  const isViewingOtherProfile = userId && userId !== currentUser?.id;
+  
   const { data: profileData, isLoading, error } = useProfileView(userId);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [isSendingInterest, setIsSendingInterest] = useState(false);
 
   // Buscar reviews
   useEffect(() => {
     if (!profileData) return;
     
-    const currentUser = api.getUser();
     const targetUserId = userId || currentUser?.id;
     if (!targetUserId) return;
 
@@ -45,7 +52,34 @@ export default function ProfileViewPage({ userId }: ProfileViewPageProps) {
       .finally(() => {
         setReviewsLoading(false);
       });
-  }, [profileData, userId]);
+  }, [profileData, userId, currentUser?.id]);
+
+  // Handler para dar match
+  const handleMatch = async () => {
+    if (!userId || !isViewingOtherProfile || isSendingInterest) return;
+
+    setIsSendingInterest(true);
+    try {
+      const res = await api.post<{ ok: boolean; matched: boolean; matchId?: number }>(
+        '/api/tinder-do-fluxo/interest',
+        { toUserId: userId, type: 'EXPERT' }
+      );
+      
+      if (res?.matched) {
+        alert('👋 Deu match! Vocês demonstraram interesse mútuo.');
+      } else {
+        alert('👋 Interesse registrado! Você será notificado quando houver match.');
+      }
+      
+      // Voltar para página de descoberta
+      navigate('/tinder-do-fluxo/expert');
+    } catch (err) {
+      console.error('Erro ao enviar interesse:', err);
+      alert('Erro ao enviar interesse. Tente novamente.');
+    } finally {
+      setIsSendingInterest(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -87,8 +121,27 @@ export default function ProfileViewPage({ userId }: ProfileViewPageProps) {
   } = profileData;
 
   return (
-    <TinderDoFluxoPageShell title="Meu Perfil">
+    <TinderDoFluxoPageShell title={isViewingOtherProfile ? `Perfil de ${user.nome}` : "Meu Perfil"}>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 16px' }}>
+        {/* Botão de Match se estiver vendo perfil de outro usuário */}
+        {isViewingOtherProfile && (
+          <div style={{ marginBottom: 16, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+            <button 
+              className="btn btn-outline"
+              onClick={() => navigate('/tinder-do-fluxo/expert')}
+            >
+              Voltar
+            </button>
+            <button 
+              className="btn btn-primary"
+              onClick={handleMatch}
+              disabled={isSendingInterest}
+            >
+              {isSendingInterest ? 'Enviando...' : '👋 Match'}
+            </button>
+          </div>
+        )}
+
         {/* Header do Perfil */}
         <ProfileHeader
           name={user.nome}
@@ -106,7 +159,7 @@ export default function ProfileViewPage({ userId }: ProfileViewPageProps) {
           fazTrafegoPago={coprodutorDetails?.faz_trafego_pago || false}
           fazCopy={coprodutorDetails?.faz_copy || false}
           fazAutomacoes={coprodutorDetails?.faz_automacoes || false}
-          onEdit={() => navigate('/tinder-do-fluxo/perfil?edit=true')}
+          onEdit={isViewingOtherProfile ? undefined : () => navigate('/tinder-do-fluxo/perfil?edit=true')}
         />
 
         {/* Status de Disponibilidade */}
@@ -172,7 +225,8 @@ export default function ProfileViewPage({ userId }: ProfileViewPageProps) {
           totalReviews={reviews.length} 
         />
 
-        {/* CTA Final */}
+        {/* CTA Final - só mostrar se for o próprio perfil */}
+        {!isViewingOtherProfile && (
         <div className="card" style={{ marginTop: 32, textAlign: 'center', padding: '40px 32px' }}>
           <h3 style={{ marginTop: 0, marginBottom: 12, fontSize: 22, fontWeight: 600 }}>
             Pronto para começar?
@@ -211,6 +265,7 @@ export default function ProfileViewPage({ userId }: ProfileViewPageProps) {
             </button>
           </div>
         </div>
+        )}
       </div>
     </TinderDoFluxoPageShell>
   );

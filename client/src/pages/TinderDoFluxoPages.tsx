@@ -11,6 +11,11 @@ import TrendingPosts from '../components/comunidade/TrendingPosts';
 import GlobalSearch from '../components/search/GlobalSearch';
 import { useDebounce } from '../hooks/useDebounce';
 import type { PostWithCounts } from '../types/comunidade';
+import TinderFilters from '../components/tinder/TinderFilters';
+import ProfileDiscoveryCard from '../components/tinder/ProfileDiscoveryCard';
+import MatchModal from '../components/tinder/MatchModal';
+import MatchesList from '../components/tinder/MatchesList';
+import SwipeActions from '../components/tinder/SwipeActions';
 
 function EmptyState({ text }: { text: string }) {
   return <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{text}</p>;
@@ -120,120 +125,289 @@ function ExpertDeckSkeleton() {
 
 export function TinderExpertPage() {
   const navigate = useNavigate();
-  const [users, setUsers] = useState<ExpertUser[]>([]);
+  const [discoveryProfiles, setDiscoveryProfiles] = useState<any[]>([]);
+  const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
-  const [showMatchModal, setShowMatchModal] = useState(false);
-  const [profileUserId, setProfileUserId] = useState<number | string | null>(null);
   const [isSendingInterest, setIsSendingInterest] = useState(false);
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [matchedUser, setMatchedUser] = useState<any>(null);
+  
+  // Filters
+  const [partnershipTypes, setPartnershipTypes] = useState<string[]>([]);
+  const [lookingFor, setLookingFor] = useState<string[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
 
-  const fetchUsers = useCallback(() => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (typeFilter) params.set('type', typeFilter);
-    if (search.trim()) params.set('search', search.trim());
-    api
-      .get<{ users?: ExpertUser[] }>(`/api/tinder-do-fluxo/feed/expert?${params.toString()}`)
-      .then((r) => setUsers(Array.isArray(r?.users) ? r.users : []))
-      .catch(() => setUsers([]))
-      .finally(() => setLoading(false));
-  }, [typeFilter, search]);
+  const currentUser = api.getUser();
 
+  // Load available cities
   useEffect(() => {
-    const id = setTimeout(() => fetchUsers(), search ? 400 : 0);
-    return () => clearTimeout(id);
-  }, [typeFilter, search, fetchUsers]);
-
-  const removeTop = useCallback(() => {
-    setUsers((prev) => prev.slice(1));
+    loadAvailableCities();
   }, []);
 
-  const handleMatch = useCallback((_matchId: number | null) => {
+  // Load discovery profiles
+  useEffect(() => {
+    loadDiscoveryProfiles();
+  }, [partnershipTypes, lookingFor, cities]);
+
+  const loadAvailableCities = async () => {
+    try {
+      const res = await api.get<{ cities: string[] }>('/api/tinder-do-fluxo/cities');
+      setAvailableCities(res.cities || []);
+    } catch (err) {
+      console.error('Erro ao carregar cidades:', err);
+      setAvailableCities([]);
+    }
+  };
+
+  const loadDiscoveryProfiles = async () => {
+    setLoading(true);
+    try {
+    const params = new URLSearchParams();
+      if (lookingFor.length > 0) {
+        if (lookingFor.includes('expert')) {
+          params.append('tipo_perfil', 'expert');
+        }
+        if (lookingFor.includes('coprodutor')) {
+          if (params.has('tipo_perfil')) {
+            params.set('tipo_perfil', params.get('tipo_perfil') + ',coprodutor');
+          } else {
+            params.append('tipo_perfil', 'coprodutor');
+          }
+        }
+      }
+      if (cities.length > 0) {
+        cities.forEach(city => params.append('city', city));
+      }
+      params.append('smart_ordering', 'true');
+
+      const url = `/api/tinder-do-fluxo/feed/expert${params.toString() ? '?' + params.toString() : ''}`;
+      const res = await api.get<{ users?: any[] }>(url);
+      const users = res.users || [];
+
+      // Transform users to match ProfileDiscoveryCard format
+      const transformed = users.map((u: any) => {
+        const expertProfile = u.tinder_expert_profiles || u.tinder_mentor_profiles;
+        const mentorProfile = u.tinder_mentor_profiles;
+
+        const isExpert = expertProfile?.is_expert || false;
+        const isCoprodutor = expertProfile?.is_coproducer || false;
+
+        return {
+          id: u.id,
+          name: u.name,
+          photo_url: mentorProfile?.photo_url,
+          isExpert: isExpert && !isCoprodutor,
+          isCoprodutor: isCoprodutor && !isExpert,
+          products: [],
+          needs: isExpert && !isCoprodutor ? {
+            precisa_trafego_pago: mentorProfile?.precisa_trafego_pago || false,
+            precisa_copy: mentorProfile?.precisa_copy || false,
+            precisa_automacoes: mentorProfile?.precisa_automacoes || false,
+            precisa_estrategista: mentorProfile?.precisa_estrategista || false,
+          } : undefined,
+          capabilities: isCoprodutor && !isExpert ? {
+            faz_perpetuo: mentorProfile?.faz_perpetuo || false,
+            faz_pico_vendas: mentorProfile?.faz_pico_vendas || false,
+            faz_trafego_pago: mentorProfile?.faz_trafego_pago || false,
+            faz_copy: mentorProfile?.faz_copy || false,
+            faz_automacoes: mentorProfile?.faz_automacoes || false,
+          } : undefined,
+          skills: [],
+          skillsExtra: [],
+          projects: [],
+          rawData: u,
+        };
+      });
+
+      setDiscoveryProfiles(transformed);
+      setCurrentProfileIndex(0);
+    } catch (err) {
+      console.error('[TinderExpertPage] Erro ao carregar perfis:', err);
+      setDiscoveryProfiles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load full profile data for current profile
+  useEffect(() => {
+    const currentProfile = discoveryProfiles[currentProfileIndex];
+    if (!currentProfile || !currentProfile.rawData) return;
+    
+    const needsLoading = currentProfile.products.length === 0 && 
+                         currentProfile.skills.length === 0 && 
+                         currentProfile.projects.length === 0 &&
+                         currentProfile.rawData;
+    
+    if (!needsLoading) return;
+    
+    api.get(`/api/tinder-do-fluxo/profile/me?userId=${currentProfile.id}`)
+      .then((profileData: any) => {
+        setDiscoveryProfiles(prev => prev.map((p, idx) => {
+          if (idx === currentProfileIndex) {
+            return {
+              ...p,
+              products: profileData.expertDetails?.products || [],
+              skills: profileData.skills || [],
+              skillsExtra: profileData.skillsExtra || [],
+              projects: profileData.projects || [],
+            };
+          }
+          return p;
+        }));
+      })
+      .catch(err => {
+        console.error('Erro ao carregar perfil completo:', err);
+      });
+  }, [currentProfileIndex, discoveryProfiles]);
+
+  const handlePass = () => {
+    if (currentProfileIndex < discoveryProfiles.length - 1) {
+      setCurrentProfileIndex(currentProfileIndex + 1);
+    } else {
+      loadDiscoveryProfiles();
+    }
+  };
+
+  const handleMatch = async () => {
+    const currentProfile = discoveryProfiles[currentProfileIndex];
+    if (!currentProfile || isSendingInterest) return;
+
+    setIsSendingInterest(true);
+    try {
+      const res = await api.post<{ ok: boolean; matched: boolean; matchId?: number }>(
+        '/api/tinder-do-fluxo/interest',
+        { toUserId: currentProfile.id, type: 'EXPERT' }
+      );
+      
+      // Sempre mostrar modal quando dá match
+      setMatchedUser({
+        id: currentProfile.id,
+        name: currentProfile.name,
+        photo_url: currentProfile.photo_url,
+        isMutual: res?.matched || false,
+      });
     setShowMatchModal(true);
-  }, []);
+      
+      // Se não for match mútuo, passar automaticamente após 1.5s
+      if (!res?.matched) {
+        setTimeout(() => {
+          setShowMatchModal(false);
+          handlePass();
+        }, 1500);
+      }
+    } catch (err) {
+      console.error('Erro ao enviar interesse:', err);
+    } finally {
+      setIsSendingInterest(false);
+    }
+  };
 
-  const handleOpenProfile = useCallback((user: ExpertUser) => {
-    setProfileUserId(user.id);
-  }, []);
+  const handleSwipe = (direction: 'left' | 'right') => {
+    if (direction === 'left') {
+      handlePass();
+    } else {
+      handleMatch();
+    }
+  };
 
-  const deckUsers = users;
+  const handleViewWhatsApp = () => {
+    if (matchedUser) {
+      // Buscar WhatsApp do match
+      api.get<{ matches: any[] }>('/api/tinder-do-fluxo/matches')
+        .then((r) => {
+          const match = r.matches.find(m => m.otherUser?.id === matchedUser.id);
+          if (match?.otherUser?.whatsapp) {
+            const digits = match.otherUser.whatsapp.replace(/\D/g, '');
+            const withCountry = digits.length <= 11 && !digits.startsWith('55') ? '55' + digits : digits;
+            window.open(`https://wa.me/${withCountry}`, '_blank');
+          }
+        });
+    }
+    setShowMatchModal(false);
+  };
+
+  const handleClearFilters = () => {
+    setPartnershipTypes([]);
+    setLookingFor([]);
+    setCities([]);
+  };
+
+  const currentProfile = discoveryProfiles[currentProfileIndex];
 
   return (
-    <TinderDoFluxoPageShell title="Expert & Coprodutor" subtitle="Parcerias estratégicas">
-      <div className="tinder-expert-header">
-        <div className="tinder-expert-header-row">
-          <Link to="/tinder-do-fluxo/matches" className="btn btn-outline tinder-btn-matches">
-            ❤️ Ver Matches
+    <TinderDoFluxoPageShell title="Tinder do Fluxo" subtitle="Descubra perfis e faça matches">
+      {/* Header com link para matches */}
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+        <Link to="/tinder-do-fluxo/matches" className="btn btn-outline">
+          👋 Ver Matches
           </Link>
-          <div className="tinder-expert-filters">
-            <input
-              type="text"
-              className="form-group input"
-              placeholder="Buscar por objetivo, nome…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ minWidth: 220 }}
-            />
-            <select
-              className="form-group input"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              style={{ minWidth: 160 }}
-            >
-              <option value="">Tipo: Todos</option>
-              <option value="EXPERT">Expert</option>
-              <option value="COPRODUTOR">Coprodutor</option>
-            </select>
-          </div>
-        </div>
       </div>
 
-      <div className="card">
+      {/* Filters */}
+      <TinderFilters
+        partnershipTypes={partnershipTypes}
+        onPartnershipTypesChange={setPartnershipTypes}
+        lookingFor={lookingFor}
+        onLookingForChange={setLookingFor}
+        cities={cities}
+        onCitiesChange={setCities}
+        availableCities={availableCities}
+      />
+
+      {/* Discovery Card */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>
-            <p style={{ color: 'var(--text-secondary)' }}>Carregando perfis...</p>
+        <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
+          <div className="loading-spinner" />
+          <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando perfis...</p>
           </div>
-        ) : users.length === 0 ? (
-          <EmptyState text={search ? "Nenhum perfil encontrado para sua busca." : "Nenhum perfil expert/coprodutor encontrado."} />
-        ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {users.map((u) => (
-              <div key={u.id} className="quick-action">
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700 }}>{u.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{u.tinder_expert_profiles?.goal_text || 'Sem objetivo cadastrado'}</div>
-                </div>
-                <Link className="btn btn-outline" to={`/tinder-do-fluxo/u/${u.id}`}>Ver perfil</Link>
-              </div>
-            ))}
-          </div>
+      ) : discoveryProfiles.length === 0 ? (
+        <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
+            Nenhum perfil encontrado com os filtros selecionados
+          </p>
+          {(partnershipTypes.length > 0 || lookingFor.length > 0) && (
+            <button className="btn btn-outline" onClick={handleClearFilters}>
+              Limpar filtros
+            </button>
         )}
       </div>
-
-      {showMatchModal && (
-        <div className="tinder-modal-overlay" onClick={() => setShowMatchModal(false)} role="dialog" aria-modal="true">
-          <div className="tinder-modal card" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 8 }}>Deu match!</h3>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>Vocês demonstraram interesse. Confira em Matches.</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button type="button" className="btn btn-primary" onClick={() => { setShowMatchModal(false); navigate('/tinder-do-fluxo/matches'); }}>
-                Ver Matches
-              </button>
-              <button type="button" className="btn btn-outline" onClick={() => setShowMatchModal(false)}>
-                Continuar
-              </button>
+      ) : !currentProfile ? (
+        <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
+            Nenhum perfil disponível no momento
+          </p>
             </div>
-          </div>
-        </div>
+      ) : (
+        <SwipeActions onSwipeLeft={handlePass} onSwipeRight={handleMatch} disabled={isSendingInterest}>
+          <ProfileDiscoveryCard
+            profile={currentProfile}
+            onPass={handlePass}
+            onMatch={handleMatch}
+            onSwipe={handleSwipe}
+          />
+        </SwipeActions>
       )}
 
-      {profileUserId != null && (
-        <ExpertProfileDrawer
-          userId={profileUserId}
-          onClose={() => setProfileUserId(null)}
-        />
-      )}
+      {/* Match Modal */}
+      <MatchModal
+        isOpen={showMatchModal}
+        matchedUser={matchedUser}
+        currentUser={currentUser ? {
+          name: currentUser.name,
+          photo_url: undefined,
+        } : null}
+        isMutualMatch={matchedUser?.isMutual || false}
+        onClose={() => setShowMatchModal(false)}
+        onViewWhatsApp={matchedUser?.isMutual ? handleViewWhatsApp : undefined}
+        onContinue={() => {
+          setShowMatchModal(false);
+          if (!matchedUser?.isMutual) {
+            handlePass();
+          }
+        }}
+      />
     </TinderDoFluxoPageShell>
   );
 }
@@ -798,50 +972,66 @@ function whatsappLink(whatsapp: string): string {
 
 export function TinderMatchesPage() {
   const [matches, setMatches] = useState<any[]>([]);
+  const [interests, setInterests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const currentUser = api.getUser();
+
+  // Load matches (mútuos) e interesses (unilaterais)
   useEffect(() => {
-    api.get<{ matches: any[] }>('/api/tinder-do-fluxo/matches').then((r) => setMatches(r.matches || []));
+    loadMatches();
   }, []);
+
+  const loadMatches = async () => {
+    setLoading(true);
+    try {
+      // Carregar matches mútuos
+      const matchesRes = await api.get<{ matches: any[] }>('/api/tinder-do-fluxo/matches');
+      const mutualMatches = matchesRes.matches || [];
+      
+      // Carregar interesses unilaterais (onde eu dei like mas ainda não houve match)
+      // A API de matches só retorna matches mútuos, então precisamos buscar interesses
+      // Por enquanto, vamos usar apenas os matches mútuos
+      // TODO: Se necessário, criar endpoint para buscar interesses unilaterais
+      
+      setMatches(mutualMatches);
+    } catch (err) {
+      console.error('[TinderMatchesPage] Erro ao carregar matches:', err);
+      setMatches([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <TinderDoFluxoPageShell title="Matches" subtitle="Conexões confirmadas">
-      <div className="card">
-        {matches.length === 0 ? <EmptyState text="Você ainda não possui matches." /> : (
-          <div className="match-cards">
-            {matches.map((m) => {
-              const ou = m.otherUser;
-              const name = ou?.name ?? 'Usuário';
-              const typeLabel = ou?.type || m.type;
-              const goalText = ou?.goal_text || '';
-              const city = ou?.city || '';
-              const photoUrl = ou?.photo_url || '';
-              const waUrl = ou?.whatsapp ? whatsappLink(ou.whatsapp) : '';
-              return (
-                <div key={m.id} className="match-card">
-                  <div className="match-card-header">
-                    <span className="match-card-type">{typeLabel}</span>
-                    <h3 className="match-card-name">{name}</h3>
+    <TinderDoFluxoPageShell title="Meus Matches" subtitle="Pessoas que você deu match">
+      {/* Header com link para descoberta */}
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+        <Link to="/tinder-do-fluxo/expert" className="btn btn-outline">
+          Descobrir perfis
+        </Link>
                   </div>
-                  <div className="match-card-photo">
-                    {photoUrl ? (
-                      <img src={photoUrl} alt="" className="match-card-avatar-img" />
-                    ) : (
-                      <span className="match-card-avatar-placeholder">{name.charAt(0).toUpperCase()}</span>
-                    )}
+
+      {/* Matches List */}
+      {loading ? (
+        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
+          <div className="loading-spinner" />
+          <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando matches...</p>
                   </div>
-                  {goalText ? <p className="match-card-bio">{goalText}</p> : null}
-                  {city ? <p className="match-card-city">{city}</p> : null}
-                  {waUrl ? (
-                    <a href={waUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary match-card-whatsapp">
-                      WhatsApp
-                    </a>
-                  ) : (
-                    <span className="match-card-no-whatsapp">WhatsApp não informado</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      ) : (
+        <MatchesList 
+          matches={matches} 
+          onViewWhatsApp={(whatsapp) => {
+            const digits = whatsapp.replace(/\D/g, '');
+            const withCountry = digits.length <= 11 && !digits.startsWith('55') ? '55' + digits : digits;
+            window.open(`https://wa.me/${withCountry}`, '_blank');
+          }}
+          onViewProfile={(userId) => {
+            navigate(`/tinder-do-fluxo/profile-view?userId=${userId}`);
+          }}
+        />
         )}
-      </div>
     </TinderDoFluxoPageShell>
   );
 }

@@ -30,15 +30,24 @@ async function requireAuth(req: Request, res: Response, next: NextFunction): Pro
       .from('user_roles')
       .select('user_id, name, role, has_seen_tinder_do_fluxo_tutorial, created_at')
       .eq('user_id', decoded.id)
-      .single();
+      .maybeSingle();
 
-    if (roleError || !roleData) {
+    if (roleError) {
       console.error('[requireAuth] Erro ao buscar role:', {
         error: roleError,
         userId: decoded.id,
         errorCode: roleError?.code,
         errorMessage: roleError?.message
       });
+      res.status(500).json({ 
+        error: 'Erro ao verificar autenticação.',
+        details: process.env.NODE_ENV === 'development' ? roleError.message : undefined
+      });
+      return;
+    }
+
+    if (!roleData) {
+      console.error('[requireAuth] Usuário não encontrado na tabela user_roles:', decoded.id);
       res.status(401).json({ error: 'Usuário não encontrado' });
       return;
     }

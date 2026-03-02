@@ -3,7 +3,7 @@ interface ProfileHeaderProps {
   headline: string;
   photoUrl?: string;
   cidade?: string;
-  onEdit: () => void;
+  onEdit?: () => void;
   onProposeProject?: () => void;
   isExpert?: boolean;
   isCoprodutor?: boolean;
@@ -207,9 +207,11 @@ export function ProfileHeader({
                 Propor Projeto
               </button>
             )}
+            {onEdit && (
             <button className="btn btn-secondary" onClick={onEdit}>
               Editar Perfil
             </button>
+            )}
           </div>
         </div>
       </div>

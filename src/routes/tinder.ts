@@ -100,6 +100,7 @@ router.get('/profile-check', async (req: Request, res: Response): Promise<void> 
     return;
   }
 
+  try {
   const userId = req.user.id;
   const role = req.user.role;
   const supabase = getSupabase();
@@ -120,7 +121,10 @@ router.get('/profile-check', async (req: Request, res: Response): Promise<void> 
     
     if (error) {
       console.error('[GET /profile-check] Erro ao verificar perfil mentor:', error);
-      res.status(500).json({ error: 'Erro ao verificar perfil.' });
+        res.status(500).json({ 
+          error: 'Erro ao verificar perfil.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
       return;
     }
     
@@ -138,7 +142,10 @@ router.get('/profile-check', async (req: Request, res: Response): Promise<void> 
     
     if (error) {
       console.error('[GET /profile-check] Erro ao verificar perfil prestador:', error);
-      res.status(500).json({ error: 'Erro ao verificar perfil.' });
+        res.status(500).json({ 
+          error: 'Erro ao verificar perfil.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
       return;
     }
     
@@ -147,6 +154,13 @@ router.get('/profile-check', async (req: Request, res: Response): Promise<void> 
   }
 
   res.json({ hasProfile: false, profileRequired: false });
+  } catch (err: any) {
+    console.error('[GET /profile-check] Erro geral:', err);
+    res.status(500).json({ 
+      error: 'Erro ao verificar perfil.',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
 });
 
 // Mentor profile
@@ -530,8 +544,10 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
     const searchQuery = cleanString((req.query.q ?? req.query.search) as string, 200);
     const typeFilter = cleanOptionalString(req.query.type, 20);
     const tipoPerfil = req.query.tipo_perfil ? String(req.query.tipo_perfil).split(',') : [];
+    const cities = req.query.city ? (Array.isArray(req.query.city) ? req.query.city : [req.query.city]).map(c => cleanString(String(c), 120)) : [];
+    const smartOrdering = req.query.smart_ordering === 'true';
     
-    console.log('[Feed Expert] Iniciando busca...', { searchQuery, typeFilter, tipoPerfil });
+    console.log('[Feed Expert] Iniciando busca...', { searchQuery, typeFilter, tipoPerfil, cities, smartOrdering });
     
     let mentoradosQuery = supabase
       .from('user_roles')
@@ -559,19 +575,26 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
     
     const userIds = (mentorados || []).map((u: any) => u.user_id);
     
-    const { data: mentorProfiles, error: mentorError } = await supabase
+    let mentorProfilesQuery = supabase
       .from('tinder_mentor_profiles')
       .select('*')
       .in('user_id', userIds);
     
-    if (mentorError) console.error('[Feed Expert] Erro ao buscar mentor profiles:', mentorError);
+    // Aplicar filtro de cidade
+    if (cities.length > 0) {
+      mentorProfilesQuery = mentorProfilesQuery.or(cities.map(c => `city.ilike.%${c}%`).join(','));
+    }
     
-    const { data: expertProfiles, error: expertError } = await supabase
-      .from('tinder_expert_profiles')
-      .select('*')
-      .in('user_id', userIds);
+    const { data: mentorProfiles, error: mentorError } = await mentorProfilesQuery;
     
-    if (expertError) console.error('[Feed Expert] Erro ao buscar expert profiles:', expertError);
+    if (mentorError) {
+      console.error('[Feed Expert] Erro ao buscar mentor profiles:', mentorError);
+      res.status(500).json({ 
+        error: 'Erro ao buscar perfis.',
+        details: process.env.NODE_ENV === 'development' ? mentorError.message : undefined
+      });
+      return;
+    }
     
     // Criar map para facilitar lookup (campos de Expert/Coprodutor agora estão em tinder_mentor_profiles)
     const mentorMap = new Map((mentorProfiles || []).map((mp: any) => [mp.user_id, mp]));
@@ -604,16 +627,28 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
         };
       });
     
+    // Filtrar apenas perfis que são Expert OU Coprodutor (mutuamente exclusivos)
     users = users.filter((u: any) => {
-      const ep = u.tinder_expert_profiles;
-      return !!(ep?.is_expert || ep?.is_coproducer);
+      const mp = u.tinder_mentor_profiles;
+      if (!mp) return false;
+      // Garantir exclusividade: não pode ser ambos
+      const isExpert = (mp.is_expert || false) && !(mp.is_coproducer || false);
+      const isCoprodutor = (mp.is_coproducer || false) && !(mp.is_expert || false);
+      return isExpert || isCoprodutor;
     });
     
+    // Aplicar filtros de tipo
     if (typeFilter === 'EXPERT' || tipoPerfil.includes('expert')) {
-      users = users.filter((u: any) => !!u.tinder_expert_profiles?.is_expert);
+      users = users.filter((u: any) => {
+        const mp = u.tinder_mentor_profiles;
+        return mp && (mp.is_expert || false) && !(mp.is_coproducer || false);
+      });
     }
     if (typeFilter === 'COPRODUTOR' || tipoPerfil.includes('coprodutor')) {
-      users = users.filter((u: any) => !!u.tinder_expert_profiles?.is_coproducer);
+      users = users.filter((u: any) => {
+        const mp = u.tinder_mentor_profiles;
+        return mp && (mp.is_coproducer || false) && !(mp.is_expert || false);
+      });
     }
     
     if (searchQuery) {
@@ -625,6 +660,24 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
         const q = searchQuery.toLowerCase();
         return name.includes(q) || goal.includes(q) || bio.includes(q);
       });
+    }
+    
+    // Aplicar Smart Ordering se solicitado
+    if (smartOrdering && users.length > 0) {
+      try {
+        const { SmartOrderingService } = await import('../services/smart-ordering.service');
+        const currentUserProfile = await supabase
+          .from('tinder_mentor_profiles')
+          .select('*')
+          .eq('user_id', req.user!.id)
+          .maybeSingle();
+        
+        const orderingService = new SmartOrderingService(supabase, req.user!.id);
+        users = await orderingService.orderProfiles(users, currentUserProfile.data);
+      } catch (err) {
+        console.error('[Feed Expert] Erro ao aplicar smart ordering:', err);
+        // Continuar sem ordenação inteligente em caso de erro
+      }
     }
     
     console.log('[Feed Expert] Retornando', users.length, 'usuários');
@@ -870,6 +923,34 @@ router.post('/interest', async (req: Request, res: Response): Promise<void> => {
 
   await logAction(req.user!.id, 'TINDER_INTEREST_CREATED', { fromUserId: req.user!.id, toUserId, type, matched });
   res.json({ ok: true, matched, matchId });
+});
+
+// Get available cities
+router.get('/cities', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('tinder_mentor_profiles')
+      .select('city')
+      .not('city', 'is', null)
+      .neq('city', '');
+    
+    if (error) {
+      console.error('[Cities] Erro ao buscar cidades:', error);
+      res.status(500).json({ error: 'Erro ao buscar cidades.' });
+      return;
+    }
+    
+    const cities = [...new Set((data || []).map((d: any) => d.city).filter(Boolean))].sort();
+    res.json({ cities });
+  } catch (err: any) {
+    console.error('[Cities] Erro geral:', err);
+    res.status(500).json({ 
+      error: 'Erro interno.',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
 });
 
 router.get('/matches', async (req: Request, res: Response): Promise<void> => {
@@ -2587,14 +2668,32 @@ router.get('/profile/me', async (req: Request, res: Response): Promise<void> => 
     const targetUserId = req.query.userId as string || req.user!.id;
     const supabase = getSupabase();
     
-    // Buscar tipo_usuario
-    const { data: userRole } = await supabase
+    // Buscar role e tipo_usuario (usar maybeSingle para não falhar se não existir)
+    const { data: userRole, error: roleError } = await supabase
       .from('user_roles')
-      .select('tipo_usuario')
+      .select('role, tipo_usuario')
       .eq('user_id', targetUserId)
-      .single();
+      .maybeSingle();
     
-    const tipoUsuario = (userRole?.tipo_usuario || 'mentorado') as 'mentorado' | 'aluno';
+    if (roleError) {
+      console.error('[GET /profile/me] Erro ao buscar user_role:', roleError);
+      res.status(500).json({ error: 'Erro ao buscar perfil do usuário.' });
+      return;
+    }
+    
+    if (!userRole) {
+      res.status(404).json({ error: 'Usuário não encontrado.' });
+      return;
+    }
+    
+    // Determinar tipo_usuario: se não existir na coluna, usar role como fallback
+    let tipoUsuario: 'mentorado' | 'aluno' = 'mentorado';
+    if (userRole.tipo_usuario) {
+      tipoUsuario = userRole.tipo_usuario as 'mentorado' | 'aluno';
+    } else {
+      // Fallback: MENTORADO → mentorado, PRESTADOR → aluno
+      tipoUsuario = userRole.role === 'PRESTADOR' ? 'aluno' : 'mentorado';
+    }
     
     const profileService = new ProfileService();
     const profile = await profileService.getProfile(targetUserId, tipoUsuario);
@@ -2602,7 +2701,10 @@ router.get('/profile/me', async (req: Request, res: Response): Promise<void> => 
     res.json(profile);
   } catch (err: any) {
     console.error('[GET /profile/me] Erro:', err);
-    res.status(500).json({ error: 'Erro ao buscar perfil.' });
+    res.status(500).json({ 
+      error: 'Erro ao buscar perfil.',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
