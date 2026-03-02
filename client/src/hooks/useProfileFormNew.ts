@@ -107,7 +107,7 @@ export function useProfileForm() {
   // Buscar perfil
   const { data: profileData, isLoading, error: queryError } = useQuery<ProfileResponse>({
     queryKey: ['profile', 'me'],
-    queryFn: async () => {
+    queryFn: async (): Promise<ProfileResponse> => {
       try {
         const res = await api.get<ProfileResponse>('/api/tinder-do-fluxo/profile/me');
         return res;
@@ -117,14 +117,14 @@ export function useProfileForm() {
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
-    cacheTime: 10 * 60 * 1000, // 10 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos (cacheTime foi renomeado para gcTime no React Query v5)
     retry: 1,
   });
   
   // Determinar tipo_usuario APÓS receber os dados, fora do queryFn
   useEffect(() => {
     if (profileData) {
-      const newTipoUsuario = profileData.prestadorDetails ? 'aluno' : 'mentorado';
+      const newTipoUsuario = (profileData as ProfileResponse).prestadorDetails ? 'aluno' : 'mentorado';
       setTipoUsuario(prev => {
         if (prev !== newTipoUsuario) {
           return newTipoUsuario;
@@ -132,7 +132,7 @@ export function useProfileForm() {
         return prev;
       });
     }
-  }, [profileData?.prestadorDetails]); // Só depende de prestadorDetails
+  }, [profileData]); // Depende de profileData completo
   
   // Usar ref para armazenar o último formData calculado e evitar recriações desnecessárias
   const formDataRef = useRef<ProfileFormData | null>(null);
@@ -141,16 +141,17 @@ export function useProfileForm() {
   // Criar uma chave estável baseada nos dados principais
   const dataKey = useMemo(() => {
     if (!profileData) return null;
+    const data = profileData as ProfileResponse;
     return JSON.stringify({
-      headline: profileData.profile?.headline,
-      cidade: profileData.profile?.city,
-      isExpert: profileData.isExpert,
-      isCoprodutor: profileData.isCoprodutor,
-      hasExpert: !!profileData.expertDetails,
-      hasCoprodutor: !!profileData.coprodutorDetails,
-      hasPrestador: !!profileData.prestadorDetails,
-      skillsCount: profileData.skills?.length || 0,
-      projectsCount: profileData.projects?.length || 0,
+      headline: data.profile?.headline,
+      cidade: data.profile?.city,
+      isExpert: data.isExpert,
+      isCoprodutor: data.isCoprodutor,
+      hasExpert: !!data.expertDetails,
+      hasCoprodutor: !!data.coprodutorDetails,
+      hasPrestador: !!data.prestadorDetails,
+      skillsCount: data.skills?.length || 0,
+      projectsCount: data.projects?.length || 0,
     });
   }, [profileData]);
   
@@ -167,29 +168,31 @@ export function useProfileForm() {
       return formDataRef.current;
     }
     
+    const data = profileData as ProfileResponse;
+    
     const result: any = {
-      photo_url: (profileData.profile as any)?.photo_url || '',
-      headline: profileData.profile?.headline || '',
-      cidade: profileData.profile?.city || '',
-      whatsapp: profileData.profile?.whatsapp || '',
-      idiomas: profileData.profile?.idiomas || [],
-      anos_experiencia: profileData.profile?.anos_experiencia || 0,
-      bio_busca: profileData.profile?.bio || profileData.profile?.search_bio || '',
-      disponivel: profileData.profile?.disponivel ?? true,
-      horas_semanais: profileData.profile?.horas_semanais || 0,
-      availability_tags: (profileData.profile as any)?.availability_tags || [],
-      modelo_trabalho: (profileData.profile as any)?.modelo_trabalho || 'remoto',
+      photo_url: (data.profile as any)?.photo_url || '',
+      headline: data.profile?.headline || '',
+      cidade: data.profile?.city || '',
+      whatsapp: data.profile?.whatsapp || '',
+      idiomas: data.profile?.idiomas || [],
+      anos_experiencia: data.profile?.anos_experiencia || 0,
+      bio_busca: data.profile?.bio || data.profile?.search_bio || '',
+      disponivel: data.profile?.disponivel ?? true,
+      horas_semanais: data.profile?.horas_semanais || 0,
+      availability_tags: (data.profile as any)?.availability_tags || [],
+      modelo_trabalho: (data.profile as any)?.modelo_trabalho || 'remoto',
       skills: {
-        copywriter: profileData.skills?.find(s => s.categoria === 'copywriter')?.nivel,
-        trafego_pago: profileData.skills?.find(s => s.categoria === 'trafego_pago')?.nivel,
-        automacao_ia: profileData.skills?.find(s => s.categoria === 'automacao_ia')?.nivel,
+        copywriter: data.skills?.find((s: { categoria: string; nivel: number }) => s.categoria === 'copywriter')?.nivel,
+        trafego_pago: data.skills?.find((s: { categoria: string; nivel: number }) => s.categoria === 'trafego_pago')?.nivel,
+        automacao_ia: data.skills?.find((s: { categoria: string; nivel: number }) => s.categoria === 'automacao_ia')?.nivel,
       },
-      skillsExtra: profileData.skillsExtra?.map(s => ({
+      skillsExtra: data.skillsExtra?.map((s: { id: string; nome: string; nivel: number }) => ({
         id: s.id,
         nome: s.nome,
         nivel: s.nivel,
       })) || [],
-      projects: profileData.projects?.map(p => ({
+      projects: data.projects?.map((p: { id: string; nome: string; descricao: string; ano: number; tags: string[]; link_portfolio: string }) => ({
         id: p.id,
         nome: p.nome,
         descricao: p.descricao || '',
@@ -198,28 +201,28 @@ export function useProfileForm() {
         link: p.link_portfolio || '',
       })) || [],
       // Expert: apenas se isExpert for true
-      expert: (profileData.isExpert && profileData.expertDetails) ? {
-        products: (profileData.expertDetails as any)?.products || [],
-        precisa_trafego_pago: (profileData.profile as any)?.precisa_trafego_pago || false,
-        precisa_copy: (profileData.profile as any)?.precisa_copy || false,
-        precisa_automacoes: (profileData.profile as any)?.precisa_automacoes || false,
-        precisa_estrategista: (profileData.profile as any)?.precisa_estrategista || false,
+      expert: (data.isExpert && data.expertDetails) ? {
+        products: (data.expertDetails as any)?.products || [],
+        precisa_trafego_pago: (data.profile as any)?.precisa_trafego_pago || false,
+        precisa_copy: (data.profile as any)?.precisa_copy || false,
+        precisa_automacoes: (data.profile as any)?.precisa_automacoes || false,
+        precisa_estrategista: (data.profile as any)?.precisa_estrategista || false,
       } : undefined,
       // Coprodutor: apenas se isCoprodutor for true
-      coprodutor: (profileData.isCoprodutor && profileData.coprodutorDetails) ? {
-        faz_perpetuo: (profileData.profile as any)?.faz_perpetuo || false,
-        faz_pico_vendas: (profileData.profile as any)?.faz_pico_vendas || false,
-        faz_trafego_pago: (profileData.profile as any)?.faz_trafego_pago || false,
-        faz_copy: (profileData.profile as any)?.faz_copy || false,
-        faz_automacoes: (profileData.profile as any)?.faz_automacoes || false,
+      coprodutor: (data.isCoprodutor && data.coprodutorDetails) ? {
+        faz_perpetuo: (data.profile as any)?.faz_perpetuo || false,
+        faz_pico_vendas: (data.profile as any)?.faz_pico_vendas || false,
+        faz_trafego_pago: (data.profile as any)?.faz_trafego_pago || false,
+        faz_copy: (data.profile as any)?.faz_copy || false,
+        faz_automacoes: (data.profile as any)?.faz_automacoes || false,
       } : undefined,
-      prestador: profileData.prestadorDetails ? {
-        servicos: profileData.prestadorDetails.servicos || [],
-        valor_minimo: profileData.prestadorDetails.valor_minimo || 0,
-        modelo_contratacao: profileData.profile?.modelo_trabalho || 'remoto',
+      prestador: data.prestadorDetails ? {
+        servicos: data.prestadorDetails.servicos || [],
+        valor_minimo: data.prestadorDetails.valor_minimo || 0,
+        modelo_contratacao: data.profile?.modelo_trabalho || 'remoto',
       } : undefined,
-      isExpert: profileData.isExpert || false,
-      isCoprodutor: profileData.isCoprodutor || false,
+      isExpert: data.isExpert || false,
+      isCoprodutor: data.isCoprodutor || false,
     };
     
     // Armazenar no ref para próxima comparação
