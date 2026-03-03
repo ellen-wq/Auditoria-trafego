@@ -31,6 +31,10 @@ export default function LoginPage() {
 
     try {
       const data = await api.post('/api/auth/login', { email, password });
+      if (!data?.token || !data?.user) {
+        setError('Resposta inválida do servidor. Tente novamente.');
+        return;
+      }
       api.setAuth(data.token, data.user);
       navigate(homeByRole(data.user.role), { replace: true });
     } catch (err: any) {

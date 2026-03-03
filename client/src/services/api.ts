@@ -62,7 +62,9 @@ class ApiService {
     if (!res.ok) {
       if (res.status === 401) {
         const isLoginRequest = url.includes('/api/auth/login');
-        if (!isLoginRequest) {
+        const isAuthMeRequest = url.includes('/api/auth/me');
+        // Não desloga nem redireciona: login (erro de credencial) e /me (evita redirect logo após login)
+        if (!isLoginRequest && !isAuthMeRequest) {
           this.clearAuthStorage();
           window.location.href = '/login';
         }

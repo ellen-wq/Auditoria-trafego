@@ -51,6 +51,8 @@ function reloadOnceForChunkError(): boolean {
 window.addEventListener('error', (event) => {
   const candidate = (event as ErrorEvent).error ?? (event as ErrorEvent).message
   if (isChunkLoadError(candidate)) {
+    // Não recarrega na tela de login para não perder email/senha preenchidos
+    if (window.location.pathname === '/login') return
     const reloaded = reloadOnceForChunkError()
     if (reloaded) event.preventDefault()
   }
@@ -58,6 +60,7 @@ window.addEventListener('error', (event) => {
 
 window.addEventListener('unhandledrejection', (event) => {
   if (isChunkLoadError(event.reason)) {
+    if (window.location.pathname === '/login') return
     const reloaded = reloadOnceForChunkError()
     if (reloaded) event.preventDefault()
   }
