@@ -61,8 +61,11 @@ class ApiService {
     }
     if (!res.ok) {
       if (res.status === 401) {
-        this.clearAuthStorage();
-        window.location.href = '/login';
+        const isLoginRequest = url.includes('/api/auth/login');
+        if (!isLoginRequest) {
+          this.clearAuthStorage();
+          window.location.href = '/login';
+        }
         throw new Error(data.error || 'Não autenticado');
       }
       throw new Error(data.error || 'Erro desconhecido');
