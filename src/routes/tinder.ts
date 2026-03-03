@@ -673,7 +673,7 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
           .maybeSingle();
         
         const orderingService = new SmartOrderingService(supabase, req.user!.id);
-        users = await orderingService.orderProfiles(users, currentUserProfile.data);
+        users = (await orderingService.orderProfiles(users, currentUserProfile.data)) as typeof users;
       } catch (err) {
         console.error('[Feed Expert] Erro ao aplicar smart ordering:', err);
         // Continuar sem ordenação inteligente em caso de erro
@@ -1142,101 +1142,205 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
     tipo_contratacao,
     modelo_trabalho,
     habilidades, // JSON string
+    tab = 'abertas', // abertas | encerradas | minhas
     page = '1',
     per_page = '20'
   } = req.query;
 
-  let query = supabase
-    .from('tinder_jobs')
-    .select('*', { count: 'exact' })
-    .eq('status', 'OPEN')
-    .order('created_at', { ascending: false });
+  const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-  // Busca textual (nome da vaga, empresa, cidade, descrição)
-  if (q) {
-    const searchTerm = cleanString(q as string, 200);
-    query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`);
-  }
+  const tabStr = cleanString(tab as string, 20);
 
-  // Filtro tipo_vaga
-  if (tipo_vaga) {
-    query = query.eq('model', cleanString(tipo_vaga as string, 60));
-  }
+  // Helper: verifica se vaga está "aberta" (pode candidatar)
+  const isJobOpen = (j: any) => {
+    if (j.status !== 'OPEN') return false;
+    if (!j.deadline) return true;
+    const d = String(j.deadline).split('T')[0];
+    return d >= todayStr;
+  };
+  // Helper: verifica se vaga está "encerrada"
+  const isJobClosed = (j: any) => {
+    if (j.status === 'CLOSED') return true;
+    if (!j.deadline) return false;
+    const d = String(j.deadline).split('T')[0];
+    return d < todayStr;
+  };
 
-  // Filtro pretensão salarial
-  if (pretensao_min) {
-    const min = Number(pretensao_min);
-    if (!isNaN(min)) {
-      query = query.gte('value', min);
+  let query = supabase.from('tinder_jobs').select('*').order('created_at', { ascending: false });
+
+  // Tab: abertas | encerradas | minhas
+  if (tabStr === 'minhas' && req.user) {
+    query = query.eq('creator_id', req.user.id);
+  } else if (tabStr === 'encerradas') {
+    // Encerrado = status CLOSED OU (deadline preenchido E deadline < hoje)
+    // Usar duas queries e mesclar (PostgREST or+and pode falhar em alguns setups)
+    const [closedRes, allOpenRes] = await Promise.all([
+      supabase.from('tinder_jobs').select('*').eq('status', 'CLOSED').order('created_at', { ascending: false }),
+      supabase.from('tinder_jobs').select('*').eq('status', 'OPEN').order('created_at', { ascending: false })
+    ]);
+    const closed = closedRes.data || [];
+    const pastDeadline = (allOpenRes.data || []).filter((j: any) => isJobClosed(j));
+    let merged = [...closed, ...pastDeadline]
+      .filter((j: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.id === j.id) === i)
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const searchTerm = q ? cleanString(q as string, 200).toLowerCase() : '';
+    if (searchTerm) {
+      merged = merged.filter((j: any) =>
+        (j.title || '').toLowerCase().includes(searchTerm) ||
+        (j.description || '').toLowerCase().includes(searchTerm) ||
+        (j.location || '').toLowerCase().includes(searchTerm)
+      );
     }
-  }
-  if (pretensao_max) {
-    const max = Number(pretensao_max);
-    if (!isNaN(max)) {
-      query = query.lte('value', max);
+    const total = merged.length;
+    const from = (Math.max(1, Number(page) || 1) - 1) * Math.min(100, Math.max(1, Number(per_page) || 20));
+    const to = from + Math.min(100, Math.max(1, Number(per_page) || 20)) - 1;
+    const paginated = merged.slice(from, to + 1);
+    const creatorIds = [...new Set(paginated.map((j: any) => j.creator_id))];
+    const { data: creatorData } = await supabase.from('user_roles').select('user_id, name').in('user_id', creatorIds);
+    const creatorMap = new Map((creatorData || []).map((c: any) => [c.user_id, c.name]));
+    const jobIds = paginated.map((j: any) => j.id);
+    let appliedJobIds = new Set<number>();
+    if (req.user && jobIds.length > 0) {
+      const { data: apps } = await supabase.from('tinder_applications').select('job_id').eq('candidate_id', req.user.id).in('job_id', jobIds);
+      appliedJobIds = new Set((apps || []).map((a: any) => a.job_id));
     }
-  }
-
-  // Filtro tipo_contratacao (mapear para campo existente ou adicionar)
-  // Por enquanto, vamos usar o campo 'model' se existir, ou criar lógica customizada
-  if (tipo_contratacao) {
-    // Assumindo que tipo_contratacao pode estar em um campo JSON ou separado
-    // Por enquanto, vamos ignorar se não existir na tabela
-  }
-
-  // Filtro modelo_trabalho
-  if (modelo_trabalho) {
-    query = query.ilike('location', `%${cleanString(modelo_trabalho as string, 60)}%`);
-  }
-
-  // Filtro habilidades (JSON)
-  if (habilidades) {
-    try {
-      const habilidadesObj = typeof habilidades === 'string' ? JSON.parse(habilidades) : habilidades;
-      const specialtyFilters: string[] = [];
-      
-      // Se copywriter está selecionado, filtrar por specialty = 'COPY'
-      if (habilidadesObj.copywriter) {
-        specialtyFilters.push('COPY');
-      }
-      
-      // Se trafego_pago tem subcategorias, filtrar por specialty = 'TRAFEGO'
-      if (habilidadesObj.trafego_pago && Array.isArray(habilidadesObj.trafego_pago) && habilidadesObj.trafego_pago.length > 0) {
-        specialtyFilters.push('TRAFEGO');
-      }
-      
-      // Se automacao_ia está selecionado, filtrar por specialty = 'AUTOMACAO'
-      if (habilidadesObj.automacao_ia) {
-        specialtyFilters.push('AUTOMACAO');
-      }
-      
-      // Aplicar filtro de specialty se houver habilidades selecionadas
-      if (specialtyFilters.length > 0) {
-        query = query.in('specialty', specialtyFilters);
-      }
-    } catch (err) {
-      // Ignorar erro de parse JSON
+    const jobsWithCreator = paginated.map((j: any) => {
+      const creatorName = creatorMap.get(j.creator_id) || 'Não especificado';
+      return {
+        id: j.id,
+        title: j.title,
+        titulo: j.title,
+        empresa: creatorName,
+        creator_name: creatorName,
+        description: j.description,
+        descricao_resumida: j.description ? j.description.substring(0, 240) : '',
+        location: j.location,
+        localizacao: j.location || '',
+        value: j.value,
+        valor: j.value,
+        created_at: j.created_at,
+        data_publicacao: j.created_at,
+        model: j.model,
+        tipo_contratacao: j.model || '',
+        modelo_trabalho: j.location || '',
+        specialty: j.specialty,
+        applied: appliedJobIds.has(j.id)
+      };
+    });
+    res.json({ jobs: jobsWithCreator, total_vagas: total });
+    return;
+  } else {
+    // abertas: buscar OPEN e filtrar em memória (deadline null ou >= hoje)
+    const { data: openJobs, error: openErr } = await query.eq('status', 'OPEN');
+    if (openErr) {
+      console.error('[GET /jobs] Erro:', openErr);
+      res.status(500).json({ error: 'Erro ao listar vagas.' });
+      return;
     }
-  }
+    let data = (openJobs || []).filter((j: any) => isJobOpen(j));
 
-  // Paginação
-  const pageNum = Math.max(1, Number(page) || 1);
-  const perPageNum = Math.min(100, Math.max(1, Number(per_page) || 20));
-  const from = (pageNum - 1) * perPageNum;
-  const to = from + perPageNum - 1;
+    // Busca textual
+    if (q) {
+      const st = cleanString(q as string, 200).toLowerCase();
+      data = data.filter((j: any) =>
+        (j.title || '').toLowerCase().includes(st) ||
+        (j.description || '').toLowerCase().includes(st) ||
+        (j.location || '').toLowerCase().includes(st)
+      );
+    }
+    if (tipo_vaga) {
+      const tv = cleanString(tipo_vaga as string, 60).toLowerCase();
+      data = data.filter((j: any) => (j.model || '').toLowerCase() === tv);
+    }
+    if (pretensao_min) {
+      const min = Number(pretensao_min);
+      if (!isNaN(min)) data = data.filter((j: any) => (j.value || 0) >= min);
+    }
+    if (pretensao_max) {
+      const max = Number(pretensao_max);
+      if (!isNaN(max)) data = data.filter((j: any) => (j.value || 0) <= max);
+    }
+    if (modelo_trabalho) {
+      const mt = cleanString(modelo_trabalho as string, 60).toLowerCase();
+      data = data.filter((j: any) => (j.location || '').toLowerCase().includes(mt));
+    }
+    if (habilidades) {
+      try {
+        const ho = typeof habilidades === 'string' ? JSON.parse(habilidades) : habilidades;
+        const sf: string[] = [];
+        if (ho.copywriter) sf.push('COPY');
+        if (ho.trafego_pago?.length) sf.push('TRAFEGO');
+        if (ho.automacao_ia) sf.push('AUTOMACAO');
+        if (sf.length > 0) data = data.filter((j: any) => sf.includes(j.specialty));
+      } catch (_) {}
+    }
 
-  query = query.range(from, to);
+    const count = data.length;
+    const pageNum = Math.max(1, Number(page) || 1);
+    const perPageNum = Math.min(100, Math.max(1, Number(per_page) || 20));
+    const from = (pageNum - 1) * perPageNum;
+    data = data.slice(from, from + perPageNum);
 
-  const { data, error, count } = await query;
-
-  if (error) {
-    console.error('[GET /jobs] Erro:', error);
-    res.status(500).json({ error: 'Erro ao listar vagas.' });
+    const creatorIds = [...new Set(data.map((j: any) => j.creator_id))];
+    const creatorMap = new Map<string, string>();
+    if (creatorIds.length > 0) {
+      const { data: creators } = await supabase.from('user_roles').select('user_id, name').in('user_id', creatorIds);
+      (creators || []).forEach((c: any) => creatorMap.set(c.user_id, c.name));
+    }
+    let appliedJobIds = new Set<number>();
+    if (req.user && data.length > 0) {
+      const { data: apps } = await supabase.from('tinder_applications').select('job_id').eq('candidate_id', req.user.id).in('job_id', data.map((j: any) => j.id));
+      appliedJobIds = new Set((apps || []).map((a: any) => a.job_id));
+    }
+    const formattedJobs = data.map((job: any) => {
+      const creatorName = creatorMap.get(job.creator_id) || 'Não especificado';
+      return {
+        id: job.id,
+        titulo: job.title,
+        empresa: creatorName,
+        localizacao: job.location || '',
+        valor: job.value,
+        descricao_resumida: job.description ? job.description.substring(0, 240) : '',
+        data_publicacao: job.created_at,
+        tipo_contratacao: job.model || '',
+        modelo_trabalho: job.location || '',
+        beneficios: job.beneficios || '',
+        specialty: job.specialty,
+        creator_name: creatorName,
+        applied: appliedJobIds.has(job.id),
+        title: job.title,
+        description: job.description,
+        created_at: job.created_at
+      };
+    });
+    res.json({ jobs: formattedJobs, total_vagas: count, page: pageNum, per_page: perPageNum });
     return;
   }
 
+  // minhas: query já tem creator_id, executar
+  const { data: myJobs, error: myErr } = await query;
+  if (myErr) {
+    console.error('[GET /jobs] Erro:', myErr);
+    res.status(500).json({ error: 'Erro ao listar vagas.' });
+    return;
+  }
+  let data = myJobs || [];
+  if (q) {
+    const st = cleanString(q as string, 200).toLowerCase();
+    data = data.filter((j: any) =>
+      (j.title || '').toLowerCase().includes(st) ||
+      (j.description || '').toLowerCase().includes(st) ||
+      (j.location || '').toLowerCase().includes(st)
+    );
+  }
+  const count = data.length;
+  const pageNum = Math.max(1, Number(page) || 1);
+  const perPageNum = Math.min(100, Math.max(1, Number(per_page) || 20));
+  const from = (pageNum - 1) * perPageNum;
+  data = data.slice(from, from + perPageNum);
+
   // Buscar nomes dos criadores
-  const creatorIds = [...new Set((data || []).map((j: any) => j.creator_id))];
+  const creatorIds = [...new Set(data.map((j: any) => j.creator_id))];
   const creatorMap = new Map<string, string>();
   
   if (creatorIds.length > 0) {
@@ -1250,8 +1354,16 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
     });
   }
 
+  // Verificar se o usuário já se candidatou a cada vaga
+  const jobIds = data.map((j: any) => j.id);
+  let appliedJobIds = new Set<number>();
+  if (req.user && jobIds.length > 0) {
+    const { data: apps } = await supabase.from('tinder_applications').select('job_id').eq('candidate_id', req.user.id).in('job_id', jobIds);
+    appliedJobIds = new Set((apps || []).map((a: any) => a.job_id));
+  }
+
   // Formatar resposta
-  const formattedJobs = (data || []).map((job: any) => {
+  const formattedJobs = data.map((job: any) => {
     const creatorName = creatorMap.get(job.creator_id) || 'Não especificado';
     return {
       id: job.id,
@@ -1266,6 +1378,7 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
       beneficios: job.beneficios || '',
       specialty: job.specialty,
       creator_name: creatorName,
+      applied: appliedJobIds.has(job.id),
       // Campos adicionais para compatibilidade
       title: job.title,
       description: job.description,
@@ -1282,7 +1395,7 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
 });
 
 router.post('/jobs', async (req: Request, res: Response): Promise<void> => {
-  if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
   
   // Garantir que userId vem da sessão
   const userId = req.user!.id;
@@ -1291,30 +1404,55 @@ router.post('/jobs', async (req: Request, res: Response): Promise<void> => {
     return;
   }
   
-  // Buscar expert_profile automaticamente pelo userId
+  // Verificar role do usuário
   const supabase = getSupabase();
-  const { data: expertProfile, error: expertError } = await supabase
-    .from('tinder_expert_profiles')
-    .select('id, is_expert, is_coproducer')
+  const { data: userRole, error: roleError } = await supabase
+    .from('user_roles')
+    .select('role')
     .eq('user_id', userId)
     .maybeSingle();
   
-  if (expertError) {
-    console.error('[POST /jobs] Erro ao buscar expert profile:', expertError);
-    res.status(500).json({ error: 'Erro ao verificar perfil de expert/coprodutor.' });
+  if (roleError) {
+    console.error('[POST /jobs] Erro ao buscar role:', roleError);
+    res.status(500).json({ error: 'Erro ao verificar perfil do usuário.' });
     return;
   }
   
-  if (!expertProfile || (!expertProfile.is_expert && !expertProfile.is_coproducer)) {
-    res.status(400).json({ error: 'Você precisa ser Expert ou Coprodutor para criar vagas. Configure seu perfil primeiro.' });
+  // Se for PRESTADOR ou LIDERANCA, pode criar diretamente
+  if (userRole?.role === 'PRESTADOR' || userRole?.role === 'LIDERANCA') {
+    // Pode criar vaga
+  } else if (userRole?.role === 'MENTORADO') {
+    // MENTORADO precisa ser expert ou coprodutor
+    const { data: mentorProfile, error: mentorError } = await supabase
+      .from('tinder_mentor_profiles')
+      .select('is_expert, is_coproducer')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (mentorError) {
+      console.error('[POST /jobs] Erro ao buscar mentor profile:', mentorError);
+      res.status(500).json({ error: 'Erro ao verificar perfil de expert/coprodutor.' });
+      return;
+    }
+    
+    if (!mentorProfile || (!mentorProfile.is_expert && !mentorProfile.is_coproducer)) {
+      res.status(400).json({ error: 'Você precisa ser Expert ou Coprodutor para criar vagas. Configure seu perfil primeiro.' });
+      return;
+    }
+  } else {
+    res.status(403).json({ error: 'Você não tem permissão para criar vagas.' });
     return;
   }
   
   const title = cleanString(req.body.title, 180);
-  const description = cleanString(req.body.description, 5000);
+  let description = cleanString(req.body.description, 5000);
+  const workingConditions = cleanString(req.body.workingConditions || '', 60);
   if (!title || !description) {
     res.status(400).json({ error: 'Título e descrição são obrigatórios.' });
     return;
+  }
+  if (workingConditions) {
+    description = description + '\n\nCondições de trabalho: ' + workingConditions;
   }
   
   // Criar vaga com creator_id da sessão
@@ -1323,8 +1461,8 @@ router.post('/jobs', async (req: Request, res: Response): Promise<void> => {
     title,
     description,
     specialty: cleanString(req.body.specialty || '', 60),
-    model: cleanString(req.body.model || '', 60),
-    value: req.body.value ? Number(req.body.value) : null,
+    model: cleanString(req.body.model || '', 60), // Modelo de trabalho: Online, Presencial, Híbrido, Indiferente
+    value: req.body.value ? Number(req.body.value) : null, // Salarial
     deadline: cleanOptionalString(req.body.deadline, 20),
     location: cleanString(req.body.location || '', 120),
     status: 'OPEN'
@@ -1340,6 +1478,113 @@ router.post('/jobs', async (req: Request, res: Response): Promise<void> => {
   res.json({ job: data });
 });
 
+// Buscar candidaturas do usuário (deve vir antes de /jobs/:id)
+router.get('/jobs/my-applications', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'PRESTADOR', 'LIDERANCA'])) return;
+  
+  const userId = req.user!.id;
+  const supabase = getSupabase();
+  
+  const { data: applications, error } = await supabase
+    .from('tinder_applications')
+    .select(`
+      id,
+      message,
+      portfolio_link,
+      created_at,
+      tinder_jobs (
+        id,
+        title,
+        description,
+        specialty,
+        model,
+        location,
+        value,
+        deadline,
+        status,
+        created_at
+      )
+    `)
+    .eq('candidate_id', userId)
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('[GET /jobs/my-applications] Erro:', error);
+    res.status(500).json({ error: 'Erro ao buscar candidaturas.' });
+    return;
+  }
+  
+  res.json({ applications: applications || [] });
+});
+
+// GET /jobs/:id/applicants - Listar candidatos (apenas criador da vaga)
+router.get('/jobs/:id/applicants', async (req: Request, res: Response): Promise<void> => {
+  const jobId = toPositiveInt(req.params.id);
+  if (!jobId) {
+    res.status(400).json({ error: 'ID inválido.' });
+    return;
+  }
+  const supabase = getSupabase();
+  const { data: job } = await supabase.from('tinder_jobs').select('creator_id').eq('id', jobId).single();
+  if (!job || job.creator_id !== req.user?.id) {
+    res.status(403).json({ error: 'Apenas o criador da vaga pode ver os candidatos.' });
+    return;
+  }
+  const { data: applications } = await supabase
+    .from('tinder_applications')
+    .select('candidate_id, message, portfolio_link, created_at')
+    .eq('job_id', jobId)
+    .order('created_at', { ascending: false });
+  if (!applications?.length) {
+    res.json({ applicants: [] });
+    return;
+  }
+  const candidateIds = [...new Set(applications.map((a: any) => a.candidate_id))];
+  const { data: roles } = await supabase.from('user_roles').select('user_id, name').in('user_id', candidateIds);
+  const { data: mentorProfiles } = await supabase.from('tinder_mentor_profiles').select('user_id, whatsapp').in('user_id', candidateIds);
+  const { data: serviceProfiles } = await supabase.from('tinder_service_profiles').select('user_id, whatsapp').in('user_id', candidateIds);
+  const roleMap = new Map((roles || []).map((r: any) => [r.user_id, r]));
+  const mentorMap = new Map((mentorProfiles || []).map((m: any) => [m.user_id, m]));
+  const serviceMap = new Map((serviceProfiles || []).map((s: any) => [s.user_id, s]));
+  const applicants = applications.map((a: any) => {
+    const r = roleMap.get(a.candidate_id);
+    const mentor = mentorMap.get(a.candidate_id);
+    const service = serviceMap.get(a.candidate_id);
+    const whatsapp = mentor?.whatsapp || service?.whatsapp || '';
+    return {
+      candidate_id: a.candidate_id,
+      name: r?.name || 'Sem nome',
+      message: a.message,
+      portfolio_link: a.portfolio_link,
+      whatsapp,
+      created_at: a.created_at
+    };
+  });
+  res.json({ applicants });
+});
+
+// PATCH /jobs/:id/close - Encerrar vaga (apenas criador)
+router.patch('/jobs/:id/close', async (req: Request, res: Response): Promise<void> => {
+  const jobId = toPositiveInt(req.params.id);
+  if (!jobId) {
+    res.status(400).json({ error: 'ID inválido.' });
+    return;
+  }
+  const supabase = getSupabase();
+  const { data: job } = await supabase.from('tinder_jobs').select('creator_id').eq('id', jobId).single();
+  if (!job || job.creator_id !== req.user?.id) {
+    res.status(403).json({ error: 'Apenas o criador da vaga pode encerrá-la.' });
+    return;
+  }
+  const { error } = await supabase.from('tinder_jobs').update({ status: 'CLOSED' }).eq('id', jobId);
+  if (error) {
+    res.status(500).json({ error: 'Erro ao encerrar vaga.' });
+    return;
+  }
+  await logAction(req.user!.id, 'TINDER_JOB_CLOSED', { jobId });
+  res.json({ ok: true, message: 'Vaga encerrada com sucesso.' });
+});
+
 router.get('/jobs/:id', async (req: Request, res: Response): Promise<void> => {
   const jobId = toPositiveInt(req.params.id);
   if (!jobId) {
@@ -1352,7 +1597,12 @@ router.get('/jobs/:id', async (req: Request, res: Response): Promise<void> => {
     res.status(404).json({ error: 'Vaga não encontrada.' });
     return;
   }
-  res.json({ job: data });
+  let applied = false;
+  if (req.user) {
+    const { data: app } = await supabase.from('tinder_applications').select('id').eq('job_id', jobId).eq('candidate_id', req.user.id).maybeSingle();
+    applied = !!app;
+  }
+  res.json({ job: { ...data, applied } });
 });
 
 router.post('/jobs/:id/apply', async (req: Request, res: Response): Promise<void> => {
@@ -1363,6 +1613,27 @@ router.post('/jobs/:id/apply', async (req: Request, res: Response): Promise<void
     return;
   }
   const supabase = getSupabase();
+  const { data: job } = await supabase.from('tinder_jobs').select('status, deadline, creator_id').eq('id', jobId).single();
+  if (!job) {
+    res.status(404).json({ error: 'Vaga não encontrada.' });
+    return;
+  }
+  if (job.creator_id === req.user!.id) {
+    res.status(400).json({ error: 'O criador da vaga não pode se candidatar.' });
+    return;
+  }
+  if (job.status === 'CLOSED') {
+    res.status(400).json({ error: 'Esta vaga está encerrada e não aceita mais candidaturas.' });
+    return;
+  }
+  if (job.deadline) {
+    const today = new Date().toISOString().split('T')[0];
+    const deadlineStr = String(job.deadline).split('T')[0];
+    if (deadlineStr < today) {
+      res.status(400).json({ error: 'O prazo desta vaga já passou.' });
+      return;
+    }
+  }
   const payload = {
     job_id: jobId,
     candidate_id: req.user!.id,
@@ -1377,7 +1648,7 @@ router.post('/jobs/:id/apply', async (req: Request, res: Response): Promise<void
     return;
   }
   await logAction(req.user!.id, 'TINDER_JOB_APPLIED', { jobId });
-  res.json({ ok: true });
+  res.json({ ok: true, message: 'Você foi candidatado para a vaga!' });
 });
 
 // Admin - Criar tabelas do Tinder do Fluxo

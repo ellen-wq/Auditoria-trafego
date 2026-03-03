@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import TinderDoFluxoPageShell from '../components/tinder-do-fluxo/TinderDoFluxoPageShell';
 import { ExpertSwipeDeck, type ExpertUser } from '../components/tinder-do-fluxo/ExpertSwipeDeck';
@@ -595,6 +595,10 @@ export function TinderPrestadoresPage() {
 
 export function TinderVagasPage() {
   const user = api.getUser();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') || 'abertas';
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     tipo_vaga: '',
@@ -628,19 +632,28 @@ export function TinderVagasPage() {
     { value: 'native_ads', label: 'Native Ads' }
   ];
 
+  // Refetch ao voltar da candidatura (garante que "Já se candidatou" apareça)
+  useEffect(() => {
+    if ((location.state as { fromApply?: boolean })?.fromApply) {
+      loadJobs();
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    }
+  }, [location.state]);
+
   // Debounce para busca
   useEffect(() => {
     const timer = setTimeout(() => {
       loadJobs();
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, filters, page]);
+  }, [searchQuery, filters, page, tab]);
 
   const loadJobs = async () => {
     setLoading(true);
     setError('');
     try {
       const params = new URLSearchParams();
+      params.append('tab', tab);
       if (searchQuery) params.append('q', searchQuery);
       if (filters.tipo_vaga) params.append('tipo_vaga', filters.tipo_vaga);
       if (filters.pretensao_min) params.append('pretensao_min', filters.pretensao_min);
@@ -696,15 +709,50 @@ export function TinderVagasPage() {
             initialValue={searchQuery}
           />
         </div>
-        {(user?.role === 'MENTORADO' || user?.role === 'LIDERANCA') && (
+        <Link className="btn btn-outline" to="/tinder-do-fluxo/vagas/minhas-candidaturas">Minhas Candidaturas</Link>
+        {(user?.role === 'MENTORADO' || user?.role === 'PRESTADOR' || user?.role === 'LIDERANCA') && (
           <Link className="btn btn-primary" to="/tinder-do-fluxo/vagas/criar">Criar vaga</Link>
         )}
+      </div>
+
+      {/* Abas: Em aberto | Encerrado | Minhas vagas */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid var(--border)' }}>
+        {(['abertas', 'encerradas', 'minhas'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => {
+              setSearchParams((p) => {
+                const next = new URLSearchParams(p);
+                next.set('tab', t);
+                return next;
+              });
+              setPage(1);
+            }}
+            style={{
+              padding: '10px 16px',
+              border: 'none',
+              borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent',
+              background: 'none',
+              color: tab === t ? 'var(--accent)' : 'var(--text-secondary)',
+              fontWeight: tab === t ? 600 : 400,
+              cursor: 'pointer',
+              fontSize: 14
+            }}
+          >
+            {t === 'abertas' ? 'Em aberto' : t === 'encerradas' ? 'Encerrado' : 'Minhas vagas'}
+          </button>
+        ))}
       </div>
 
       {/* Contador de vagas */}
       {!loading && totalVagas > 0 && (
         <div className="card" style={{ marginBottom: 12, padding: 16, background: 'var(--bg-secondary)' }}>
-          <strong>{totalVagas} vagas esperando pela sua aplicação</strong>
+          <strong>
+            {tab === 'abertas' && `${totalVagas} vagas em aberto`}
+            {tab === 'encerradas' && `${totalVagas} vagas encerradas`}
+            {tab === 'minhas' && `${totalVagas} vagas criadas por você`}
+          </strong>
         </div>
       )}
 
@@ -856,8 +904,28 @@ export function TinderVagasPage() {
                       {j.modelo_trabalho && <span>• {j.modelo_trabalho}</span>}
                       {j.valor && <span>• R$ {Number(j.valor).toLocaleString('pt-BR')}</span>}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      {formatRelativeDate(j.data_publicacao || j.created_at)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {formatRelativeDate(j.data_publicacao || j.created_at)}
+                      </span>
+                      {j.applied && (
+                        <span
+                          style={{
+                            fontSize: 12,
+                            padding: '4px 10px',
+                            background: 'var(--accent-light)',
+                            color: 'var(--accent-dark)',
+                            borderRadius: 'var(--radius)',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6
+                          }}
+                          title="Você já se candidatou a esta vaga"
+                        >
+                          ✓ Já se candidatou
+                        </span>
+                      )}
                     </div>
                 </div>
                 <Link className="btn btn-outline" to={`/tinder-do-fluxo/vagas/${j.id}`}>Detalhes</Link>
@@ -895,7 +963,15 @@ export function TinderVagasPage() {
 
 export function TinderJobCreatePage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ title: '', description: '', specialty: '', model: '', location: '' });
+  const [form, setForm] = useState({ 
+    title: '', 
+    description: '', 
+    specialty: '', 
+    model: '', 
+    location: '',
+    value: '',
+    workingConditions: ''
+  });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -904,24 +980,106 @@ export function TinderJobCreatePage() {
     setError('');
     setIsSubmitting(true);
     try {
-      const res = await api.post<{ job: { id: number } }>('/api/tinder-do-fluxo/jobs', form);
-      // Navegar para a lista de vagas e recarregar
-      navigate('/tinder-do-fluxo/vagas', { replace: true });
-      // Forçar reload da página para atualizar a lista
-      window.location.reload();
+      const res = await api.post<{ job: { id: number } }>('/api/tinder-do-fluxo/jobs', {
+        ...form,
+        value: form.value ? Number(form.value) : null
+      });
+      // Navegar para Minhas vagas
+      navigate('/tinder-do-fluxo/vagas?tab=minhas', { replace: true });
     } catch (err: any) {
       setError(err.message || 'Erro ao criar vaga.');
       setIsSubmitting(false);
     }
   };
+  
   return (
     <TinderDoFluxoPageShell title="Criar vaga">
       <form className="card" onSubmit={submit}>
-        <div className="form-group"><label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
-        <div className="form-group"><label>Descrição</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required rows={5} /></div>
-        <div className="form-group"><label>Especialidade</label><input value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })} /></div>
-        <div className="form-group"><label>Modelo</label><input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} /></div>
-        <div className="form-group"><label>Local</label><input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div>
+        <div className="form-group">
+          <label>Título</label>
+          <input 
+            value={form.title} 
+            onChange={(e) => setForm({ ...form, title: e.target.value })} 
+            required 
+            style={{ width: '100%' }}
+          />
+        </div>
+        
+        <div className="form-group">
+          <label>Descrição</label>
+          <textarea 
+            value={form.description} 
+            onChange={(e) => setForm({ ...form, description: e.target.value })} 
+            required 
+            style={{ 
+              width: '100%', 
+              minHeight: '200px',
+              resize: 'vertical'
+            }}
+            placeholder="Descreva detalhadamente a vaga, requisitos, responsabilidades..."
+          />
+        </div>
+        
+        <div className="form-group">
+          <label>Especialidade</label>
+          <input 
+            value={form.specialty} 
+            onChange={(e) => setForm({ ...form, specialty: e.target.value })} 
+            placeholder="Ex: Tráfego Pago, Copy, Automações..."
+          />
+        </div>
+        
+        <div className="form-group">
+          <label>Modelo de trabalho</label>
+          <select 
+            value={form.model} 
+            onChange={(e) => setForm({ ...form, model: e.target.value })}
+            style={{ width: '100%' }}
+          >
+            <option value="">Selecione...</option>
+            <option value="Online">Online</option>
+            <option value="Presencial">Presencial</option>
+            <option value="Híbrido">Híbrido</option>
+            <option value="Indiferente">Indiferente</option>
+          </select>
+        </div>
+        
+        <div className="form-group">
+          <label>Local</label>
+          <input 
+            value={form.location} 
+            onChange={(e) => setForm({ ...form, location: e.target.value })} 
+            placeholder="Ex: Remoto, São Paulo, Rio de Janeiro..."
+          />
+        </div>
+        
+        <div className="form-group">
+          <label>Salarial (R$)</label>
+          <input 
+            type="number"
+            value={form.value} 
+            onChange={(e) => setForm({ ...form, value: e.target.value })} 
+            placeholder="Ex: 5000"
+            min="0"
+            step="0.01"
+          />
+        </div>
+        
+        <div className="form-group">
+          <label>Condições de trabalho</label>
+          <select 
+            value={form.workingConditions} 
+            onChange={(e) => setForm({ ...form, workingConditions: e.target.value })}
+            style={{ width: '100%' }}
+          >
+            <option value="">Selecione...</option>
+            <option value="CLT">CLT</option>
+            <option value="PJ">PJ</option>
+            <option value="Freelancer">Freelancer</option>
+            <option value="Indiferente">Indiferente</option>
+          </select>
+        </div>
+        
         {error && <div className="alert alert-error visible">{error}</div>}
         <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Criando vaga...' : 'Salvar vaga'}
@@ -933,30 +1091,233 @@ export function TinderJobCreatePage() {
 
 export function TinderJobDetailPage() {
   const params = useParams();
+  const navigate = useNavigate();
+  const user = api.getUser();
   const [job, setJob] = useState<any>(null);
+  const [applicants, setApplicants] = useState<any[]>([]);
   const [message, setMessage] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [isApplying, setIsApplying] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [isCandidaturaSucesso, setIsCandidaturaSucesso] = useState(false);
+
+  const isCreator = user?.id && job?.creator_id === user.id;
+
   useEffect(() => {
     if (!params.id) return;
     api.get<{ job: any }>(`/api/tinder-do-fluxo/jobs/${params.id}`).then((r) => setJob(r.job));
   }, [params.id]);
+
+  useEffect(() => {
+    if (!params.id || !isCreator) return;
+    api.get<{ applicants: any[] }>(`/api/tinder-do-fluxo/jobs/${params.id}/applicants`)
+      .then((r) => setApplicants(r.applicants || []))
+      .catch(() => setApplicants([]));
+  }, [params.id, isCreator]);
+
   const apply = async () => {
     if (!params.id) return;
-    await api.post(`/api/tinder-do-fluxo/jobs/${params.id}/apply`, { message });
-    setFeedback('Candidatura enviada.');
+    setIsApplying(true);
+    setFeedback('');
+    try {
+      const res = await api.post<{ ok: boolean; message?: string }>(`/api/tinder-do-fluxo/jobs/${params.id}/apply`, { message });
+      setFeedback(res.message || 'Candidatura concluída!');
+      setIsCandidaturaSucesso(true);
+      setMessage('');
+      setTimeout(() => {
+        navigate('/tinder-do-fluxo/vagas?tab=abertas', { replace: true, state: { fromApply: true } });
+      }, 2000);
+    } catch (err: any) {
+      setFeedback(err.message || 'Erro ao candidatar-se.');
+    } finally {
+      setIsApplying(false);
+    }
   };
+
+  const closeJob = async () => {
+    if (!params.id) return;
+    setIsClosing(true);
+    try {
+      await api.patch(`/api/tinder-do-fluxo/jobs/${params.id}/close`);
+      setJob((prev: any) => prev ? { ...prev, status: 'CLOSED' } : null);
+    } catch (err: any) {
+      setFeedback(err.message || 'Erro ao encerrar vaga.');
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
+  const formatWhatsAppLink = (w: string) => {
+    const digits = (w || '').replace(/\D/g, '');
+    if (!digits.length) return '';
+    const withCountry = digits.length <= 11 && !digits.startsWith('55') ? '55' + digits : digits;
+    return `https://wa.me/${withCountry}`;
+  };
+
+  const isClosed = !job || job.status === 'CLOSED' || (() => {
+    if (!job?.deadline) return false;
+    const today = new Date().toISOString().split('T')[0];
+    const deadlineStr = String(job.deadline).split('T')[0];
+    return deadlineStr < today;
+  })();
+  const alreadyApplied = !!job?.applied;
+  const canApply = !isCreator && !isClosed && !alreadyApplied && job?.status === 'OPEN';
+
   return (
     <TinderDoFluxoPageShell title="Detalhe da vaga">
       {!job ? <div className="card"><EmptyState text="Carregando vaga..." /></div> : (
-        <div className="card">
-          <h3>{job.title}</h3>
-          <p style={{ marginTop: 8 }}>{job.description}</p>
-          <div className="form-group" style={{ marginTop: 14 }}>
-            <label>Mensagem de candidatura</label>
-            <textarea rows={4} value={message} onChange={(e) => setMessage(e.target.value)} />
+        <div 
+          className="card" 
+          style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            flex: 1,
+            minHeight: 'calc(100vh - 200px)',
+            padding: 20
+          }}
+        >
+          <Link to="/tinder-do-fluxo/vagas?tab=abertas" className="btn btn-outline" style={{ alignSelf: 'flex-start', marginBottom: 16 }}>
+            ← Voltar para vagas em aberto
+          </Link>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0 }}>{job.title}</h3>
+            {isCreator && job.status === 'OPEN' && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={closeJob}
+                disabled={isClosing}
+                style={{ color: 'var(--red)' }}
+              >
+                {isClosing ? 'Encerrando...' : 'Encerrar vaga'}
+              </button>
+            )}
           </div>
-          <button className="btn btn-primary" type="button" onClick={apply}>Candidatar-se</button>
-          {feedback && <p style={{ marginTop: 8, color: 'var(--green)' }}>{feedback}</p>}
+          {!isCreator && isClosed && (
+            <button type="button" disabled style={{ marginTop: 16, alignSelf: 'flex-start', opacity: 0.7, cursor: 'not-allowed' }} className="btn btn-outline">
+              Vaga encerrada
+            </button>
+          )}
+          {!isCreator && !isClosed && alreadyApplied && (
+            <button
+              type="button"
+              disabled
+              style={{ marginTop: 16, alignSelf: 'flex-start', opacity: 0.7, cursor: 'not-allowed' }}
+              className="btn btn-outline"
+              title="Você já se candidatou a esta vaga"
+            >
+              ✓ Já se candidatou
+            </button>
+          )}
+          <p style={{ marginTop: 8 }}>{job.description}</p>
+          
+          {/* Informações da vaga */}
+          <div style={{ marginTop: 16, padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)' }}>
+            {job.specialty && <p style={{ margin: '4px 0' }}><strong>Especialidade:</strong> {job.specialty}</p>}
+            {job.model && <p style={{ margin: '4px 0' }}><strong>Modelo de trabalho:</strong> {job.model}</p>}
+            {job.location && <p style={{ margin: '4px 0' }}><strong>Local:</strong> {job.location}</p>}
+            {job.value && <p style={{ margin: '4px 0' }}><strong>Valor:</strong> R$ {Number(job.value).toLocaleString('pt-BR')}</p>}
+            {job.deadline && <p style={{ margin: '4px 0' }}><strong>Prazo:</strong> {job.deadline}</p>}
+          </div>
+
+          {/* Candidatos (apenas para o criador) */}
+          {isCreator && (
+            <div style={{ marginTop: 24 }}>
+              <h4 style={{ margin: '0 0 12px 0' }}>Candidatos ({applicants.length})</h4>
+              {applicants.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Nenhum candidato ainda.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {applicants.map((a: any) => (
+                    <div key={a.candidate_id} style={{ padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, marginBottom: 4 }}>{a.name}</div>
+                          {a.message && <p style={{ margin: '4px 0 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>{a.message}</p>}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <Link
+                            to={`/tinder-do-fluxo/profile-view?userId=${a.candidate_id}&returnTo=${encodeURIComponent(`/tinder-do-fluxo/vagas/${params.id}`)}`}
+                            className="btn btn-outline"
+                            style={{ fontSize: 13 }}
+                          >
+                            Ver perfil
+                          </Link>
+                          {a.whatsapp ? (
+                            <a
+                              href={formatWhatsAppLink(a.whatsapp)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-primary"
+                              style={{ fontSize: 13 }}
+                            >
+                              WhatsApp
+                            </a>
+                          ) : (
+                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sem WhatsApp</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Formulário de candidatura - APENAS quando NÃO sou o criador E vaga está aberta */}
+          {!isCreator && canApply && (
+            <>
+              <div 
+                className="form-group" 
+                style={{ 
+                  marginTop: 24, 
+                  flex: 1, 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  minHeight: 200
+                }}
+              >
+                <label>Mensagem de candidatura</label>
+                <textarea 
+                  style={{ 
+                    width: '100%', 
+                    flex: 1,
+                    minHeight: 200,
+                    resize: 'vertical',
+                    marginTop: 8
+                  }}
+                  value={message} 
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Escreva uma mensagem explicando por que você é o candidato ideal para esta vaga..."
+                />
+              </div>
+              
+              <button 
+                className="btn btn-primary" 
+                type="button" 
+                onClick={apply}
+                disabled={isApplying}
+                style={{ marginTop: 16, alignSelf: 'flex-start' }}
+              >
+                {isApplying ? 'Candidatando...' : 'Me candidatar'}
+              </button>
+            </>
+          )}
+
+          
+          {feedback && (
+            <div style={{ 
+              marginTop: 16, 
+              padding: 12, 
+              background: isCandidaturaSucesso ? 'var(--green)' : 'var(--red)',
+              color: 'white',
+              borderRadius: 'var(--radius)'
+            }}>
+              {feedback}
+              {isCandidaturaSucesso && ' Redirecionando para a lista de vagas...'}
+            </div>
+          )}
         </div>
       )}
     </TinderDoFluxoPageShell>
@@ -1119,6 +1480,120 @@ export function TinderServiceDetailPage() {
             </div>
           </div>
         </>
+      )}
+    </TinderDoFluxoPageShell>
+  );
+}
+
+export function TinderMyApplicationsPage() {
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    loadApplications();
+  }, []);
+  
+  const loadApplications = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get<{ applications: any[] }>('/api/tinder-do-fluxo/jobs/my-applications');
+      setApplications(res.applications || []);
+    } catch (err: any) {
+      console.error('Erro ao carregar candidaturas:', err);
+      setApplications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+  
+  return (
+    <TinderDoFluxoPageShell title="Minhas Candidaturas" subtitle="Vagas que você se candidatou">
+      {loading ? (
+        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
+          <div className="loading-spinner" />
+          <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando candidaturas...</p>
+        </div>
+      ) : applications.length === 0 ? (
+        <div className="card">
+          <EmptyState text="Você ainda não se candidatou para nenhuma vaga." />
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 12 }}>
+          {applications.map((app: any) => {
+            const job = app.tinder_jobs;
+            if (!job) return null;
+            
+            return (
+              <div key={app.id} className="card" style={{ padding: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: 0, marginBottom: 8 }}>{job.title}</h3>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 14 }}>
+                      Candidatado em {formatDate(app.created_at)}
+                    </p>
+                  </div>
+                  <Link 
+                    className="btn btn-outline" 
+                    to={`/tinder-do-fluxo/vagas/${job.id}`}
+                    style={{ marginLeft: 12 }}
+                  >
+                    Ver vaga
+                  </Link>
+                </div>
+                
+                {job.description && (
+                  <p style={{ marginTop: 8, marginBottom: 8, color: 'var(--text-secondary)' }}>
+                    {job.description.length > 200 ? job.description.substring(0, 200) + '...' : job.description}
+                  </p>
+                )}
+                
+                <div style={{ 
+                  display: 'flex', 
+                  gap: 12, 
+                  flexWrap: 'wrap', 
+                  marginTop: 12,
+                  padding: 12,
+                  background: 'var(--bg-secondary)',
+                  borderRadius: 'var(--radius)'
+                }}>
+                  {job.specialty && <span style={{ fontSize: 12 }}>📌 {job.specialty}</span>}
+                  {job.model && <span style={{ fontSize: 12 }}>💼 {job.model}</span>}
+                  {job.location && <span style={{ fontSize: 12 }}>📍 {job.location}</span>}
+                  {job.value && <span style={{ fontSize: 12 }}>💰 R$ {Number(job.value).toLocaleString('pt-BR')}</span>}
+                  {job.status && (
+                    <span style={{ 
+                      fontSize: 12,
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: job.status === 'OPEN' ? 'var(--green)' : 'var(--text-muted)',
+                      color: 'white'
+                    }}>
+                      {job.status === 'OPEN' ? 'Aberta' : 'Fechada'}
+                    </span>
+                  )}
+                </div>
+                
+                {app.message && (
+                  <div style={{ marginTop: 12, padding: 12, background: 'var(--bg-sidebar)', borderRadius: 'var(--radius)' }}>
+                    <strong style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sua mensagem:</strong>
+                    <p style={{ marginTop: 4, fontSize: 14 }}>{app.message}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </TinderDoFluxoPageShell>
   );

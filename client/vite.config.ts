@@ -14,7 +14,7 @@ export default defineConfig({
       'Expires': '0'
     },
     hmr: {
-      port: 8082 // Trocar para 8082 para evitar conflito
+      clientPort: 5174 // Usar mesma porta do servidor para evitar conflitos
     }
   },
   build: {

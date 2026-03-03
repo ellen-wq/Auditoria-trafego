@@ -100,6 +100,6 @@ export function useProfileView(userId?: string) {
     },
     enabled: !!targetUserId,
     staleTime: 2 * 60 * 1000,
-    retry: 1,
+    retry: false,
   });
 }

@@ -29,6 +29,7 @@ import {
   TinderJobCreatePage,
   TinderJobDetailPage,
   TinderMatchesPage,
+  TinderMyApplicationsPage,
   TinderPrestadoresPage,
   TinderServiceDetailPage,
   TinderSimplePlaceholderPage,
@@ -84,7 +85,8 @@ export default function App() {
       <Route path="/tinder-do-fluxo/prestadores" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderPrestadoresPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/prestadores/:id" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderServiceDetailPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/vagas" element={<ProtectedRoute allowedRoles={['MENTORADO', 'PRESTADOR', 'LIDERANCA']}><TinderVagasPage /></ProtectedRoute>} />
-      <Route path="/tinder-do-fluxo/vagas/criar" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderJobCreatePage /></ProtectedRoute>} />
+      <Route path="/tinder-do-fluxo/vagas/criar" element={<ProtectedRoute allowedRoles={['MENTORADO', 'PRESTADOR', 'LIDERANCA']}><TinderJobCreatePage /></ProtectedRoute>} />
+      <Route path="/tinder-do-fluxo/vagas/minhas-candidaturas" element={<ProtectedRoute allowedRoles={['MENTORADO', 'PRESTADOR', 'LIDERANCA']}><TinderMyApplicationsPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/vagas/:id" element={<ProtectedRoute allowedRoles={['MENTORADO', 'PRESTADOR', 'LIDERANCA']}><TinderJobDetailPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/matches" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderMatchesPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/favoritos" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderFavoritosPage /></ProtectedRoute>} />

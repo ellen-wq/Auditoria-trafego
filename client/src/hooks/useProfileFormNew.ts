@@ -118,7 +118,7 @@ export function useProfileForm() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 10 * 60 * 1000, // 10 minutos (cacheTime foi renomeado para gcTime no React Query v5)
-    retry: 1,
+    retry: false,
   });
   
   // Determinar tipo_usuario APÓS receber os dados, fora do queryFn

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import ProfileFormPage from './ProfileFormPage';
@@ -12,15 +12,11 @@ export default function ProfileRouterPage() {
   const [isChecking, setIsChecking] = useState(true);
   const forceEdit = searchParams.get('edit') === 'true';
 
-  useEffect(() => {
-    // LIDERANCA doesn't need a profile
-    if (user?.role === 'LIDERANCA') {
-      setHasProfile(true);
-      setIsChecking(false);
-      return;
-    }
+  const [checkError, setCheckError] = useState<string | null>(null);
 
-    // Check if profile exists
+  const checkProfile = useCallback(() => {
+    setCheckError(null);
+    setIsChecking(true);
     api.get<{ hasProfile: boolean; profileRequired: boolean }>('/api/tinder-do-fluxo/profile-check')
       .then((res) => {
         setHasProfile(res.hasProfile);
@@ -29,10 +25,20 @@ export default function ProfileRouterPage() {
       .catch((err) => {
         console.error('[ProfileRouterPage] Erro ao verificar perfil:', err);
         setIsChecking(false);
-        // On error, assume profile doesn't exist to show form
+        setCheckError(err?.message || 'Erro ao verificar perfil. Verifique sua conexão.');
         setHasProfile(false);
       });
-  }, [user?.role]);
+  }, []);
+
+  useEffect(() => {
+    // LIDERANCA doesn't need a profile
+    if (user?.role === 'LIDERANCA') {
+      setHasProfile(true);
+      setIsChecking(false);
+      return;
+    }
+    if (user) checkProfile();
+  }, [user?.role, user, checkProfile]);
 
   if (isChecking) {
     return (
@@ -40,6 +46,20 @@ export default function ProfileRouterPage() {
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', flexDirection: 'column', gap: 16 }}>
           <div className="loading-spinner" />
           <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Verificando perfil...</div>
+        </div>
+      </TinderDoFluxoPageShell>
+    );
+  }
+
+  if (checkError) {
+    return (
+      <TinderDoFluxoPageShell title="Meu Perfil">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: 24, textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: 360 }}>{checkError}</p>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button className="btn btn-outline" onClick={checkProfile}>Tentar novamente</button>
+            <button className="btn btn-primary" onClick={() => api.logout()}>Fazer logout</button>
+          </div>
         </div>
       </TinderDoFluxoPageShell>
     );

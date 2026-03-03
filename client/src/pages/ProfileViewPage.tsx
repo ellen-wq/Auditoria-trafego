@@ -26,6 +26,7 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
   // Pegar userId de prop, query param ou usuário atual
   const currentUser = api.getUser();
   const userId = userIdProp || searchParams.get('userId') || undefined;
+  const returnTo = searchParams.get('returnTo') || undefined;
   const isViewingOtherProfile = userId && userId !== currentUser?.id;
   
   const { data: profileData, isLoading, error } = useProfileView(userId);
@@ -124,21 +125,23 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
     <TinderDoFluxoPageShell title={isViewingOtherProfile ? `Perfil de ${user.nome}` : "Meu Perfil"}>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 16px' }}>
         {/* Botão de Match se estiver vendo perfil de outro usuário */}
-        {isViewingOtherProfile && (
+        {(isViewingOtherProfile || returnTo) && (
           <div style={{ marginBottom: 16, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <button 
               className="btn btn-outline"
-              onClick={() => navigate('/tinder-do-fluxo/expert')}
+              onClick={() => navigate(returnTo || '/tinder-do-fluxo/expert')}
             >
-              Voltar
+              ← Voltar
             </button>
-            <button 
-              className="btn btn-primary"
-              onClick={handleMatch}
-              disabled={isSendingInterest}
-            >
-              {isSendingInterest ? 'Enviando...' : '👋 Match'}
-            </button>
+            {!returnTo && (
+              <button 
+                className="btn btn-primary"
+                onClick={handleMatch}
+                disabled={isSendingInterest}
+              >
+                {isSendingInterest ? 'Enviando...' : '👋 Match'}
+              </button>
+            )}
           </div>
         )}
 
