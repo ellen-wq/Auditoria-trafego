@@ -169,12 +169,12 @@ export function TinderExpertPage() {
       const res = await api.get<{ users?: any[] }>(url);
       const users = res.users || [];
 
-      // Mapear modelo_trabalho para label de formato (tipos de parceria / formato)
-      const formatoLabel: Record<string, string> = {
-        remoto: 'Remoto',
-        hibrido: 'Híbrido',
-        presencial: 'Presencial',
-        indiferente: 'Indiferente',
+      // Formato = interesses (availability_tags): Projetos, Parcerias, Coprodução, Sociedade
+      const interesseLabels: Record<string, string> = {
+        projetos: 'Projetos',
+        parcerias: 'Parcerias',
+        coproducao: 'Coprodução',
+        sociedade: 'Sociedade',
       };
 
       // Transform users to match ProfileDiscoveryCard format (conectado às colunas do Supabase)
@@ -185,8 +185,10 @@ export function TinderExpertPage() {
         const isExpert = expertProfile?.is_expert || false;
         const isCoprodutor = expertProfile?.is_coproducer || false;
 
-        const modelo = mentorProfile?.modelo_trabalho;
-        const formato = modelo ? (formatoLabel[modelo] || modelo) : undefined;
+        const tags = mentorProfile?.availability_tags || [];
+        const formato = Array.isArray(tags) && tags.length > 0
+          ? tags.map((t: string) => interesseLabels[t] || t).filter(Boolean).join(', ')
+          : undefined;
 
         return {
           id: u.id,

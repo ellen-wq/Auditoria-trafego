@@ -32,7 +32,8 @@ ALTER TABLE public.tinder_mentor_profiles
   ADD COLUMN IF NOT EXISTS faz_trafego_pago BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS faz_copy BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS faz_automacoes BOOLEAN DEFAULT false,
-  ADD COLUMN IF NOT EXISTS average_rating NUMERIC(3,2) DEFAULT NULL;
+  ADD COLUMN IF NOT EXISTS average_rating NUMERIC(3,2) DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS availability_tags TEXT[] DEFAULT ARRAY[]::TEXT[];
 
 -- 2. Todo MENTORADO precisa ter linha em tinder_mentor_profiles
 INSERT INTO public.tinder_mentor_profiles (
@@ -181,12 +182,31 @@ SET average_rating = ranked.r
 FROM ranked
 WHERE tmp.user_id = ranked.user_id;
 
--- 9. Conferência: quem aparece no feed (com average_rating para ordenação)
+-- 9. availability_tags (interesses) para o campo Formato no card: Projetos, Parcerias, Coprodução, Sociedade
+WITH tags_vals AS (
+  SELECT tmp.user_id,
+         CASE (ROW_NUMBER() OVER (ORDER BY tmp.user_id) % 4)
+           WHEN 0 THEN ARRAY['projetos', 'parcerias']::TEXT[]
+           WHEN 1 THEN ARRAY['parcerias', 'coproducao']::TEXT[]
+           WHEN 2 THEN ARRAY['coproducao', 'sociedade']::TEXT[]
+           ELSE ARRAY['projetos', 'sociedade']::TEXT[]
+         END AS tags
+  FROM public.tinder_mentor_profiles tmp
+  JOIN public.user_roles ur ON ur.user_id = tmp.user_id
+  WHERE ur.role = 'MENTORADO' AND (tmp.is_expert = true OR tmp.is_coproducer = true)
+)
+UPDATE public.tinder_mentor_profiles tmp
+SET availability_tags = tags_vals.tags
+FROM tags_vals
+WHERE tmp.user_id = tags_vals.user_id
+  AND (COALESCE(array_length(tmp.availability_tags, 1), 0) = 0);
+
+-- 10. Conferência: quem aparece no feed (formato = availability_tags)
 SELECT
   ur.name,
   tmp.headline AS objetivo,
   tmp.niche AS nicho,
-  tmp.modelo_trabalho AS formato,
+  tmp.availability_tags AS formato_interesses,
   tmp.average_rating AS rating,
   CASE WHEN tmp.is_expert THEN 'Expert' WHEN tmp.is_coproducer THEN 'Coprodutor' ELSE '-' END AS tipo
 FROM public.user_roles ur

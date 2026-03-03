@@ -13,7 +13,7 @@ interface ProfileDiscoveryCardProps {
     bio?: string;
     /** Nicho - tinder_mentor_profiles.niche */
     niche?: string;
-    /** Formato / tipo parceria - modelo_trabalho ou tipos de parceria */
+    /** Formato = interesses (availability_tags): Projetos, Parcerias, Coprodução, Sociedade */
     formato?: string;
     // Expert fields
     products?: Array<{
