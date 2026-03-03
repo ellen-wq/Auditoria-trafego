@@ -1213,7 +1213,17 @@ router.get('/favorites', async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: 'Erro ao buscar favoritos.' });
     return;
   }
-  res.json({ favorites: data || [] });
+  const list = data || [];
+  const targetIds = [...new Set(list.map((f: any) => f.target_user_id).filter(Boolean))];
+  if (targetIds.length > 0) {
+    const { data: roles } = await supabase.from('user_roles').select('user_id, name').in('user_id', targetIds);
+    const nameByUserId = new Map((roles || []).map((r: any) => [r.user_id, r.name]));
+    list.forEach((f: any) => {
+      if (f.users) f.users.name = f.users.name || nameByUserId.get(f.target_user_id) || null;
+      else f.users = { id: f.target_user_id, name: nameByUserId.get(f.target_user_id) || null, email: null, role: null };
+    });
+  }
+  res.json({ favorites: list });
 });
 
 router.delete('/favorite', async (req: Request, res: Response): Promise<void> => {
