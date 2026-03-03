@@ -13,6 +13,7 @@ const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFil
   }
 };
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 10 * 1024 * 1024 } });
+// 4 MB para evitar exceder limite do body em ambientes serverless (ex.: Vercel ~4.5 MB)
+const upload = multer({ storage, fileFilter, limits: { fileSize: 4 * 1024 * 1024 } });
 
 export default upload;

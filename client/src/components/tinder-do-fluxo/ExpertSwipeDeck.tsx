@@ -4,7 +4,7 @@ import { api } from '../../services/api';
 export type ExpertUser = {
   id: number | string;
   name: string;
-  tinder_mentor_profiles?: { city?: string; niche?: string; photo_url?: string } | null;
+  tinder_mentor_profiles?: { city?: string; niche?: string; photo_url?: string; nivel_fluxo?: string; bio?: string } | null;
   tinder_expert_profiles?: {
     is_expert?: boolean;
     is_coproducer?: boolean;
@@ -48,6 +48,23 @@ function getCity(u: ExpertUser): string {
 
 function getPhotoUrl(u: ExpertUser): string {
   return getMentorProfile(u)?.photo_url ?? '';
+}
+
+function getNivel(u: ExpertUser): string {
+  return getMentorProfile(u)?.nivel_fluxo ?? '';
+}
+
+function getBio(u: ExpertUser): string {
+  const mentor = getMentorProfile(u);
+  if (mentor?.bio) return mentor.bio;
+  return getExpertProfile(u)?.search_bio ?? '';
+}
+
+function getNiche(u: ExpertUser): string {
+  const mentor = getMentorProfile(u);
+  if (mentor?.niche) return mentor.niche;
+  const tags = getTags(u);
+  return tags[0] ?? '';
 }
 
 interface ExpertSwipeDeckProps {
@@ -187,25 +204,32 @@ export function ExpertSwipeDeck({
           onMouseLeave={handleMouseLeave}
         >
           <div className="tinder-card-inner">
-            <div className="tinder-card-header">
-              <span className="tinder-card-type">{getTypeLabel(top)}</span>
-              <h3 className="tinder-card-name">{top.name}</h3>
-            </div>
+            {/* Nível: Expert / Coprodutor */}
+            <span className="tinder-card-type">{getTypeLabel(top) || '—'}</span>
+            {/* Nome */}
+            <h3 className="tinder-card-name">{top.name || '—'}</h3>
+            {/* Foto */}
             <div className="tinder-card-photo">
               {getPhotoUrl(top) ? (
                 <img src={getPhotoUrl(top)} alt="" className="tinder-card-avatar-img" />
               ) : (
-                <span className="tinder-card-avatar-placeholder">{top.name.charAt(0).toUpperCase()}</span>
+                <span className="tinder-card-avatar-placeholder">{top.name ? top.name.charAt(0).toUpperCase() : '?'}</span>
               )}
             </div>
+            {/* Bio: objetivo (goal_text) ou bio do mentor */}
             <p className="tinder-card-objective">
-              {getExpertProfile(top)?.goal_text || 'Sem objetivo cadastrado'}
+              {getExpertProfile(top)?.goal_text || getBio(top) || 'Sem objetivo cadastrado'}
             </p>
-            {getCity(top) ? (
-              <p className="tinder-card-city">{getCity(top)}</p>
+            {/* Cidade */}
+            {getCity(top) ? <p className="tinder-card-city">{getCity(top)}</p> : null}
+            {/* Nicho: mentor.niche ou tags */}
+            {getNiche(top) ? (
+              <div className="tinder-card-nicho-wrap">
+                <span className="tinder-tag tinder-tag-nicho">{getNiche(top)}</span>
+              </div>
             ) : null}
             <div className="tinder-card-tags">
-              {getTags(top).map((tag) => (
+              {getTags(top).filter((tag) => tag !== getNiche(top)).map((tag) => (
                 <span key={tag} className="tinder-tag">{tag}</span>
               ))}
             </div>

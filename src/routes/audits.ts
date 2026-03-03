@@ -26,14 +26,52 @@ function parseAdvantagePlusCampaigns(rawValue: unknown): string[] {
   return [];
 }
 
-router.post('/preview-campaigns', requireAuth, upload.single('file'), async (req: Request, res: Response): Promise<void> => {
+function getFileBuffer(file: Express.Multer.File): Buffer | null {
+  if (!file || (file as any).buffer === undefined) return null;
+  const buf = (file as any).buffer;
+  if (Buffer.isBuffer(buf)) return buf;
+  try {
+    if (buf instanceof Uint8Array) return Buffer.from(buf);
+    if (Array.isArray(buf)) return Buffer.from(buf as number[]);
+    return Buffer.from(buf);
+  } catch {
+    return null;
+  }
+}
+
+function handleMulterError(err: any, _req: Request, res: Response, next: () => void): void {
+  if (err) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({ error: 'Arquivo muito grande. Use um arquivo de até 4 MB (recomendado para evitar falhas).' });
+      return;
+    }
+    res.status(400).json({ error: err.message || 'Erro no envio do arquivo.' });
+    return;
+  }
+  next();
+}
+
+router.post('/preview-campaigns', requireAuth, (req: Request, res: Response, next: () => void) => {
+  upload.single('file')(req, res, (err: any) => {
+    if (err) {
+      handleMulterError(err, req, res, next);
+      return;
+    }
+    next();
+  });
+}, async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.file) {
       res.status(400).json({ error: 'Arquivo da planilha é obrigatório (.xlsx ou .csv).' });
       return;
     }
+    const buffer = getFileBuffer(req.file);
+    if (!buffer || buffer.length === 0) {
+      res.status(400).json({ error: 'O arquivo está vazio ou não pôde ser lido. Tente enviar novamente (máx. 4 MB recomendado).' });
+      return;
+    }
 
-    const parsed = parseSpreadsheetBuffer(req.file.buffer, req.file.originalname);
+    const parsed = parseSpreadsheetBuffer(buffer, req.file.originalname);
     if (parsed.error) {
       res.status(400).json({ error: parsed.error });
       return;
@@ -47,7 +85,15 @@ router.post('/preview-campaigns', requireAuth, upload.single('file'), async (req
   }
 });
 
-router.post('/', requireAuth, upload.single('file'), async (req: Request, res: Response): Promise<void> => {
+router.post('/', requireAuth, (req: Request, res: Response, next: () => void) => {
+  upload.single('file')(req, res, (err: any) => {
+    if (err) {
+      handleMulterError(err, req, res, next);
+      return;
+    }
+    next();
+  });
+}, async (req: Request, res: Response): Promise<void> => {
   try {
     const {
       product_price,
@@ -66,6 +112,11 @@ router.post('/', requireAuth, upload.single('file'), async (req: Request, res: R
       res.status(400).json({ error: 'Arquivo da planilha é obrigatório (.xlsx ou .csv).' });
       return;
     }
+    const buffer = getFileBuffer(req.file);
+    if (!buffer || buffer.length === 0) {
+      res.status(400).json({ error: 'O arquivo está vazio ou não pôde ser lido. Tente enviar novamente (máx. 4 MB recomendado).' });
+      return;
+    }
 
     const price = parseFloat(product_price);
     const pType = product_type || 'low_ticket';
@@ -74,7 +125,14 @@ router.post('/', requireAuth, upload.single('file'), async (req: Request, res: R
     const hasAnyAdvantagePlus = has_any_advantage_plus === 'true' || has_any_advantage_plus === '1';
     const advantagePlusCampaigns = parseAdvantagePlusCampaigns(advantage_plus_campaigns);
 
-    const parsed = parseSpreadsheetBuffer(req.file.buffer, req.file.originalname);
+    let parsed;
+    try {
+      parsed = parseSpreadsheetBuffer(buffer, req.file.originalname);
+    } catch (parseErr: unknown) {
+      const msg = parseErr instanceof Error ? parseErr.message : String(parseErr);
+      res.status(400).json({ error: 'Planilha inválida ou formato não reconhecido. Verifique se é uma exportação do Gerenciador de Anúncios (.xlsx ou .csv). ' + msg });
+      return;
+    }
     if (parsed.error) {
       res.status(400).json({ error: parsed.error });
       return;
@@ -99,7 +157,7 @@ router.post('/', requireAuth, upload.single('file'), async (req: Request, res: R
     const storagePath = `${req.user!.id}/${Date.now()}-${Math.round(Math.random() * 1e9)}${uploadExt}`;
     const { error: storageError } = await supabase.storage
       .from(STORAGE_BUCKET_NAME)
-      .upload(storagePath, req.file.buffer, {
+      .upload(storagePath, buffer, {
         contentType: req.file.mimetype || undefined,
         upsert: false
       });
@@ -122,7 +180,19 @@ router.post('/', requireAuth, upload.single('file'), async (req: Request, res: R
       .single();
 
     if (auditError || !audit) {
-      res.status(500).json({ error: 'Erro ao criar auditoria.' });
+      console.error('[Audits] Erro ao inserir auditoria:', auditError);
+      const rawMsg =
+        (auditError && typeof auditError === 'object' && 'message' in auditError && String((auditError as any).message)) ||
+        (auditError && typeof auditError === 'object' && 'error' in auditError && String((auditError as any).error)) ||
+        (auditError ? String(auditError) : '') ||
+        'Erro desconhecido ao inserir na tabela audits.';
+      const msg = rawMsg.trim();
+      const hint =
+        /integer|uuid|type|invalid|syntax|column|does not exist|relation/i.test(msg)
+          ? ' Solução: execute o script migrate-audits-to-uuid.sql no Supabase (Dashboard > SQL Editor).'
+          : '';
+      const fullError = msg ? `Erro ao criar auditoria: ${msg}${hint}` : `Erro ao criar auditoria.${hint}`;
+      res.status(500).json({ error: fullError });
       return;
     }
 
@@ -275,6 +345,91 @@ router.get('/:id', requireAuth, async (req: Request, res: Response): Promise<voi
   } catch (err) {
     console.error('Audit detail error:', err);
     res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// Migração: recria tabelas audits/campaigns/recommendations/creatives com user_id UUID
+const MIGRATE_AUDITS_SQL_STEPS = [
+  `DROP TABLE IF EXISTS creatives CASCADE`,
+  `DROP TABLE IF EXISTS recommendations CASCADE`,
+  `DROP TABLE IF EXISTS campaigns CASCADE`,
+  `DROP TABLE IF EXISTS audits CASCADE`,
+  `CREATE TABLE public.audits (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    product_price REAL NOT NULL,
+    product_type TEXT DEFAULT 'low_ticket',
+    has_pre_checkout INTEGER NOT NULL DEFAULT 0,
+    filename TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_audits_user_id ON public.audits(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_audits_created_at ON public.audits(created_at)`,
+  `CREATE TABLE public.campaigns (
+    id SERIAL PRIMARY KEY,
+    audit_id INTEGER NOT NULL REFERENCES public.audits(id) ON DELETE CASCADE,
+    campaign_name TEXT NOT NULL,
+    spend REAL DEFAULT 0,
+    ctr_link REAL DEFAULT 0,
+    link_clicks INTEGER DEFAULT 0,
+    lp_views INTEGER DEFAULT 0,
+    lp_rate REAL DEFAULT 0,
+    checkouts INTEGER DEFAULT 0,
+    purchases INTEGER DEFAULT 0,
+    cpa REAL DEFAULT 0,
+    cpc REAL DEFAULT 0,
+    impressions INTEGER DEFAULT 0,
+    reach INTEGER DEFAULT 0,
+    scenario INTEGER DEFAULT 0,
+    hook_rate REAL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_campaigns_audit_id ON public.campaigns(audit_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_campaigns_scenario ON public.campaigns(scenario)`,
+  `CREATE TABLE public.recommendations (
+    id SERIAL PRIMARY KEY,
+    campaign_id INTEGER NOT NULL REFERENCES public.campaigns(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    steps_json TEXT DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_recommendations_campaign_id ON public.recommendations(campaign_id)`,
+  `CREATE TABLE public.creatives (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    audit_id INTEGER NOT NULL REFERENCES public.audits(id) ON DELETE CASCADE,
+    campaign_id INTEGER NOT NULL REFERENCES public.campaigns(id) ON DELETE CASCADE,
+    copy_text TEXT DEFAULT '',
+    video_link TEXT DEFAULT '',
+    analysis_result TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_creatives_user_id ON public.creatives(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_creatives_audit_id ON public.creatives(audit_id)`
+];
+
+router.post('/migrate-to-uuid', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const supabase = getSupabase();
+    for (let i = 0; i < MIGRATE_AUDITS_SQL_STEPS.length; i++) {
+      const { error } = await supabase.rpc('exec_sql', { sql: MIGRATE_AUDITS_SQL_STEPS[i] });
+      if (error) {
+        console.error('[Audits migrate] Step failed:', i, MIGRATE_AUDITS_SQL_STEPS[i].slice(0, 50), error);
+        res.status(500).json({
+          error: 'Migração falhou no passo ' + (i + 1) + '. ' + (error.message || String(error)) +
+            ' Se o Supabase não tiver a função exec_sql, execute o arquivo migrate-audits-to-uuid.sql no SQL Editor do Dashboard.'
+        });
+        return;
+      }
+    }
+    res.json({ ok: true, message: 'Migração concluída. Tente criar a auditoria novamente.' });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({
+      error: 'Erro ao executar migração: ' + msg +
+        ' Execute o arquivo migrate-audits-to-uuid.sql no Supabase (Dashboard > SQL Editor).'
+    });
   }
 });
 

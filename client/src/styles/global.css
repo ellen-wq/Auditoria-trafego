@@ -1366,6 +1366,19 @@ tbody tr:hover { background: #fafbfd; }
   display: flex;
   flex-direction: column;
 }
+.tinder-card-nivel {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--purple);
+  background: var(--purple-light);
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+  width: fit-content;
+}
 .tinder-card-name {
   font-size: 20px;
   font-weight: 700;
@@ -1376,6 +1389,11 @@ tbody tr:hover { background: #fafbfd; }
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  margin: 0 0 4px 0;
+  display: block;
+}
+.tinder-card-nicho-wrap {
+  margin-top: 8px;
 }
 .tinder-card-photo {
   margin: 12px 0;
@@ -1400,6 +1418,14 @@ tbody tr:hover { background: #fafbfd; }
   align-items: center;
   justify-content: center;
   border: 2px solid var(--border-light);
+}
+.tinder-card-bio {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 8px 0 0 0;
+  line-height: 1.5;
+  flex: 1;
+  min-height: 0;
 }
 .tinder-card-city {
   font-size: 13px;

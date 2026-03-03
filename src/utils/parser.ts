@@ -125,21 +125,38 @@ function parseNumber(val: unknown): number {
 }
 
 function parseSpreadsheetBuffer(fileBuffer: Buffer, originalName: string): ParseResult {
+  if (!fileBuffer || !Buffer.isBuffer(fileBuffer) || fileBuffer.length === 0) {
+    return { error: 'Arquivo vazio ou inválido.' };
+  }
   const ext = path.extname(originalName).toLowerCase();
+  if (ext !== '.xlsx' && ext !== '.csv') {
+    return { error: 'Formato não suportado. Use .xlsx ou .csv exportado do Gerenciador de Anúncios.' };
+  }
   let rawRows: Record<string, unknown>[];
 
-  if (ext === '.xlsx') {
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-  } else {
-    const content = fileBuffer.toString('utf-8');
-    const result = Papa.parse<Record<string, unknown>>(content, { header: true, skipEmptyLines: true });
-    rawRows = result.data;
+  try {
+    if (ext === '.xlsx') {
+      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+      if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+        return { error: 'A planilha não contém abas com dados.' };
+      }
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (!sheet) {
+        return { error: 'Não foi possível ler a primeira aba da planilha.' };
+      }
+      rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    } else {
+      const content = fileBuffer.toString('utf-8');
+      const result = Papa.parse<Record<string, unknown>>(content, { header: true, skipEmptyLines: true });
+      rawRows = result.data || [];
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { error: 'Não foi possível ler o arquivo. Verifique se o arquivo não está corrompido e se é uma exportação do Gerenciador de Anúncios. Detalhe: ' + msg };
   }
 
   if (!rawRows || rawRows.length === 0) {
-    return { error: 'Planilha vazia ou sem dados.' };
+    return { error: 'Planilha vazia ou sem dados. Exporte novamente pelo Gerenciador de Anúncios do Facebook.' };
   }
 
   const originalHeaders = Object.keys(rawRows[0]);

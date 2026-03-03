@@ -22,6 +22,8 @@ export default function AuditoriaUploadPage() {
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const [migrateMessage, setMigrateMessage] = useState('');
 
   const handleFile = useCallback((f: File | null) => {
     if (!f) return;
@@ -30,8 +32,8 @@ export default function AuditoriaUploadPage() {
       setError('Formato inválido. Envie um arquivo .xlsx ou .csv');
       return;
     }
-    if (f.size > 10 * 1024 * 1024) {
-      setError('Arquivo muito grande. Máximo permitido: 10MB');
+    if (f.size > 4 * 1024 * 1024) {
+      setError('Arquivo muito grande. Máximo permitido: 4 MB');
       return;
     }
     setError('');
@@ -118,6 +120,20 @@ export default function AuditoriaUploadPage() {
       setLoading(false);
     }
   };
+
+  const handleRunMigration = useCallback(async () => {
+    setMigrateMessage('');
+    setMigrating(true);
+    try {
+      const result = await api.post<{ ok?: boolean; message?: string }>('/api/audits/migrate-to-uuid');
+      setMigrateMessage(result?.message || 'Migração concluída. Tente criar a auditoria novamente.');
+      setError('');
+    } catch (err: any) {
+      setMigrateMessage(err.message || 'Falha na migração.');
+    } finally {
+      setMigrating(false);
+    }
+  }, []);
 
   const handleAnyAdvantagePlus = useCallback((checked: boolean) => {
     setHasAnyAdvantagePlus(checked);
@@ -213,6 +229,21 @@ export default function AuditoriaUploadPage() {
       </div>
 
       <div className={`alert alert-error${error ? ' visible' : ''}`}>{error}</div>
+      {error && (
+        <div style={{ marginBottom: 12 }}>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={handleRunMigration}
+            disabled={migrating}
+          >
+            {migrating ? 'Executando migração...' : 'Corrigir banco de dados (executar migração)'}
+          </button>
+          {migrateMessage && (
+            <p style={{ marginTop: 8, color: 'var(--green)', fontSize: 14 }}>{migrateMessage}</p>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="card" style={{ marginBottom: 20 }}>
@@ -333,7 +364,7 @@ export default function AuditoriaUploadPage() {
             <path d="M20 16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <p className="upload-text">Arraste o arquivo ou clique para selecionar</p>
-          <p className="upload-hint">Formatos aceitos: .xlsx, .csv (máx. 10MB)</p>
+          <p className="upload-hint">Formatos aceitos: .xlsx, .csv (máx. 4 MB)</p>
           <input
             ref={fileInputRef}
             type="file"
