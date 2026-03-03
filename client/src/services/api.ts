@@ -63,8 +63,9 @@ class ApiService {
       if (res.status === 401) {
         const isLoginRequest = url.includes('/api/auth/login');
         const isAuthMeRequest = url.includes('/api/auth/me');
-        // Não desloga nem redireciona: login (erro de credencial) e /me (evita redirect logo após login)
-        if (!isLoginRequest && !isAuthMeRequest) {
+        const isOnMatchesPage = (typeof window !== 'undefined' && window.location.pathname.includes('/tinder-do-fluxo/matches'));
+        // Não desloga nem redireciona: login, /me e quando estiver na página de matches
+        if (!isLoginRequest && !isAuthMeRequest && !isOnMatchesPage) {
           this.clearAuthStorage();
           window.location.href = '/login';
         }
