@@ -611,38 +611,53 @@ function ExpertProfileDrawer({ userId, onClose }: { userId: number | string; onC
   );
 }
 
+const PRESTADORES_PAGE_SIZE = 9;
+const SPECIALTY_TABS = [
+  { value: 'ALL', label: 'Todos' },
+  { value: 'COPY', label: 'Copy' },
+  { value: 'TRAFEGO', label: 'Tráfego' },
+  { value: 'AUTOMACAO', label: 'Automação' },
+] as const;
+
+function prestadoresAvatarUrl(s: { photo_url?: string | null; users?: { name?: string } | null }): string {
+  if (s.photo_url && s.photo_url.trim()) return s.photo_url;
+  const name = s.users?.name || 'Prestador';
+  const encoded = encodeURIComponent(name.replace(/\s+/g, ' ').trim() || 'P');
+  return `https://ui-avatars.com/api/?name=${encoded}&size=160&background=94a3b8&color=fff`;
+}
+
+function prestadoresCityDisplay(s: { city?: string | null; state?: string | null }): string {
+  const city = (s.city || '').trim();
+  const state = (s.state || '').trim();
+  if (!city && !state) return 'Localização não informada';
+  if (city && state) return `${city}, ${state}`;
+  return city || state;
+}
+
 export function TinderPrestadoresPage() {
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
-  const [filters, setFilters] = useState({
-    tipo_servico: [] as string[],
-    rating_min: null as number | null,
-    modo_trabalho: [] as string[],
-  });
+  const [activeTab, setActiveTab] = useState<'ALL' | 'COPY' | 'TRAFEGO' | 'AUTOMACAO'>('ALL');
+  const [ratingMin, setRatingMin] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const debouncedSearchText = useDebounce(searchText, 400);
 
   useEffect(() => {
     loadServices();
-  }, [debouncedSearchText, filters]);
+  }, [debouncedSearchText, activeTab, ratingMin]);
 
   const loadServices = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (debouncedSearchText) params.append('q', debouncedSearchText);
-      if (filters.tipo_servico.length > 0) {
-        params.append('tipo_servico', filters.tipo_servico.join(','));
-      }
-      if (filters.rating_min) {
-        params.append('rating_min', filters.rating_min.toString());
-      }
-      if (filters.modo_trabalho.length > 0) {
-        params.append('modo_trabalho', filters.modo_trabalho.join(','));
-      }
-      
+      if (activeTab !== 'ALL') params.append('tipo_servico', activeTab);
+      if (ratingMin != null) params.append('rating_min', String(ratingMin));
+
       const res = await api.get<{ services: any[] }>(`/api/tinder-do-fluxo/services?${params.toString()}`);
       setServices(res.services || []);
+      setCurrentPage(1);
     } catch (err) {
       console.error('Erro ao carregar prestadores:', err);
       setServices([]);
@@ -651,85 +666,190 @@ export function TinderPrestadoresPage() {
     }
   };
 
+  const totalPages = Math.max(1, Math.ceil(services.length / PRESTADORES_PAGE_SIZE));
+  const start = (currentPage - 1) * PRESTADORES_PAGE_SIZE;
+  const pageServices = services.slice(start, start + PRESTADORES_PAGE_SIZE);
+
   return (
-    <TinderDoFluxoPageShell title="Prestadores" subtitle="Diretório por especialidade e avaliação">
-      <GlobalSearch
-        placeholder="Buscar por nome, especialidade..."
-        onSearch={setSearchText}
-      />
-      
-      {/* Filtros */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ fontSize: 14, fontWeight: 600 }}>Tipo de serviço:</label>
-            {['COPY', 'TRAFEGO', 'AUTOMACAO'].map((tipo) => (
-              <label key={tipo} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={filters.tipo_servico.includes(tipo)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setFilters({ ...filters, tipo_servico: [...filters.tipo_servico, tipo] });
-                    } else {
-                      setFilters({ ...filters, tipo_servico: filters.tipo_servico.filter(t => t !== tipo) });
-                    }
-                  }}
-                />
-                <span>{tipo === 'TRAFEGO' ? 'Tráfego' : tipo === 'AUTOMACAO' ? 'Automação' : tipo}</span>
-              </label>
-            ))}
+    <TinderDoFluxoPageShell title="Prestadores" subtitle="Diretório de prestadores">
+      <div className="prestadores-directory">
+        {/* Hero */}
+        <div className="prestadores-hero">
+          <h1>Diretório de Prestadores</h1>
+        </div>
+
+        {/* Search + Filters */}
+        <div className="prestadores-search-filter-card">
+          <div className="prestadores-search-wrap">
+            <label>
+              <span className="material-symbols-outlined search-icon">search</span>
+              <input
+                type="search"
+                placeholder="Buscar por nome, habilidade ou palavra-chave..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+            </label>
           </div>
-          
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ fontSize: 14, fontWeight: 600 }}>Avaliação mínima:</label>
-            {[5, 4, 3, 2, 1].map((rating) => (
+          <div className="prestadores-filter-buttons">
+            <button type="button" className="prestadores-filter-btn" title="Especialidade filtrada pelas abas abaixo">
+              <span>Especialidade</span>
+              <span className="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" className="prestadores-filter-btn" title="Em breve">
+              <span>Certificação</span>
+              <span className="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" className="prestadores-filter-btn" title="Em breve">
+              <span>Cidade</span>
+              <span className="material-symbols-outlined">expand_more</span>
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Avaliação mínima:</span>
+              {([null, 1, 2, 3, 4, 5] as const).map((r) => (
+                <button
+                  key={r ?? 0}
+                  type="button"
+                  onClick={() => setRatingMin(r === ratingMin ? null : r)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius)',
+                    border: `1px solid ${ratingMin === r ? 'var(--accent-dark)' : 'var(--border)'}`,
+                    background: ratingMin === r ? 'color-mix(in srgb, var(--accent) 18%, transparent)' : 'var(--bg-white)',
+                    color: ratingMin === r ? 'var(--accent-dark)' : 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontWeight: 600,
+                  }}
+                >
+                  {r == null ? 'Qualquer' : `${r}+`}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="prestadores-tabs">
+            {SPECIALTY_TABS.map(({ value, label }) => (
               <button
-                key={rating}
+                key={value}
                 type="button"
-                onClick={() => {
-                  setFilters({ 
-                    ...filters, 
-                    rating_min: filters.rating_min === rating ? null : rating 
-                  });
-                }}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 'var(--radius)',
-                  border: `1px solid ${filters.rating_min === rating ? 'var(--accent-dark)' : 'var(--border)'}`,
-                  background: filters.rating_min === rating ? 'var(--accent-light)' : 'var(--bg-white)',
-                  color: filters.rating_min === rating ? 'var(--accent-dark)' : 'var(--text-primary)',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                }}
+                className={`prestadores-tab ${activeTab === value ? 'active' : ''}`}
+                onClick={() => setActiveTab(value)}
               >
-                {Array.from({ length: rating }).map((_, i) => '★')} {rating}+
+                {label}
               </button>
             ))}
           </div>
         </div>
-      </div>
 
-      <div className="card">
+        {/* Results Grid */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>
-            <p style={{ color: 'var(--text-secondary)' }}>Carregando prestadores...</p>
+          <div className="prestadores-loading">
+            <p>Carregando prestadores...</p>
           </div>
         ) : services.length === 0 ? (
-          <EmptyState text={debouncedSearchText ? "Nenhum prestador encontrado para sua busca." : "Nenhum prestador encontrado."} />
-        ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {services.map((s) => (
-              <div key={s.id} className="quick-action">
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700 }}>{s.users?.name || 'Prestador'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{s.specialty || 'Especialidade não informada'} • {Number(s.rating_avg || 0).toFixed(1)} ★</div>
-                </div>
-                <Link className="btn btn-outline" to={`/tinder-do-fluxo/prestadores/${s.id}`}>Ver perfil</Link>
-              </div>
-            ))}
+          <div className="prestadores-empty">
+            <p>{debouncedSearchText ? 'Nenhum prestador encontrado para sua busca.' : 'Nenhum prestador encontrado.'}</p>
           </div>
+        ) : (
+          <>
+            <div className="prestadores-grid">
+              {pageServices.map((s) => (
+                <article key={s.id} className="prestadores-card">
+                  <div className={`prestadores-card-banner ${(s.specialty || '').toUpperCase() === 'AUTOMACAO' ? 'dark' : ''}`}>
+                    <img
+                      className="prestadores-card-avatar"
+                      src={prestadoresAvatarUrl(s)}
+                      alt=""
+                    />
+                  </div>
+                  <div className="prestadores-card-body">
+                    <div>
+                      <div className="prestadores-card-header">
+                        <h3 className="prestadores-card-name">{s.users?.name || 'Prestador'}</h3>
+                        <div className="prestadores-card-rating">
+                          <span className="material-symbols-outlined">star</span>
+                          {Number(s.rating_avg ?? 0).toFixed(1)}
+                        </div>
+                      </div>
+                      <p className="prestadores-card-city">{prestadoresCityDisplay(s)}</p>
+                    </div>
+                    <div className="prestadores-card-tags">
+                      {s.specialty && (
+                        <span className="prestadores-card-tag primary">
+                          {s.specialty === 'TRAFEGO' ? 'Tráfego' : s.specialty === 'AUTOMACAO' ? 'Automação' : s.specialty === 'COPY' ? 'Copy' : s.specialty}
+                        </span>
+                      )}
+                      {s.certification && (
+                        <span className="prestadores-card-tag secondary">{s.certification}</span>
+                      )}
+                    </div>
+                    <p className="prestadores-card-bio">
+                      {(s.bio || s.experience || 'Sem descrição cadastrada.').replace(/\s+/g, ' ').trim().slice(0, 160)}
+                      {((s.bio || s.experience) && (s.bio || s.experience).length > 160) ? '…' : ''}
+                    </p>
+                    <Link className="prestadores-card-cta" to={`/tinder-do-fluxo/prestadores/${s.id}`}>
+                      Ver Perfil Completo
+                      <span className="material-symbols-outlined">arrow_forward</span>
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="prestadores-pagination">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="Página anterior"
+                >
+                  <span className="material-symbols-outlined">chevron_left</span>
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className={currentPage === p ? 'active' : ''}
+                    onClick={() => setCurrentPage(p)}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  aria-label="Próxima página"
+                >
+                  <span className="material-symbols-outlined">chevron_right</span>
+                </button>
+              </div>
+            )}
+          </>
         )}
+
+        {/* Footer */}
+        <footer className="prestadores-footer">
+          <div className="prestadores-footer-inner">
+            <div className="prestadores-footer-logo">
+              <div className="prestadores-footer-logo-icon">
+                <span className="material-symbols-outlined">local_fire_department</span>
+              </div>
+              <span>Tinder do Fluxo</span>
+            </div>
+            <div className="prestadores-footer-links">
+              <a href="#">Sobre</a>
+              <a href="#">Termos de Uso</a>
+              <a href="#">Privacidade</a>
+              <a href="#">Suporte</a>
+            </div>
+            <div className="prestadores-footer-copy">
+              © {new Date().getFullYear()} Tinder do Fluxo. Todos os direitos reservados.
+            </div>
+          </div>
+        </footer>
       </div>
     </TinderDoFluxoPageShell>
   );
@@ -2090,50 +2210,246 @@ export function TinderAvaliacoesPrestadorPage() {
   );
 }
 
+function prestadorProfileAvatarUrl(s: { photo_url?: string | null; users?: { name?: string } | null }): string {
+  if (s?.photo_url && String(s.photo_url).trim()) return s.photo_url;
+  const name = s?.users?.name || 'Prestador';
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=256&background=94a3b8&color=fff`;
+}
+
+function prestadorProfileCityDisplay(s: { city?: string | null; state?: string | null }): string {
+  const city = (s?.city || '').trim();
+  const state = (s?.state || '').trim();
+  if (city && state) return `${city}, ${state}`;
+  return city || state || 'Localização não informada';
+}
+
+function formatPrecoMinimo(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return '';
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
+}
+
+const PRESTADOR_TABS = [
+  { id: 'sobre', label: 'Sobre & Experiência' },
+  { id: 'portfolio', label: 'Portfólio' },
+  { id: 'avaliacoes', label: 'Avaliações' },
+  { id: 'servicos', label: 'Serviços' },
+] as const;
+
 export function TinderServiceDetailPage() {
   const { id } = useParams();
   const [service, setService] = useState<any>(null);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<(typeof PRESTADOR_TABS)[number]['id']>('sobre');
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [message, setMessage] = useState('');
+
   useEffect(() => {
     if (!id) return;
-    api.get<{ service: any }>(`/api/tinder-do-fluxo/services/${id}`).then((r) => setService(r.service));
-    api.get<{ reviews: any[] }>(`/api/tinder-do-fluxo/services/${id}/reviews`).then((r) => setReviews(r.reviews || []));
+    setLoading(true);
+    Promise.all([
+      api.get<{ service: any }>(`/api/tinder-do-fluxo/services/${id}`).then((r) => r.service),
+      api.get<{ reviews: any[] }>(`/api/tinder-do-fluxo/services/${id}/reviews`).then((r) => r.reviews || []),
+    ])
+      .then(([svc, rev]) => {
+        setService(svc);
+        setReviews(rev);
+      })
+      .catch(() => {
+        setService(null);
+        setReviews([]);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   const submitReview = async () => {
     if (!id) return;
     await api.post(`/api/tinder-do-fluxo/services/${id}/reviews`, { rating, comment });
     setMessage('Avaliação enviada.');
+    setComment('');
     const r = await api.get<{ reviews: any[] }>(`/api/tinder-do-fluxo/services/${id}/reviews`);
     setReviews(r.reviews || []);
   };
 
+  const beneficios: string[] = Array.isArray(service?.beneficios) ? service.beneficios : [];
+  if (beneficios.length === 0 && service) {
+    beneficios.push('Análise de Avatar Gratuita', '2 Rodadas de Revisão', 'Entrega em até 7 dias úteis');
+  }
+
+  if (loading) {
+    return (
+      <TinderDoFluxoPageShell title="Perfil do Prestador">
+        <div className="card" style={{ padding: 48, textAlign: 'center' }}>
+          <EmptyState text="Carregando prestador..." />
+        </div>
+      </TinderDoFluxoPageShell>
+    );
+  }
+
+  if (!service) {
+    return (
+      <TinderDoFluxoPageShell title="Perfil do Prestador">
+        <div className="card">
+          <EmptyState text="Prestador não encontrado." />
+        </div>
+      </TinderDoFluxoPageShell>
+    );
+  }
+
+  const memberSince = service.created_at ? new Date(service.created_at).getFullYear() : null;
+  const whatsappUrl = whatsappLink(service.whatsapp ?? '');
+
   return (
     <TinderDoFluxoPageShell title="Perfil do Prestador">
-      {!service ? <div className="card"><EmptyState text="Carregando prestador..." /></div> : (
-        <>
-          <div className="card">
-            <h3>{service.users?.name || 'Prestador'}</h3>
-            <p style={{ marginTop: 8 }}>{service.bio || 'Sem bio cadastrada.'}</p>
-            <p style={{ marginTop: 8, color: 'var(--text-muted)' }}>WhatsApp: {service.whatsapp || '-'}</p>
-          </div>
-          <div className="card" style={{ marginTop: 12 }}>
-            <div className="form-group"><label>Nota (1-5)</label><input type="number" min={1} max={5} value={rating} onChange={(e) => setRating(Number(e.target.value))} /></div>
-            <div className="form-group"><label>Comentário</label><textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} /></div>
-            <button className="btn btn-primary" type="button" onClick={submitReview}>Avaliar prestador</button>
-            {message && <p style={{ marginTop: 8, color: 'var(--green)' }}>{message}</p>}
-          </div>
-          <div className="card" style={{ marginTop: 12 }}>
-            <span className="card-title">Avaliações</span>
-            <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-              {reviews.length === 0 ? <EmptyState text="Sem avaliações." /> : reviews.map((r) => <div key={r.id} className="quick-action">Nota {r.rating} ★ — {r.comment || 'Sem comentário'}</div>)}
+      <div className="prestador-profile">
+        <div className="prestador-profile-header-card">
+          <div className="prestador-profile-header">
+            <div className="prestador-profile-avatar-wrap">
+              <img className="prestador-profile-avatar" src={prestadorProfileAvatarUrl(service)} alt="" />
+              <span className="prestador-profile-avatar-online" title="Online" />
+            </div>
+            <div className="prestador-profile-header-text">
+              <div className="prestador-profile-name-row">
+                <h2 className="prestador-profile-name">{service.users?.name || 'Prestador'}</h2>
+                {service.certification && (
+                  <span className="prestador-profile-badge">
+                    <span className="material-symbols-outlined">verified</span>
+                    {service.certification}
+                  </span>
+                )}
+              </div>
+              {service.headline && <p className="prestador-profile-headline">{service.headline}</p>}
+              <div className="prestador-profile-meta">
+                <span><span className="material-symbols-outlined">location_on</span> {prestadorProfileCityDisplay(service)}</span>
+                <span><span className="material-symbols-outlined">star</span> {Number(service.rating_avg || 0).toFixed(1)} ({service.rating_count || 0} avaliações)</span>
+                {memberSince && <span><span className="material-symbols-outlined">calendar_today</span> Membro desde {memberSince}</span>}
+              </div>
+            </div>
+            <div className="prestador-profile-header-actions">
+              <button type="button" title="Compartilhar"><span className="material-symbols-outlined">share</span></button>
+              <button type="button" title="Favoritar"><span className="material-symbols-outlined">favorite</span></button>
             </div>
           </div>
-        </>
-      )}
+        </div>
+
+        <div className="prestador-profile-tabs">
+          {PRESTADOR_TABS.map((tab) => (
+            <button key={tab.id} type="button" className={`prestador-profile-tab ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="prestador-profile-grid">
+          <div className="prestador-profile-main">
+            {activeTab === 'sobre' && (
+              <>
+                <section>
+                  <h3><span className="material-symbols-outlined">description</span> Bio Profissional</h3>
+                  <p className="prestador-profile-bio-text">{service.bio || 'Sem bio cadastrada.'}</p>
+                  {service.experience && <p className="prestador-profile-bio-text" style={{ marginTop: 16 }}>{service.experience}</p>}
+                </section>
+                <section>
+                  <h3><span className="material-symbols-outlined">history_edu</span> Experiência & Certificações</h3>
+                  {service.certification && (
+                    <div className="prestador-profile-exp-card">
+                      <div className="prestador-profile-exp-icon"><span className="material-symbols-outlined">workspace_premium</span></div>
+                      <div><h4>{service.certification}</h4><p>Certificação</p></div>
+                    </div>
+                  )}
+                  {service.specialty && (
+                    <div className="prestador-profile-exp-card">
+                      <div className="prestador-profile-exp-icon"><span className="material-symbols-outlined">campaign</span></div>
+                      <div><h4>Especialidade: {service.specialty}</h4><p>{service.headline || service.experience || '—'}</p></div>
+                    </div>
+                  )}
+                </section>
+              </>
+            )}
+            {activeTab === 'portfolio' && (
+              <section>
+                <h3><span className="material-symbols-outlined">photo_library</span> Portfólio</h3>
+                <p className="prestador-profile-bio-text">{service.portfolio || 'Portfólio não informado.'}</p>
+              </section>
+            )}
+            {activeTab === 'servicos' && (
+              <section>
+                <h3><span className="material-symbols-outlined">work</span> Serviços</h3>
+                <p className="prestador-profile-bio-text">Especialidade: {service.specialty || '—'}. {service.bio || ''}</p>
+              </section>
+            )}
+            {activeTab === 'avaliacoes' && (
+              <section>
+                <div className="prestador-profile-reviews-header">
+                  <h3><span className="material-symbols-outlined">reviews</span> Avaliações dos Clientes</h3>
+                  <div className="prestador-profile-review-rating-summary">
+                    <span>{Number(service.rating_avg || 0).toFixed(1)}</span>
+                    <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
+                    <span>({reviews.length})</span>
+                  </div>
+                </div>
+                {reviews.length === 0 ? <EmptyState text="Sem avaliações." /> : (
+                  reviews.slice(0, 10).map((r) => (
+                    <div key={r.id} className="prestador-profile-review-item">
+                      <div className="prestador-profile-review-top">
+                        <div className="prestador-profile-review-author">
+                          <img className="prestador-profile-review-avatar" src={`https://ui-avatars.com/api/?name=${encodeURIComponent(r.users?.name || 'A')}&size=80`} alt="" />
+                          <div><p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>{r.users?.name || 'Anônimo'}</p><p className="author-role">Avaliação</p></div>
+                        </div>
+                        <div className="prestador-profile-review-stars">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <span key={i} className="material-symbols-outlined" style={{ fontVariationSettings: i < (r.rating || 0) ? '"FILL" 1' : '"FILL" 0' }}>star</span>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="prestador-profile-review-body">"{r.comment || 'Sem comentário.'}"</p>
+                    </div>
+                  ))
+                )}
+                {reviews.length > 10 && <button type="button" className="prestador-profile-btn-all-reviews">Ver todas as {reviews.length} avaliações</button>}
+                <div className="prestador-profile-form-review">
+                  <h4 style={{ marginBottom: 16 }}>Deixar avaliação</h4>
+                  <div className="form-group"><label>Nota (1-5)</label><input type="number" min={1} max={5} value={rating} onChange={(e) => setRating(Number(e.target.value))} /></div>
+                  <div className="form-group"><label>Comentário</label><textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Conte sua experiência..." /></div>
+                  <button className="btn btn-primary" type="button" onClick={submitReview}>Avaliar prestador</button>
+                  {message && <p style={{ marginTop: 8, color: 'var(--green)' }}>{message}</p>}
+                </div>
+              </section>
+            )}
+          </div>
+
+          <aside className="prestador-profile-sidebar">
+            <div className="prestador-profile-price-card">
+              <p className="prestador-profile-price-label">A partir de</p>
+              <p className="prestador-profile-price-value">
+                {formatPrecoMinimo(service.preco_minimo) || '—'}
+                {service.preco_minimo != null && <span> /projeto</span>}
+              </p>
+              <div className="prestador-profile-benefits">
+                {beneficios.map((b, i) => (
+                  <div key={i} className="prestador-profile-benefit"><span className="material-symbols-outlined">check_circle</span><span>{b}</span></div>
+                ))}
+              </div>
+              {whatsappUrl && (
+                <a className="prestador-profile-whatsapp-btn" href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                  <span className="material-symbols-outlined">chat</span> Chamar no WhatsApp
+                </a>
+              )}
+              <button type="button" className="prestador-profile-orcamento-btn">Solicitar Orçamento</button>
+              <p className="prestador-profile-secure-text">Pagamento Seguro Via Plataforma</p>
+            </div>
+            <div className="prestador-profile-portfolio-card">
+              <h4>Trabalhos Recentes</h4>
+              <div className="prestador-profile-portfolio-grid">
+                <div className="prestador-profile-portfolio-thumb" style={{ background: 'var(--bg-main)' }} />
+                <div className="prestador-profile-portfolio-thumb" style={{ background: 'var(--bg-main)' }} />
+              </div>
+              <button type="button" className="prestador-profile-orcamento-btn" style={{ marginTop: 16, background: 'transparent', border: 'none', fontSize: 14 }}>Ver Portfólio Completo</button>
+            </div>
+          </aside>
+        </div>
+      </div>
     </TinderDoFluxoPageShell>
   );
 }

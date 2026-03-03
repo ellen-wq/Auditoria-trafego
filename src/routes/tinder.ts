@@ -815,16 +815,29 @@ router.get('/services/:id', async (req: Request, res: Response): Promise<void> =
     return;
   }
   const supabase = getSupabase();
-  const { data, error } = await supabase
+  const { data: profile, error } = await supabase
     .from('tinder_service_profiles')
-    .select('*, users(id, name, email, role)')
+    .select('*')
     .eq('id', profileId)
     .single();
-  if (error || !data) {
+  if (error || !profile) {
     res.status(404).json({ error: 'Prestador não encontrado.' });
     return;
   }
-  res.json({ service: data });
+  const userId = (profile as any).user_id;
+  const { data: userRoles } = await supabase
+    .from('user_roles')
+    .select('user_id, name, role')
+    .eq('user_id', userId)
+    .maybeSingle();
+  let email = '';
+  try {
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const u = authUsers?.users?.find((u: any) => u.id === userId);
+    if (u?.email) email = u.email;
+  } catch (_) {}
+  const users = userRoles ? { id: userRoles.user_id, name: userRoles.name, email, role: userRoles.role } : null;
+  res.json({ service: { ...profile, users } });
 });
 
 router.get('/services/:id/reviews', async (req: Request, res: Response): Promise<void> => {
@@ -834,16 +847,30 @@ router.get('/services/:id/reviews', async (req: Request, res: Response): Promise
     return;
   }
   const supabase = getSupabase();
-  const { data, error } = await supabase
+  const { data: reviews, error } = await supabase
     .from('tinder_reviews')
-    .select('*, users!tinder_reviews_reviewer_id_fkey(id, name)')
+    .select('*')
     .eq('service_profile_id', profileId)
     .order('created_at', { ascending: false });
   if (error) {
     res.status(500).json({ error: 'Erro ao buscar avaliações.' });
     return;
   }
-  res.json({ reviews: data || [] });
+  const list = reviews || [];
+  const reviewerIds = [...new Set(list.map((r: any) => r.reviewer_id).filter(Boolean))];
+  let reviewerMap = new Map<string, { name: string }>();
+  if (reviewerIds.length > 0) {
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('user_id, name')
+      .in('user_id', reviewerIds);
+    reviewerMap = new Map((roles || []).map((r: any) => [r.user_id, { name: r.name }]));
+  }
+  const reviewsWithUsers = list.map((r: any) => ({
+    ...r,
+    users: reviewerMap.get(r.reviewer_id) ? { id: r.reviewer_id, name: reviewerMap.get(r.reviewer_id)!.name } : null
+  }));
+  res.json({ reviews: reviewsWithUsers });
 });
 
 router.post('/services/:id/reviews', async (req: Request, res: Response): Promise<void> => {
