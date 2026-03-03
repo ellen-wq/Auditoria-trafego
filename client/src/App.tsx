@@ -88,7 +88,7 @@ export default function App() {
       <Route path="/tinder-do-fluxo/vagas/criar" element={<ProtectedRoute allowedRoles={['MENTORADO', 'PRESTADOR', 'LIDERANCA']}><TinderJobCreatePage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/vagas/minhas-candidaturas" element={<ProtectedRoute allowedRoles={['MENTORADO', 'PRESTADOR', 'LIDERANCA']}><TinderMyApplicationsPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/vagas/:id" element={<ProtectedRoute allowedRoles={['MENTORADO', 'PRESTADOR', 'LIDERANCA']}><TinderJobDetailPage /></ProtectedRoute>} />
-      <Route path="/tinder-do-fluxo/matches" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']} skipProfileCheck><TinderMatchesPage /></ProtectedRoute>} />
+      <Route path="/tinder-do-fluxo/matches" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA', 'PRESTADOR']} skipProfileCheck><TinderMatchesPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/favoritos" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderFavoritosPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/perfil" element={<ProtectedRoute skipProfileCheck><ProfileRouterPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/profile-view" element={<ProtectedRoute skipProfileCheck><ProfileViewPage /></ProtectedRoute>} />

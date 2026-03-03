@@ -1,31 +1,48 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import logoFluxo from '../assets/fluxo.logo.animation.svg';
 
+const LOGIN_EMAIL_KEY = 'fluxer_login_email';
+const DEFAULT_AFTER_LOGIN = '/tinder-do-fluxo/matches';
+
+function getStoredEmail(): string {
+  try {
+    return sessionStorage.getItem(LOGIN_EMAIL_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(getStoredEmail);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  function homeByRole(role: string): string {
-    if (role === 'LIDERANCA') return '/admin/dashboard';
-    // MENTORADO and PRESTADOR must create profile first
-    if (role === 'PRESTADOR' || role === 'MENTORADO') return '/tinder-do-fluxo/perfil';
-    return '/app/upload';
-  }
+  const handleEmailChange = useCallback((value: string) => {
+    setEmail(value);
+    try {
+      if (value) sessionStorage.setItem(LOGIN_EMAIL_KEY, value);
+      else sessionStorage.removeItem(LOGIN_EMAIL_KEY);
+    } catch {
+      // ignora indisponibilidade de storage
+    }
+  }, []);
 
+  // Só redireciona "já logado" se o formulário estiver vazio (evita redirecionar enquanto o usuário digita)
   useEffect(() => {
     const user = api.getUser();
-    if (user) {
-      navigate(homeByRole(user.role), { replace: true });
+    if (user && !email && !password) {
+      navigate(DEFAULT_AFTER_LOGIN, { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, email, password]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    e.stopPropagation();
+    if (loading) return;
     setError('');
     setLoading(true);
 
@@ -35,12 +52,27 @@ export default function LoginPage() {
         setError('Resposta inválida do servidor. Tente novamente.');
         return;
       }
+      try {
+        sessionStorage.removeItem(LOGIN_EMAIL_KEY);
+      } catch {
+        // ignora
+      }
       api.setAuth(data.token, data.user);
-      navigate(homeByRole(data.user.role), { replace: true });
+      navigate(DEFAULT_AFTER_LOGIN, { replace: true });
     } catch (err: any) {
       setError(err.message || 'Erro ao entrar.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  function handleFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!loading) {
+        const form = e.currentTarget;
+        form.requestSubmit();
+      }
     }
   }
 
@@ -59,7 +91,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} action="javascript:void(0)">
           <div className="form-group">
             <label htmlFor="email">Email</label>
             <input
@@ -67,8 +99,9 @@ export default function LoginPage() {
               id="email"
               placeholder="seu@email.com"
               required
+              autoComplete="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => handleEmailChange(e.target.value)}
               disabled={loading}
             />
           </div>
@@ -79,6 +112,7 @@ export default function LoginPage() {
               id="password"
               placeholder="Sua senha"
               required
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
