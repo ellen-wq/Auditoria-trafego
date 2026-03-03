@@ -138,6 +138,9 @@ export function TinderExpertPage() {
   const [lookingFor, setLookingFor] = useState<string[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
+  // Busca do header (placeholder: "Buscar por objetivo, nome...")
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
   const currentUser = api.getUser();
 
@@ -146,10 +149,10 @@ export function TinderExpertPage() {
     loadAvailableCities();
   }, []);
 
-  // Load discovery profiles
+  // Load discovery profiles (inclui busca por nome/objetivo)
   useEffect(() => {
     loadDiscoveryProfiles();
-  }, [partnershipTypes, lookingFor, cities]);
+  }, [partnershipTypes, lookingFor, cities, debouncedSearchQuery]);
 
   const loadAvailableCities = async () => {
     try {
@@ -165,6 +168,9 @@ export function TinderExpertPage() {
     setLoading(true);
     try {
     const params = new URLSearchParams();
+      if (debouncedSearchQuery?.trim()) {
+        params.append('q', debouncedSearchQuery.trim());
+      }
       if (lookingFor.length > 0) {
         if (lookingFor.includes('expert')) {
           params.append('tipo_perfil', 'expert');
@@ -186,7 +192,15 @@ export function TinderExpertPage() {
       const res = await api.get<{ users?: any[] }>(url);
       const users = res.users || [];
 
-      // Transform users to match ProfileDiscoveryCard format
+      // Mapear modelo_trabalho para label de formato (tipos de parceria / formato)
+      const formatoLabel: Record<string, string> = {
+        remoto: 'Remoto',
+        hibrido: 'Híbrido',
+        presencial: 'Presencial',
+        indiferente: 'Indiferente',
+      };
+
+      // Transform users to match ProfileDiscoveryCard format (conectado às colunas do Supabase)
       const transformed = users.map((u: any) => {
         const expertProfile = u.tinder_expert_profiles || u.tinder_mentor_profiles;
         const mentorProfile = u.tinder_mentor_profiles;
@@ -194,10 +208,17 @@ export function TinderExpertPage() {
         const isExpert = expertProfile?.is_expert || false;
         const isCoprodutor = expertProfile?.is_coproducer || false;
 
+        const modelo = mentorProfile?.modelo_trabalho;
+        const formato = modelo ? (formatoLabel[modelo] || modelo) : undefined;
+
         return {
           id: u.id,
           name: u.name,
           photo_url: mentorProfile?.photo_url,
+          objective: mentorProfile?.headline || expertProfile?.goal_text || '',
+          bio: mentorProfile?.bio || '',
+          niche: mentorProfile?.niche || undefined,
+          formato: formato || undefined,
           isExpert: isExpert && !isCoprodutor,
           isCoprodutor: isCoprodutor && !isExpert,
           products: [],
@@ -245,10 +266,13 @@ export function TinderExpertPage() {
     
     api.get(`/api/tinder-do-fluxo/profile/me?userId=${currentProfile.id}`)
       .then((profileData: any) => {
+        const profileObj = profileData.profile || {};
         setDiscoveryProfiles(prev => prev.map((p, idx) => {
           if (idx === currentProfileIndex) {
             return {
               ...p,
+              objective: profileObj.headline || p.objective,
+              bio: profileObj.bio_busca || profileObj.bio || p.bio,
               products: profileData.expertDetails?.products || [],
               skills: profileData.skills || [],
               skillsExtra: profileData.skillsExtra || [],
@@ -333,17 +357,182 @@ export function TinderExpertPage() {
     setPartnershipTypes([]);
     setLookingFor([]);
     setCities([]);
+    setSearchQuery('');
   };
 
   const currentProfile = discoveryProfiles[currentProfileIndex];
 
+  const toggleLookingFor = (value: 'expert' | 'coprodutor') => {
+    if (lookingFor.includes(value)) {
+      setLookingFor(lookingFor.filter((t) => t !== value));
+    } else {
+      setLookingFor([...lookingFor, value]);
+    }
+  };
+
   return (
-    <TinderDoFluxoPageShell title="Tinder do Fluxo" subtitle="Descubra perfis e faça matches">
-      {/* Header com link para matches */}
+    <TinderDoFluxoPageShell title="Expert & Coprodutor" subtitle="Descubra perfis e faça matches">
+      <div id="tinder-expert-page-root" data-page="expert">
+      {/* Header com busca (spec: Buscar por objetivo, nome...) + Expert/Coprodutor + ícones */}
+      <header
+        data-page="expert-search"
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 40,
+          height: 80,
+          padding: '0 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          background: 'var(--bg-white)',
+          borderBottom: '1px solid var(--border)',
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, maxWidth: 560 }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <label htmlFor="expert-search-input" style={{ position: 'absolute', left: -9999 }}>Busca</label>
+            <span
+              style={{
+                position: 'absolute',
+                left: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--text-muted)',
+                fontSize: 18,
+                pointerEvents: 'none',
+              }}
+              aria-hidden
+            >
+              🔍
+            </span>
+            <input
+              id="expert-search-input"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por objetivo, nome..."
+              style={{
+                width: '100%',
+                padding: '10px 12px 10px 40px',
+                fontSize: 14,
+                border: 'none',
+                borderRadius: 12,
+                background: 'var(--bg-secondary)',
+                color: 'var(--text)',
+                outline: 'none',
+              }}
+              onFocus={(e) => {
+                e.target.style.boxShadow = '0 0 0 2px var(--green)';
+              }}
+              onBlur={(e) => {
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => toggleLookingFor('expert')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '10px 14px',
+                fontSize: 12,
+                fontWeight: 700,
+                border: 'none',
+                borderRadius: 12,
+                background: lookingFor.includes('expert') ? 'var(--accent-dark)' : 'var(--bg-secondary)',
+                color: lookingFor.includes('expert') ? 'white' : 'var(--text)',
+                cursor: 'pointer',
+              }}
+            >
+              Expert
+              <span style={{ fontSize: 14 }}>▼</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleLookingFor('coprodutor')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '10px 14px',
+                fontSize: 12,
+                fontWeight: 700,
+                border: 'none',
+                borderRadius: 12,
+                background: lookingFor.includes('coprodutor') ? 'var(--purple)' : 'var(--bg-secondary)',
+                color: lookingFor.includes('coprodutor') ? 'white' : 'var(--text)',
+                cursor: 'pointer',
+              }}
+            >
+              Coprodutor
+              <span style={{ fontSize: 14 }}>▼</span>
+            </button>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Link
+            to="/tinder-do-fluxo/matches"
+            style={{
+              width: 40,
+              height: 40,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-muted)',
+              textDecoration: 'none',
+              position: 'relative',
+            }}
+            title="Notificações / Matches"
+          >
+            🔔
+            <span
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: 'var(--red)',
+                border: '2px solid var(--bg-white)',
+              }}
+            />
+          </Link>
+          <button
+            type="button"
+            style={{
+              width: 40,
+              height: 40,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              background: 'var(--bg-secondary)',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+            }}
+            title="Filtros"
+            onClick={() => document.querySelector('.tinder-filters-card')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            ⚙️
+          </button>
+        </div>
+      </header>
+
+      {/* Link rápido para matches (mantido) */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
         <Link to="/tinder-do-fluxo/matches" className="btn btn-outline">
           👋 Ver Matches
-          </Link>
+        </Link>
       </div>
 
       {/* Filters */}
@@ -365,15 +554,17 @@ export function TinderExpertPage() {
           </div>
       ) : discoveryProfiles.length === 0 ? (
         <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
-            Nenhum perfil encontrado com os filtros selecionados
+          <p style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
+            {partnershipTypes.length > 0 || lookingFor.length > 0 || searchQuery.trim()
+              ? 'Nenhum perfil encontrado com os filtros ou busca selecionados.'
+              : 'Nenhum perfil disponível no momento. O feed mostra outros usuários Expert ou Coprodutor; verifique se há outros perfis no sistema.'}
           </p>
-          {(partnershipTypes.length > 0 || lookingFor.length > 0) && (
+          {(partnershipTypes.length > 0 || lookingFor.length > 0 || searchQuery.trim()) && (
             <button className="btn btn-outline" onClick={handleClearFilters}>
               Limpar filtros
             </button>
-        )}
-      </div>
+          )}
+        </div>
       ) : !currentProfile ? (
         <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
           <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
@@ -409,6 +600,7 @@ export function TinderExpertPage() {
           }
         }}
       />
+      </div>
     </TinderDoFluxoPageShell>
   );
 }
@@ -594,46 +786,86 @@ export function TinderPrestadoresPage() {
   );
 }
 
+// Mapeia specialty (tinder_jobs.specialty) para ícone Material Symbols
+function getJobCardIcon(specialty: string | undefined): string {
+  if (!specialty) return 'work';
+  const s = (specialty || '').toUpperCase();
+  if (s.includes('DESIGN') || s.includes('UI') || s.includes('UX')) return 'palette';
+  if (s.includes('CODE') || s.includes('FRONT') || s.includes('REACT') || s.includes('DEV')) return 'code';
+  if (s.includes('SOCIAL') || s.includes('CAMPAIGN') || s.includes('MÍDIA')) return 'campaign';
+  if (s.includes('MOTION') || s.includes('VIDEO') || s.includes('EDIT')) return 'movie_edit';
+  if (s.includes('RESEARCH') || s.includes('PESQUISA')) return 'search_insights';
+  if (s.includes('COPY') || s.includes('TRAFEGO') || s.includes('TRAFEGO')) return 'campaign';
+  return 'work';
+}
+
+// Formata prazo para o card: "Prazo: X dias" ou "Encerrada há X dias" (Supabase: tinder_jobs.deadline, status)
+function formatPrazo(job: { status?: string; deadline?: string | null }): string {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const deadlineStr = job.deadline ? String(job.deadline).split('T')[0] : null;
+  const isClosed = job.status === 'CLOSED' || (deadlineStr && new Date(deadlineStr) < today);
+
+  if (!deadlineStr) return isClosed ? 'Encerrada' : 'Sem prazo';
+  const deadline = new Date(deadlineStr);
+  deadline.setHours(0, 0, 0, 0);
+  const diffMs = deadline.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (isClosed) {
+    const pastMs = today.getTime() - deadline.getTime();
+    const pastDays = Math.floor(pastMs / (1000 * 60 * 60 * 24));
+    if (pastDays <= 0) return 'Encerrada hoje';
+    return pastDays === 1 ? 'Encerrada há 1 dia' : `Encerrada há ${pastDays} dias`;
+  }
+  if (diffDays <= 0) return 'Prazo: hoje';
+  return diffDays === 1 ? 'Prazo: 1 dia' : `Prazo: ${diffDays} dias`;
+}
+
+// Verifica se vaga está aberta (status OPEN e deadline não vencido)
+function isJobOpen(job: { status?: string; deadline?: string | null }): boolean {
+  if (job.status !== 'OPEN') return false;
+  if (!job.deadline) return true;
+  const d = String(job.deadline).split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
+  return d >= today;
+}
+
+const TIPO_VAGA_OPTIONS = ['Projeto', 'Fixo', 'Parceria'];
+const MODELO_TRABALHO_OPTIONS = ['Remoto', 'Presencial', 'Híbrido'];
+
 export function TinderVagasPage() {
   const user = api.getUser();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get('tab') || 'abertas';
+  const tabParam = searchParams.get('tab') || 'minhas';
+  const statusTab: 'minhas' | 'abertas' | 'encerradas' =
+    tabParam === 'todas' ? 'minhas' : tabParam === 'abertas' || tabParam === 'encerradas' ? tabParam : 'minhas';
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 400);
   const [filters, setFilters] = useState({
     tipo_vaga: '',
     pretensao_min: '',
     pretensao_max: '',
-    tipo_contratacao: '',
-    modelo_trabalho: '',
-    habilidades: {
-      copywriter: false,
-      trafego_pago: [] as string[],
-      automacao_ia: false
-    }
+    modelo_trabalho: ''
   });
   const [jobs, setJobs] = useState<any[]>([]);
   const [totalVagas, setTotalVagas] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
-  const perPage = 20;
+  const perPage = 12;
 
-  const tipoVagaOptions = ['Projeto', 'Fixo', 'Parceria'];
-  const tipoContratacaoOptions = ['PJ', 'CLT', 'Freelancer', 'Indiferente'];
-  const modeloTrabalhoOptions = ['Remoto', 'Presencial', 'Híbrido', 'Indiferente'];
-  const trafegoSubcategorias = [
-    { value: 'facebook_ads', label: 'Facebook Ads' },
-    { value: 'google_ads', label: 'Google Ads' },
-    { value: 'tiktok_ads', label: 'TikTok Ads' },
-    { value: 'linkedin_ads', label: 'LinkedIn Ads' },
-    { value: 'twitter_ads', label: 'Twitter Ads' },
-    { value: 'pinterest_ads', label: 'Pinterest Ads' },
-    { value: 'native_ads', label: 'Native Ads' }
-  ];
+  const statusFilterApi = statusTab === 'minhas' ? 'all' : statusTab === 'abertas' ? 'open' : 'closed';
+  const hasActiveFilters = !!(
+    debouncedSearch ||
+    filters.tipo_vaga ||
+    filters.pretensao_min ||
+    filters.pretensao_max ||
+    filters.modelo_trabalho
+  );
 
-  // Refetch ao voltar da candidatura (garante que "Já se candidatou" apareça)
   useEffect(() => {
     if ((location.state as { fromApply?: boolean })?.fromApply) {
       loadJobs();
@@ -641,39 +873,27 @@ export function TinderVagasPage() {
     }
   }, [location.state]);
 
-  // Debounce para busca
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadJobs();
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery, filters, page, tab]);
+    loadJobs();
+  }, [statusTab, page, debouncedSearch, filters.tipo_vaga, filters.pretensao_min, filters.pretensao_max, filters.modelo_trabalho]);
 
   const loadJobs = async () => {
     setLoading(true);
     setError('');
     try {
       const params = new URLSearchParams();
-      params.append('tab', tab);
-      if (searchQuery) params.append('q', searchQuery);
-      if (filters.tipo_vaga) params.append('tipo_vaga', filters.tipo_vaga);
-      if (filters.pretensao_min) params.append('pretensao_min', filters.pretensao_min);
-      if (filters.pretensao_max) params.append('pretensao_max', filters.pretensao_max);
-      if (filters.tipo_contratacao) params.append('tipo_contratacao', filters.tipo_contratacao);
-      if (filters.modelo_trabalho) params.append('modelo_trabalho', filters.modelo_trabalho);
-      if (filters.habilidades.copywriter || filters.habilidades.trafego_pago.length > 0 || filters.habilidades.automacao_ia) {
-        const habilidadesObj: any = {};
-        if (filters.habilidades.copywriter) habilidadesObj.copywriter = true;
-        if (filters.habilidades.trafego_pago.length > 0) habilidadesObj.trafego_pago = filters.habilidades.trafego_pago;
-        if (filters.habilidades.automacao_ia) habilidadesObj.automacao_ia = true;
-        params.append('habilidades', JSON.stringify(habilidadesObj));
-      }
-      params.append('page', page.toString());
-      params.append('per_page', perPage.toString());
-
-      const res = await api.get<{ jobs: any[], total_vagas: number }>(`/api/tinder-do-fluxo/jobs?${params.toString()}`);
+      params.set('tab', 'minhas');
+      params.set('status_filter', statusFilterApi);
+      params.set('page', page.toString());
+      params.set('per_page', perPage.toString());
+      if (debouncedSearch) params.set('q', debouncedSearch);
+      if (filters.tipo_vaga) params.set('tipo_vaga', filters.tipo_vaga.toLowerCase());
+      if (filters.pretensao_min) params.set('pretensao_min', filters.pretensao_min);
+      if (filters.pretensao_max) params.set('pretensao_max', filters.pretensao_max);
+      if (filters.modelo_trabalho) params.set('modelo_trabalho', filters.modelo_trabalho.toLowerCase());
+      const res = await api.get<{ jobs: any[]; total_vagas: number }>(`/api/tinder-do-fluxo/jobs?${params.toString()}`);
       setJobs(res.jobs || []);
-      setTotalVagas(res.total_vagas || 0);
+      setTotalVagas(res.total_vagas ?? 0);
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar vagas.');
       setJobs([]);
@@ -682,276 +902,338 @@ export function TinderVagasPage() {
     }
   };
 
-  const formatRelativeDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffHours < 1) return 'Publicado há menos de 1 hora';
-    if (diffHours < 24) return `Publicado há ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
-    return `Publicado há ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`;
+  const clearFilters = () => {
+    setSearchQuery('');
+    setFilters({ tipo_vaga: '', pretensao_min: '', pretensao_max: '', modelo_trabalho: '' });
+    setPage(1);
   };
 
-  const truncateDescription = (text: string, maxLength: number = 240): string => {
-    if (!text) return '';
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength).trim() + '...';
-  };
+  const totalPages = Math.max(1, Math.ceil(totalVagas / perPage));
+
+  const canCreate = user?.role === 'MENTORADO' || user?.role === 'PRESTADOR' || user?.role === 'LIDERANCA';
 
   return (
-    <TinderDoFluxoPageShell title="Vagas">
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <GlobalSearch
-            placeholder="Buscar vagas por título, empresa, cidade..."
-            onSearch={setSearchQuery}
-            initialValue={searchQuery}
-          />
+    <TinderDoFluxoPageShell
+      title="Minhas Vagas"
+      subtitle="Gerencie suas oportunidades e encontre talentos de elite."
+      headerRight={
+        <div className="vagas-tabs">
+          {(['minhas', 'abertas', 'encerradas'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={statusTab === t ? 'active' : ''}
+              onClick={() => {
+                setSearchParams((p) => {
+                  const next = new URLSearchParams(p);
+                  next.set('tab', t);
+                  return next;
+                });
+                setPage(1);
+              }}
+            >
+              {t === 'minhas' ? 'Minhas' : t === 'abertas' ? 'Abertas' : 'Encerradas'}
+            </button>
+          ))}
         </div>
-        <Link className="btn btn-outline" to="/tinder-do-fluxo/vagas/minhas-candidaturas">Minhas Candidaturas</Link>
-        {(user?.role === 'MENTORADO' || user?.role === 'PRESTADOR' || user?.role === 'LIDERANCA') && (
-          <Link className="btn btn-primary" to="/tinder-do-fluxo/vagas/criar">Criar vaga</Link>
-        )}
-      </div>
-
-      {/* Abas: Em aberto | Encerrado | Minhas vagas */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid var(--border)' }}>
-        {(['abertas', 'encerradas', 'minhas'] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => {
-              setSearchParams((p) => {
-                const next = new URLSearchParams(p);
-                next.set('tab', t);
-                return next;
-              });
-              setPage(1);
-            }}
-            style={{
-              padding: '10px 16px',
-              border: 'none',
-              borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent',
-              background: 'none',
-              color: tab === t ? 'var(--accent)' : 'var(--text-secondary)',
-              fontWeight: tab === t ? 600 : 400,
-              cursor: 'pointer',
-              fontSize: 14
-            }}
-          >
-            {t === 'abertas' ? 'Em aberto' : t === 'encerradas' ? 'Encerrado' : 'Minhas vagas'}
-          </button>
-        ))}
-      </div>
-
-      {/* Contador de vagas */}
-      {!loading && totalVagas > 0 && (
-        <div className="card" style={{ marginBottom: 12, padding: 16, background: 'var(--bg-secondary)' }}>
-          <strong>
-            {tab === 'abertas' && `${totalVagas} vagas em aberto`}
-            {tab === 'encerradas' && `${totalVagas} vagas encerradas`}
-            {tab === 'minhas' && `${totalVagas} vagas criadas por você`}
-          </strong>
-        </div>
-      )}
-
-      {/* Filtros */}
-      <div className="card" style={{ marginBottom: 12 }}>
-        <div className="card-title" style={{ marginBottom: 16 }}>Filtros</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-          <div className="form-group">
-            <label>Tipo da vaga</label>
-            <select value={filters.tipo_vaga} onChange={(e) => setFilters({ ...filters, tipo_vaga: e.target.value })}>
-              <option value="">Todos</option>
-              {tipoVagaOptions.map(opt => (
-                <option key={opt} value={opt.toLowerCase()}>{opt}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Pretensão mínima (R$)</label>
-            <input
-              type="number"
-              placeholder="0"
-              value={filters.pretensao_min}
-              onChange={(e) => setFilters({ ...filters, pretensao_min: e.target.value })}
+      }
+    >
+      <div className="vagas-page">
+        <div style={{ marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+          <div style={{ flex: 1, minWidth: 200, maxWidth: 360 }}>
+            <GlobalSearch
+              placeholder="Buscar por título, descrição ou localização..."
+              onSearch={setSearchQuery}
+              initialValue={searchQuery}
             />
           </div>
-          <div className="form-group">
-            <label>Pretensão máxima (R$)</label>
-            <input
-              type="number"
-              placeholder="0"
-              value={filters.pretensao_max}
-              onChange={(e) => setFilters({ ...filters, pretensao_max: e.target.value })}
-            />
-          </div>
-          <div className="form-group">
-            <label>Tipo de contratação</label>
-            <select value={filters.tipo_contratacao} onChange={(e) => setFilters({ ...filters, tipo_contratacao: e.target.value })}>
-              <option value="">Todos</option>
-              {tipoContratacaoOptions.map(opt => (
-                <option key={opt} value={opt.toLowerCase()}>{opt}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Modelo de trabalho</label>
-            <select value={filters.modelo_trabalho} onChange={(e) => setFilters({ ...filters, modelo_trabalho: e.target.value })}>
-              <option value="">Todos</option>
-              {modeloTrabalhoOptions.map(opt => (
-                <option key={opt} value={opt.toLowerCase()}>{opt}</option>
-              ))}
-            </select>
-          </div>
+          <Link className="btn btn-outline" to="/tinder-do-fluxo/vagas/minhas-candidaturas">
+            Minhas Candidaturas
+          </Link>
+          {canCreate && (
+            <Link className="btn btn-primary" to="/tinder-do-fluxo/vagas/criar">
+              Criar vaga
+            </Link>
+          )}
         </div>
 
-        {/* Habilidades */}
-        <div style={{ marginTop: 16, padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)' }}>
-          <div style={{ fontWeight: 600, marginBottom: 12 }}>Habilidades</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={filters.habilidades.copywriter}
-                onChange={(e) => setFilters({
-                  ...filters,
-                  habilidades: { ...filters.habilidades, copywriter: e.target.checked }
-                })}
-              />
-              <span>✍️ Copywriter</span>
-            </label>
-            <div>
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer', marginBottom: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={filters.habilidades.trafego_pago.length > 0}
-                  onChange={(e) => {
-                    if (!e.target.checked) {
-                      setFilters({
-                        ...filters,
-                        habilidades: { ...filters.habilidades, trafego_pago: [] }
-                      });
-                    }
-                  }}
-                />
-                <span>📊 Tráfego Pago</span>
+        <div
+          className="card"
+          style={{
+            marginBottom: 24,
+            padding: 16,
+            background: 'var(--bg-white)',
+            border: '1px solid var(--border)',
+            borderRadius: 16
+          }}
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 16 }}>
+            <div className="form-group" style={{ marginBottom: 0, minWidth: 140 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
+                Tipo da vaga
               </label>
-              {filters.habilidades.trafego_pago.length > 0 && (
-                <div style={{ marginLeft: 24, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {trafegoSubcategorias.map(sub => (
-                    <label key={sub.value} style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer', fontSize: 13 }}>
-                      <input
-                        type="checkbox"
-                        checked={filters.habilidades.trafego_pago.includes(sub.value)}
-                        onChange={(e) => {
-                          const newSubs = e.target.checked
-                            ? [...filters.habilidades.trafego_pago, sub.value]
-                            : filters.habilidades.trafego_pago.filter(s => s !== sub.value);
-                          setFilters({
-                            ...filters,
-                            habilidades: { ...filters.habilidades, trafego_pago: newSubs }
-                          });
-                        }}
-                      />
-                      <span>{sub.label}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
+              <select
+                value={filters.tipo_vaga}
+                onChange={(e) => { setFilters((f) => ({ ...f, tipo_vaga: e.target.value })); setPage(1); }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)' }}
+              >
+                <option value="">Todos</option>
+                {TIPO_VAGA_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt.toLowerCase()}>{opt}</option>
+                ))}
+              </select>
             </div>
-            <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+            <div className="form-group" style={{ marginBottom: 0, minWidth: 120 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
+                Valor mín. (R$)
+              </label>
               <input
-                type="checkbox"
-                checked={filters.habilidades.automacao_ia}
-                onChange={(e) => setFilters({
-                  ...filters,
-                  habilidades: { ...filters.habilidades, automacao_ia: e.target.checked }
-                })}
+                type="number"
+                placeholder="0"
+                value={filters.pretensao_min}
+                onChange={(e) => { setFilters((f) => ({ ...f, pretensao_min: e.target.value })); setPage(1); }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)' }}
               />
-              <span>🤖 Automação e IA</span>
-            </label>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0, minWidth: 120 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
+                Valor máx. (R$)
+              </label>
+              <input
+                type="number"
+                placeholder="—"
+                value={filters.pretensao_max}
+                onChange={(e) => { setFilters((f) => ({ ...f, pretensao_max: e.target.value })); setPage(1); }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)' }}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0, minWidth: 140 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
+                Modelo de trabalho
+              </label>
+              <select
+                value={filters.modelo_trabalho}
+                onChange={(e) => { setFilters((f) => ({ ...f, modelo_trabalho: e.target.value })); setPage(1); }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)' }}
+              >
+                <option value="">Todos</option>
+                {MODELO_TRABALHO_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt.toLowerCase()}>{opt}</option>
+                ))}
+              </select>
+            </div>
+            {hasActiveFilters && (
+              <button type="button" className="btn btn-outline" onClick={clearFilters} style={{ padding: '8px 16px', fontSize: 13 }}>
+                Limpar filtros
+              </button>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Listagem de vagas */}
-      <div className="card">
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 24 }}>
-            <div className="loading-spinner" />
+        {!loading && (
+          <p style={{ marginBottom: 16, fontSize: 14, color: 'var(--text-secondary)' }}>
+            {totalVagas === 0 ? 'Nenhuma vaga' : totalVagas === 1 ? '1 vaga' : `${totalVagas} vagas`}
+            {hasActiveFilters && ' (com filtros aplicados)'}
+          </p>
+        )}
+
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: 16 }}>
+            {error}
           </div>
-        ) : error ? (
-          <div className="alert alert-error" style={{ display: 'block' }}>{error}</div>
-        ) : jobs.length === 0 ? (
-          <EmptyState text="Nenhuma vaga encontrada com esses filtros." />
-        ) : (
-          <>
-            <div style={{ display: 'grid', gap: 12 }}>
-            {jobs.map((j) => (
-                <div key={j.id} className="quick-action" style={{ padding: 16 }}>
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{j.title}</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>
-                      {j.empresa || j.creator_name || 'Empresa'} • {j.localizacao || j.location || 'Não especificado'}
-                    </div>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                      {truncateDescription(j.descricao_resumida || j.description || '', 240)}
-                    </div>
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-                      {j.tipo_contratacao && <span>{j.tipo_contratacao}</span>}
-                      {j.modelo_trabalho && <span>• {j.modelo_trabalho}</span>}
-                      {j.valor && <span>• R$ {Number(j.valor).toLocaleString('pt-BR')}</span>}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                        {formatRelativeDate(j.data_publicacao || j.created_at)}
-                      </span>
-                      {j.applied && (
-                        <span
-                          style={{
-                            fontSize: 12,
-                            padding: '4px 10px',
-                            background: 'var(--accent-light)',
-                            color: 'var(--accent-dark)',
-                            borderRadius: 'var(--radius)',
-                            fontWeight: 600,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 6
-                          }}
-                          title="Você já se candidatou a esta vaga"
-                        >
-                          ✓ Já se candidatou
-                        </span>
-                      )}
-                    </div>
-                </div>
-                <Link className="btn btn-outline" to={`/tinder-do-fluxo/vagas/${j.id}`}>Detalhes</Link>
+        )}
+
+        {loading ? (
+          <div className="vagas-grid">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="vagas-card" style={{ pointerEvents: 'none' }}>
+                <div style={{ height: 48, background: 'var(--border-light)', borderRadius: 12, marginBottom: 16, width: 48 }} />
+                <div style={{ height: 24, background: 'var(--border-light)', borderRadius: 8, marginBottom: 8 }} />
+                <div style={{ height: 16, background: 'var(--border-light)', borderRadius: 8, marginBottom: 16 }} />
+                <div style={{ height: 16, background: 'var(--border-light)', borderRadius: 8, width: '60%' }} />
               </div>
             ))}
           </div>
-            {/* Paginação */}
-            {totalVagas > perPage && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 20 }}>
-                <button
-                  className="btn btn-outline"
-                  disabled={page === 1}
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                >
-                  Anterior
+        ) : (
+          <>
+            {(jobs.length === 0 && !canCreate) ? (
+              <div className="card" style={{ padding: 48, textAlign: 'center', borderRadius: 16 }}>
+                <EmptyState text="Você ainda não publicou nenhuma vaga." />
+                <p style={{ marginTop: 12, color: 'var(--text-muted)' }}>
+                  Vagas criadas por você aparecerão aqui (Minhas, Abertas e Encerradas).
+                </p>
+              </div>
+            ) : jobs.length === 0 && hasActiveFilters ? (
+              <div className="card" style={{ padding: 48, textAlign: 'center', borderRadius: 16 }}>
+                <EmptyState text="Nenhuma vaga encontrada com os filtros selecionados." />
+                <p style={{ marginTop: 12, color: 'var(--text-muted)' }}>
+                  Tente alterar os filtros ou clique em &quot;Limpar filtros&quot; para ver todas as vagas.
+                </p>
+                <button type="button" className="btn btn-primary" onClick={clearFilters} style={{ marginTop: 16 }}>
+                  Limpar filtros
                 </button>
-                <span style={{ display: 'flex', alignItems: 'center', padding: '0 12px' }}>
-                  Página {page} de {Math.ceil(totalVagas / perPage)}
-                </span>
-                <button
-                  className="btn btn-outline"
-                  disabled={page >= Math.ceil(totalVagas / perPage)}
-                  onClick={() => setPage(p => p + 1)}
-                >
-                  Próxima
+              </div>
+            ) : (
+              <div className="vagas-grid">
+                {jobs.map((j) => {
+                  const open = isJobOpen(j);
+                  return (
+                    <Link
+                      key={j.id}
+                      to={`/tinder-do-fluxo/vagas/${j.id}`}
+                      className={`vagas-card ${open ? '' : 'vagas-card--closed'}`}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                        <div
+                          style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 12,
+                            background: open ? 'rgba(163,230,53,0.15)' : 'var(--border-light)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: open ? 'var(--accent-dark)' : 'var(--text-muted)'
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 24 }}>
+                            {getJobCardIcon(j.specialty)}
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 800,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            padding: '4px 12px',
+                            borderRadius: 9999,
+                            background: open ? 'var(--accent)' : 'var(--border-light)',
+                            color: open ? 'var(--bg-sidebar)' : 'var(--text-secondary)'
+                          }}
+                        >
+                          {open ? 'Aberta' : 'Encerrada'}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          marginBottom: 12,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: 'var(--accent-dark)',
+                          background: 'rgba(163,230,53,0.12)',
+                          padding: '4px 10px',
+                          borderRadius: 8
+                        }}
+                        title="Criada por você"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                          person
+                        </span>
+                        Sua vaga
+                      </div>
+                      <h3 className="vagas-card-title" style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: 'var(--text-primary)' }}>
+                        {j.title || j.titulo}
+                      </h3>
+                      <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 16 }}>
+                        Especialidade: {j.specialty || 'Não informada'}
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--text-muted)' }}>
+                            {j.location && /remoto/i.test(String(j.location)) ? 'distance' : 'location_on'}
+                          </span>
+                          {j.location || j.localizacao || 'Não especificado'}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--text-muted)' }}>
+                            calendar_today
+                          </span>
+                          {formatPrazo(j)}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          paddingTop: 20,
+                          borderTop: '1px solid var(--border-light)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}
+                      >
+                        <div>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>
+                            {open ? 'Valor' : 'Valor Final'}
+                          </span>
+                          <div className={open ? '' : 'vagas-card-value'} style={{ fontSize: 20, fontWeight: 800, color: open ? 'var(--accent)' : 'var(--text-muted)' }}>
+                            {j.value != null && Number(j.value) > 0
+                              ? `R$ ${Number(j.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                              : 'A combinar'}
+                          </div>
+                        </div>
+                        <div
+                          className="vagas-card-arrow"
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            background: 'var(--border-light)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'var(--text-muted)'
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                            {open ? 'arrow_forward' : 'lock'}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+
+                {canCreate && (
+                  <Link to="/tinder-do-fluxo/vagas/criar" className="vagas-card vagas-card--create">
+                    <div className="vagas-card-create-icon">
+                      <span className="material-symbols-outlined" style={{ fontSize: 32, fontWeight: 700 }}>
+                        add
+                      </span>
+                    </div>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>
+                      Publicar nova vaga
+                    </h3>
+                    <p style={{ fontSize: 14, color: 'var(--text-muted)', maxWidth: 200 }}>
+                      Encontre o especialista perfeito para seu próximo projeto.
+                    </p>
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div className="vagas-pagination">
+                <button type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                    chevron_left
+                  </span>
+                </button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const p = i + 1;
+                  return (
+                    <button key={p} type="button" onClick={() => setPage(p)} className={page === p ? 'active' : ''}>
+                      {p}
+                    </button>
+                  );
+                })}
+                {totalPages > 5 && <span style={{ padding: '0 8px', color: 'var(--text-muted)' }}>...</span>}
+                <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                    chevron_right
+                  </span>
                 </button>
               </div>
             )}

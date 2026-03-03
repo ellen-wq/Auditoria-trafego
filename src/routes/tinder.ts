@@ -1313,6 +1313,7 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
     modelo_trabalho,
     habilidades, // JSON string
     tab = 'abertas', // abertas | encerradas | minhas
+    status_filter, // all | open | closed (para tab=minhas: filtrar minhas vagas por status)
     page = '1',
     per_page = '20'
   } = req.query;
@@ -1394,6 +1395,8 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
         tipo_contratacao: j.model || '',
         modelo_trabalho: j.location || '',
         specialty: j.specialty,
+        status: j.status,
+        deadline: j.deadline,
         applied: appliedJobIds.has(j.id)
       };
     });
@@ -1480,7 +1483,9 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
         applied: appliedJobIds.has(job.id),
         title: job.title,
         description: job.description,
-        created_at: job.created_at
+        created_at: job.created_at,
+        status: job.status,
+        deadline: job.deadline
       };
     });
     res.json({ jobs: formattedJobs, total_vagas: count, page: pageNum, per_page: perPageNum });
@@ -1495,6 +1500,9 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
     return;
   }
   let data = myJobs || [];
+  const statusFilter = cleanString((status_filter as string) || 'all', 20).toLowerCase();
+  if (statusFilter === 'open') data = data.filter((j: any) => isJobOpen(j));
+  else if (statusFilter === 'closed') data = data.filter((j: any) => isJobClosed(j));
   if (q) {
     const st = cleanString(q as string, 200).toLowerCase();
     data = data.filter((j: any) =>
@@ -1502,6 +1510,22 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
       (j.description || '').toLowerCase().includes(st) ||
       (j.location || '').toLowerCase().includes(st)
     );
+  }
+  if (tipo_vaga) {
+    const tv = cleanString(tipo_vaga as string, 60).toLowerCase();
+    data = data.filter((j: any) => (j.model || '').toLowerCase() === tv);
+  }
+  if (pretensao_min) {
+    const min = Number(pretensao_min);
+    if (!isNaN(min)) data = data.filter((j: any) => (j.value || 0) >= min);
+  }
+  if (pretensao_max) {
+    const max = Number(pretensao_max);
+    if (!isNaN(max)) data = data.filter((j: any) => (j.value || 0) <= max);
+  }
+  if (modelo_trabalho) {
+    const mt = cleanString(modelo_trabalho as string, 60).toLowerCase();
+    data = data.filter((j: any) => (j.location || '').toLowerCase().includes(mt));
   }
   const count = data.length;
   const pageNum = Math.max(1, Number(page) || 1);
@@ -1549,10 +1573,11 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
       specialty: job.specialty,
       creator_name: creatorName,
       applied: appliedJobIds.has(job.id),
-      // Campos adicionais para compatibilidade
       title: job.title,
       description: job.description,
-      created_at: job.created_at
+      created_at: job.created_at,
+      status: job.status,
+      deadline: job.deadline
     };
   });
 
