@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   function homeByRole(role: string): string {
     if (role === 'LIDERANCA') return '/admin/dashboard';
@@ -26,6 +27,7 @@ export default function LoginPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     try {
       const data = await api.post('/api/auth/login', { email, password });
@@ -33,6 +35,8 @@ export default function LoginPage() {
       navigate(homeByRole(data.user.role), { replace: true });
     } catch (err: any) {
       setError(err.message || 'Erro ao entrar.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -61,6 +65,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
             />
           </div>
           <div className="form-group">
@@ -72,12 +77,15 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
             />
           </div>
           <div className="auth-inline-link">
             <Link to="/recuperar-senha">Esqueci minha senha</Link>
           </div>
-          <button type="submit" className="btn btn-primary">Entrar</button>
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
         </form>
 
         <p className="auth-footer">
