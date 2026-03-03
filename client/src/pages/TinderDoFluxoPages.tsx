@@ -671,13 +671,8 @@ export function TinderPrestadoresPage() {
   const pageServices = services.slice(start, start + PRESTADORES_PAGE_SIZE);
 
   return (
-    <TinderDoFluxoPageShell title="Prestadores" subtitle="Diretório de prestadores">
+    <TinderDoFluxoPageShell title="Prestadores">
       <div className="prestadores-directory">
-        {/* Hero */}
-        <div className="prestadores-hero">
-          <h1>Diretório de Prestadores</h1>
-        </div>
-
         {/* Search + Filters */}
         <div className="prestadores-search-filter-card">
           <div className="prestadores-search-wrap">
