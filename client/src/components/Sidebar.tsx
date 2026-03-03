@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import type { User } from '../services/api';
 import { api } from '../services/api';
 import logoAnimation from '../assets/fluxo.logo.animation.svg';
@@ -10,6 +11,7 @@ interface SidebarProps {
 
 export default function Sidebar({ user }: SidebarProps) {
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [isAuditMenuOpen, setIsAuditMenuOpen] = useState(false);
   const [isCopyAuditMenuOpen, setIsCopyAuditMenuOpen] = useState(false);
   const [isTinderMenuOpen, setIsTinderMenuOpen] = useState(() => {
@@ -28,6 +30,16 @@ export default function Sidebar({ user }: SidebarProps) {
     () => location.pathname.startsWith('/auditoria-copy'),
     [location.pathname]
   );
+
+  useEffect(() => {
+    if (!isTinderRouteActive) return;
+    if (user.role !== 'MENTORADO' && user.role !== 'LIDERANCA') return;
+    queryClient.prefetchQuery({
+      queryKey: ['tinder-do-fluxo', 'matches'],
+      queryFn: () => api.get<{ matches: any[] }>('/api/tinder-do-fluxo/matches').then((r) => r.matches || []),
+      staleTime: 60 * 1000,
+    });
+  }, [isTinderRouteActive, user.role, queryClient]);
 
   useEffect(() => {
     if (isCopyAuditRouteActive) setIsCopyAuditMenuOpen(true);

@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
 import TinderDoFluxoPageShell from '../components/tinder-do-fluxo/TinderDoFluxoPageShell';
 import { ExpertSwipeDeck, type ExpertUser } from '../components/tinder-do-fluxo/ExpertSwipeDeck';
@@ -1346,9 +1346,41 @@ function formatMessageTime(iso: string): string {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
+const MATCHES_QUERY_KEY = ['tinder-do-fluxo', 'matches'] as const;
+
+function MatchesListSkeleton() {
+  return (
+    <>
+      <div className="matches-chat-section-title">Novos Matches</div>
+      <div className="matches-chat-new-matches" style={{ gap: 16 }}>
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="matches-chat-new-match-item" style={{ cursor: 'default' }}>
+            <div className="skeleton-line" style={{ width: 64, height: 64, borderRadius: '50%', flexShrink: 0 }} />
+            <div className="skeleton-line" style={{ width: 40, height: 12, borderRadius: 4 }} />
+          </div>
+        ))}
+      </div>
+      <div className="matches-chat-section-title">Mensagens Recentes</div>
+      <div className="matches-chat-messages-list">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="matches-chat-message-row" style={{ cursor: 'default' }}>
+            <div className="skeleton-line" style={{ width: 48, height: 48, borderRadius: '50%', flexShrink: 0 }} />
+            <div className="meta" style={{ flex: 1, minWidth: 0 }}>
+              <div className="name-row">
+                <div className="skeleton-line" style={{ width: 120, height: 14, borderRadius: 4 }} />
+                <div className="skeleton-line" style={{ width: 36, height: 10, borderRadius: 4 }} />
+              </div>
+              <div className="skeleton-line" style={{ width: '80%', height: 12, borderRadius: 4, marginTop: 6 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export function TinderMatchesPage() {
-  const [matches, setMatches] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -1357,9 +1389,20 @@ export function TinderMatchesPage() {
   const navigate = useNavigate();
   const currentUser = api.getUser() as { id: string; name: string; photo_url?: string } | null;
 
+  const { data: matches = [], isLoading: loading } = useQuery({
+    queryKey: MATCHES_QUERY_KEY,
+    queryFn: async () => {
+      const res = await api.get<{ matches: any[] }>('/api/tinder-do-fluxo/matches');
+      return res.matches || [];
+    },
+    staleTime: 60 * 1000,
+  });
+
   useEffect(() => {
-    loadMatches();
-  }, []);
+    if (matches.length > 0 && selectedMatchId === null) {
+      setSelectedMatchId(matches[0].id);
+    }
+  }, [matches, selectedMatchId]);
 
   useEffect(() => {
     if (!selectedMatchId) {
@@ -1377,21 +1420,6 @@ export function TinderMatchesPage() {
     return () => { cancelled = true; };
   }, [selectedMatchId]);
 
-  const loadMatches = async () => {
-    setLoading(true);
-    try {
-      const matchesRes = await api.get<{ matches: any[] }>('/api/tinder-do-fluxo/matches');
-      const list = matchesRes.matches || [];
-      setMatches(list);
-      setSelectedMatchId((prev) => (prev === null && list.length > 0 ? list[0].id : prev));
-    } catch (err) {
-      console.error('[TinderMatchesPage] Erro ao carregar matches:', err);
-      setMatches([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const selectedMatch = selectedMatchId ? matches.find((m) => m.id === selectedMatchId) : null;
   const sortedByRecent = [...matches].sort((a, b) => {
     const at = a.lastMessageAt || a.created_at || '';
@@ -1407,14 +1435,14 @@ export function TinderMatchesPage() {
     try {
       const r = await api.post<{ message: any }>(`/api/tinder-do-fluxo/matches/${selectedMatchId}/messages`, { body: text });
       setMessages((prev) => [...prev, r.message]);
-      setMatches((prev) =>
-        prev.map((m) =>
+      queryClient.setQueryData<any[]>(MATCHES_QUERY_KEY, (old) =>
+        (old || []).map((m) =>
           m.id === selectedMatchId
             ? {
                 ...m,
                 lastMessage: text,
                 lastMessageAt: r.message.created_at,
-                lastMessageSenderId: currentUser?.id
+                lastMessageSenderId: currentUser?.id,
               }
             : m
         )
@@ -1438,10 +1466,7 @@ export function TinderMatchesPage() {
           </div>
 
           {loading ? (
-            <div style={{ padding: 24, textAlign: 'center' }}>
-              <div className="loading-spinner" />
-              <p style={{ color: 'var(--text-secondary)', marginTop: 12, fontSize: 13 }}>Carregando matches...</p>
-            </div>
+            <MatchesListSkeleton />
           ) : (
             <>
               <div className="matches-chat-section-title">Novos Matches</div>
