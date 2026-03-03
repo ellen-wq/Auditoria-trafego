@@ -987,6 +987,20 @@ router.get('/matches', async (req: Request, res: Response): Promise<void> => {
     if (ep.is_coproducer) parts.push('Coprodutor');
     return parts.join(' / ') || '';
   };
+  const matchIds = matchesList.map((m: any) => m.id);
+  let lastMessagesMap: Record<number, { body: string; created_at: string; sender_id: string }> = {};
+  if (matchIds.length > 0) {
+    const { data: messagesRows } = await supabase
+      .from('tinder_messages')
+      .select('match_id, body, created_at, sender_id')
+      .in('match_id', matchIds)
+      .order('created_at', { ascending: false });
+    const messagesList = messagesRows || [];
+    messagesList.forEach((msg: any) => {
+      if (!lastMessagesMap[msg.match_id]) lastMessagesMap[msg.match_id] = msg;
+    });
+  }
+
   const matches = matchesList.map((m: any) => {
     const otherId = m.user1_id === req.user!.id ? m.user2_id : m.user1_id;
     const role = rolesMap.get(otherId);
@@ -1001,9 +1015,91 @@ router.get('/matches', async (req: Request, res: Response): Promise<void> => {
       photo_url: mentor?.photo_url || '',
       whatsapp: mentor?.whatsapp || ''
     };
-    return { ...m, otherUser };
+    const lastMsg = lastMessagesMap[m.id];
+    return {
+      ...m,
+      otherUser,
+      lastMessage: lastMsg ? lastMsg.body : null,
+      lastMessageAt: lastMsg ? lastMsg.created_at : null,
+      lastMessageSenderId: lastMsg ? lastMsg.sender_id : null
+    };
   });
   res.json({ matches });
+});
+
+// Listar mensagens de um match (conversa)
+router.get('/matches/:matchId/messages', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  const matchId = toPositiveInt(req.params.matchId);
+  if (!matchId) {
+    res.status(400).json({ error: 'ID do match inválido.' });
+    return;
+  }
+  const supabase = getSupabase();
+  const { data: matchRow, error: matchError } = await supabase
+    .from('tinder_matches')
+    .select('id, user1_id, user2_id')
+    .eq('id', matchId)
+    .single();
+  if (matchError || !matchRow) {
+    res.status(404).json({ error: 'Match não encontrado.' });
+    return;
+  }
+  const userId = req.user!.id;
+  if (matchRow.user1_id !== userId && matchRow.user2_id !== userId) {
+    res.status(403).json({ error: 'Sem permissão para ver esta conversa.' });
+    return;
+  }
+  const { data: rows, error } = await supabase
+    .from('tinder_messages')
+    .select('id, match_id, sender_id, body, read_at, created_at')
+    .eq('match_id', matchId)
+    .order('created_at', { ascending: true });
+  if (error) {
+    res.status(500).json({ error: 'Erro ao buscar mensagens.' });
+    return;
+  }
+  res.json({ messages: rows || [] });
+});
+
+// Enviar mensagem em um match
+router.post('/matches/:matchId/messages', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  const matchId = toPositiveInt(req.params.matchId);
+  const body = cleanString(req.body.body, 10000);
+  if (!matchId) {
+    res.status(400).json({ error: 'ID do match inválido.' });
+    return;
+  }
+  if (!body) {
+    res.status(400).json({ error: 'Mensagem não pode ser vazia.' });
+    return;
+  }
+  const supabase = getSupabase();
+  const { data: matchRow, error: matchError } = await supabase
+    .from('tinder_matches')
+    .select('id, user1_id, user2_id')
+    .eq('id', matchId)
+    .single();
+  if (matchError || !matchRow) {
+    res.status(404).json({ error: 'Match não encontrado.' });
+    return;
+  }
+  const userId = req.user!.id;
+  if (matchRow.user1_id !== userId && matchRow.user2_id !== userId) {
+    res.status(403).json({ error: 'Sem permissão para enviar mensagem nesta conversa.' });
+    return;
+  }
+  const { data: inserted, error: insertError } = await supabase
+    .from('tinder_messages')
+    .insert({ match_id: matchId, sender_id: userId, body })
+    .select('id, match_id, sender_id, body, read_at, created_at')
+    .single();
+  if (insertError) {
+    res.status(500).json({ error: 'Erro ao enviar mensagem.' });
+    return;
+  }
+  res.status(201).json({ message: inserted });
 });
 
 router.post('/favorite', async (req: Request, res: Response): Promise<void> => {

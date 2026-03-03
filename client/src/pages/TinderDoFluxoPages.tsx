@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import AppLayout from '../components/AppLayout';
 import TinderDoFluxoPageShell from '../components/tinder-do-fluxo/TinderDoFluxoPageShell';
 import { ExpertSwipeDeck, type ExpertUser } from '../components/tinder-do-fluxo/ExpertSwipeDeck';
 import { api } from '../services/api';
@@ -1331,32 +1332,58 @@ function whatsappLink(whatsapp: string): string {
   return `https://wa.me/${withCountry}`;
 }
 
+function formatMessageTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.floor((today.getTime() - msgDay.getTime()) / (24 * 60 * 60 * 1000));
+  if (diffDays === 0) {
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+  if (diffDays === 1) return 'Ontem';
+  if (diffDays < 7) return `${diffDays} dias`;
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
 export function TinderMatchesPage() {
   const [matches, setMatches] = useState<any[]>([]);
-  const [interests, setInterests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [sending, setSending] = useState(false);
   const navigate = useNavigate();
+  const currentUser = api.getUser() as { id: string; name: string; photo_url?: string } | null;
 
-  const currentUser = api.getUser();
-
-  // Load matches (mútuos) e interesses (unilaterais)
   useEffect(() => {
     loadMatches();
   }, []);
 
+  useEffect(() => {
+    if (!selectedMatchId) {
+      setMessages([]);
+      return;
+    }
+    let cancelled = false;
+    setMessagesLoading(true);
+    api.get<{ messages: any[] }>(`/api/tinder-do-fluxo/matches/${selectedMatchId}/messages`)
+      .then((r) => {
+        if (!cancelled) setMessages(r.messages || []);
+      })
+      .catch(() => { if (!cancelled) setMessages([]); })
+      .finally(() => { if (!cancelled) setMessagesLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedMatchId]);
+
   const loadMatches = async () => {
     setLoading(true);
     try {
-      // Carregar matches mútuos
       const matchesRes = await api.get<{ matches: any[] }>('/api/tinder-do-fluxo/matches');
-      const mutualMatches = matchesRes.matches || [];
-      
-      // Carregar interesses unilaterais (onde eu dei like mas ainda não houve match)
-      // A API de matches só retorna matches mútuos, então precisamos buscar interesses
-      // Por enquanto, vamos usar apenas os matches mútuos
-      // TODO: Se necessário, criar endpoint para buscar interesses unilaterais
-      
-      setMatches(mutualMatches);
+      const list = matchesRes.matches || [];
+      setMatches(list);
+      setSelectedMatchId((prev) => (prev === null && list.length > 0 ? list[0].id : prev));
     } catch (err) {
       console.error('[TinderMatchesPage] Erro ao carregar matches:', err);
       setMatches([]);
@@ -1365,35 +1392,229 @@ export function TinderMatchesPage() {
     }
   };
 
-  return (
-    <TinderDoFluxoPageShell title="Meus Matches" subtitle="Pessoas que você deu match">
-      {/* Header com link para descoberta */}
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
-        <Link to="/tinder-do-fluxo/expert" className="btn btn-outline">
-          Descobrir perfis
-        </Link>
-                  </div>
+  const selectedMatch = selectedMatchId ? matches.find((m) => m.id === selectedMatchId) : null;
+  const sortedByRecent = [...matches].sort((a, b) => {
+    const at = a.lastMessageAt || a.created_at || '';
+    const bt = b.lastMessageAt || b.created_at || '';
+    return bt.localeCompare(at);
+  });
 
-      {/* Matches List */}
-      {loading ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
-          <div className="loading-spinner" />
-          <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando matches...</p>
+  const handleSend = async () => {
+    const text = inputValue.trim();
+    if (!text || !selectedMatchId || sending) return;
+    setSending(true);
+    setInputValue('');
+    try {
+      const r = await api.post<{ message: any }>(`/api/tinder-do-fluxo/matches/${selectedMatchId}/messages`, { body: text });
+      setMessages((prev) => [...prev, r.message]);
+      setMatches((prev) =>
+        prev.map((m) =>
+          m.id === selectedMatchId
+            ? {
+                ...m,
+                lastMessage: text,
+                lastMessageAt: r.message.created_at,
+                lastMessageSenderId: currentUser?.id
+              }
+            : m
+        )
+      );
+    } catch (err) {
+      console.error('[TinderMatchesPage] Erro ao enviar mensagem:', err);
+      setInputValue(text);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <AppLayout breadcrumbs={[{ label: 'Tinder do Fluxo' }, { label: 'Matches' }]}>
+      <div className="matches-chat-page">
+        {/* Left panel */}
+        <aside className="matches-chat-left">
+          <div className="matches-chat-left-header">
+            <h2>Faça amigos no <span className="accent">Fluxo!</span></h2>
+            <p>Gerencie suas conexões e conversas</p>
+          </div>
+
+          {loading ? (
+            <div style={{ padding: 24, textAlign: 'center' }}>
+              <div className="loading-spinner" />
+              <p style={{ color: 'var(--text-secondary)', marginTop: 12, fontSize: 13 }}>Carregando matches...</p>
+            </div>
+          ) : (
+            <>
+              <div className="matches-chat-section-title">Novos Matches</div>
+              <div className="matches-chat-new-matches">
+                {matches.map((match) => {
+                  const user = match.otherUser;
+                  if (!user) return null;
+                  const name = user.name || 'Usuário';
+                  const isSelected = match.id === selectedMatchId;
+                  return (
+                    <div
+                      key={match.id}
+                      className="matches-chat-new-match-item"
+                      onClick={() => setSelectedMatchId(match.id)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && setSelectedMatchId(match.id)}
+                    >
+                      {user.photo_url ? (
+                        <img src={user.photo_url} alt={name} className="matches-chat-new-match-avatar" />
+                      ) : (
+                        <div className="matches-chat-new-match-avatar-placeholder">{name.charAt(0).toUpperCase()}</div>
+                      )}
+                      <span className="matches-chat-new-match-name">{name.split(' ')[0]}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="matches-chat-section-title">Mensagens Recentes</div>
+              <div className="matches-chat-messages-list">
+                {sortedByRecent.map((match) => {
+                  const user = match.otherUser;
+                  if (!user) return null;
+                  const name = user.name || 'Usuário';
+                  const isActive = match.id === selectedMatchId;
+                  const preview = match.lastMessage
+                    ? match.lastMessage.length > 40
+                      ? match.lastMessage.slice(0, 40) + '...'
+                      : match.lastMessage
+                    : 'Sem mensagens ainda';
+                  const timeStr = match.lastMessageAt
+                    ? formatMessageTime(match.lastMessageAt)
+                    : match.created_at
+                      ? formatMessageTime(match.created_at)
+                      : '';
+                  return (
+                    <div
+                      key={match.id}
+                      className={`matches-chat-message-row${isActive ? ' active' : ''}`}
+                      onClick={() => setSelectedMatchId(match.id)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && setSelectedMatchId(match.id)}
+                    >
+                      <div className="avatar-wrap">
+                        {user.photo_url ? (
+                          <img src={user.photo_url} alt={name} />
+                        ) : (
+                          <div className="avatar-placeholder">{name.charAt(0).toUpperCase()}</div>
+                        )}
+                        <div className="online-dot" aria-hidden />
+                      </div>
+                      <div className="meta">
+                        <div className="name-row">
+                          <span className="name">{name}</span>
+                          <span className="time">{timeStr}</span>
+                        </div>
+                        <p className="preview">{preview}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </aside>
+
+        {/* Right panel - Chat */}
+        <section className="matches-chat-right">
+          {!selectedMatch ? (
+            <div className="matches-chat-empty-right">
+              {loading ? 'Carregando...' : matches.length === 0 ? 'Você ainda não fez nenhum match. Descubra perfis para começar!' : 'Selecione uma conversa'}
+            </div>
+          ) : (
+            <>
+              <header className="matches-chat-right-header">
+                <div className="user-info">
+                  {selectedMatch.otherUser?.photo_url ? (
+                    <img src={selectedMatch.otherUser.photo_url} alt="" className="avatar" />
+                  ) : (
+                    <div className="avatar-placeholder">
+                      {(selectedMatch.otherUser?.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <div className="name">{selectedMatch.otherUser?.name || 'Usuário'}</div>
+                    <div className="status">Online agora</div>
                   </div>
-      ) : (
-        <MatchesList 
-          matches={matches} 
-          onViewWhatsApp={(whatsapp) => {
-            const digits = whatsapp.replace(/\D/g, '');
-            const withCountry = digits.length <= 11 && !digits.startsWith('55') ? '55' + digits : digits;
-            window.open(`https://wa.me/${withCountry}`, '_blank');
-          }}
-          onViewProfile={(userId) => {
-            navigate(`/tinder-do-fluxo/profile-view?userId=${userId}`);
-          }}
-        />
-        )}
-    </TinderDoFluxoPageShell>
+                </div>
+                <div className="actions">
+                  <button
+                    type="button"
+                    className="matches-chat-btn-outline"
+                    onClick={() => navigate(`/tinder-do-fluxo/profile-view?userId=${selectedMatch.otherUser?.id}`)}
+                  >
+                    Ver Perfil Completo
+                  </button>
+                  <button type="button" className="matches-chat-btn-icon" aria-label="Mais opções">
+                    <span style={{ fontSize: 20 }}>⋮</span>
+                  </button>
+                </div>
+              </header>
+
+              <div className="matches-chat-messages-area">
+                <div className="matches-chat-date-sep">
+                  <span>Hoje</span>
+                </div>
+                {messagesLoading ? (
+                  <div style={{ textAlign: 'center', padding: 24 }}>
+                    <div className="loading-spinner" />
+                    <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>Carregando mensagens...</p>
+                  </div>
+                ) : (
+                  messages.map((msg) => {
+                    const isSent = msg.sender_id === currentUser?.id;
+                    const senderName = isSent ? (currentUser?.name || 'Você') : (selectedMatch.otherUser?.name || 'Usuário');
+                    const senderPhoto = isSent ? currentUser?.photo_url : selectedMatch.otherUser?.photo_url;
+                    return (
+                      <div key={msg.id} className={`matches-chat-msg-bubble ${isSent ? 'sent' : ''}`}>
+                        {senderPhoto ? (
+                          <img src={senderPhoto} alt="" className="small-avatar" />
+                        ) : (
+                          <div className="small-avatar-placeholder">{senderName.charAt(0).toUpperCase()}</div>
+                        )}
+                        <div className={`bubble ${isSent ? 'sent' : 'received'}`}>
+                          <p>{msg.body}</p>
+                          <span className="time">{formatMessageTime(msg.created_at)}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="matches-chat-input-area">
+                <div className="matches-chat-input-wrap">
+                  <button type="button" className="matches-chat-btn-icon" aria-label="Anexar">
+                    <span style={{ fontSize: 20 }}>+</span>
+                  </button>
+                  <input
+                    type="text"
+                    placeholder="Escreva sua mensagem..."
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                  />
+                  <button
+                    type="button"
+                    className="matches-chat-send-btn"
+                    onClick={handleSend}
+                    disabled={sending || !inputValue.trim()}
+                    aria-label="Enviar"
+                  >
+                    ➤
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+      </div>
+    </AppLayout>
   );
 }
 
