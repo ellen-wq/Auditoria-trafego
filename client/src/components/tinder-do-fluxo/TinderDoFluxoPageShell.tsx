@@ -1,13 +1,15 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import AppLayout from '../AppLayout';
 
-interface Props {
+export interface TinderDoFluxoPageShellProps {
   title: string;
   subtitle?: string;
+  headerRight?: React.ReactNode;
   children?: React.ReactNode;
 }
 
-export default function TinderDoFluxoPageShell({ title, subtitle, children }: Props) {
+export default function TinderDoFluxoPageShell({ title, subtitle, headerRight, children }: TinderDoFluxoPageShellProps) {
+
   const breadcrumbs = useMemo(() => ([
     { label: 'Tinder do Fluxo' },
     { label: title }
@@ -15,8 +17,13 @@ export default function TinderDoFluxoPageShell({ title, subtitle, children }: Pr
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <h1 className="page-title">{title}</h1>
-      {subtitle && <p className="page-subtitle">{subtitle}</p>}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div>
+          <h1 className="page-title">{title}</h1>
+          {subtitle && <p className="page-subtitle">{subtitle}</p>}
+        </div>
+        {headerRight && <div>{headerRight}</div>}
+      </div>
       {children || (
         <div className="card">
           <div className="card-header">
