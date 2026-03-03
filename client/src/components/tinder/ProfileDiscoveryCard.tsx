@@ -122,12 +122,6 @@ export default function ProfileDiscoveryCard({
     ...(profile.skillsExtra || [])
   ].sort((a, b) => b.nivel - a.nivel).slice(0, 3);
 
-  // Tags do rodapé do card: habilidades (profile_skills + profile_skills_extra) – para Expert e Coprodutor
-  const footerSkillTags = [
-    ...(profile.skills || []).map(s => categoriaLabels[s.categoria] || s.categoria),
-    ...(profile.skillsExtra || []).map(s => s.nome),
-  ].filter(Boolean);
-
   // Get top 3 projects for Coprodutor
   const projects = profile.projects?.slice(0, 3) || [];
   const projectsRemaining = (profile.projects?.length || 0) - projects.length;
@@ -484,34 +478,6 @@ export default function ProfileDiscoveryCard({
         </div>
         </div>
       </div>
-
-      {/* Tags do rodapé: habilidades (profile_skills + profile_skills_extra) */}
-      {footerSkillTags.length > 0 && (
-        <div style={{ 
-          padding: '12px 20px', 
-          borderTop: '1px solid var(--border)',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 8,
-          background: 'var(--bg-secondary)'
-        }}>
-          {footerSkillTags.map((tag, idx) => (
-            <span
-              key={idx}
-              style={{
-                padding: '6px 12px',
-                background: 'var(--bg-sidebar)',
-                color: 'white',
-                borderRadius: 'var(--radius)',
-                fontSize: 12,
-                fontWeight: 600
-              }}
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
 
       {/* Actions: X (passar), Coração (match); Ver Perfil Completo – estilo matte */}
       <div style={{ 

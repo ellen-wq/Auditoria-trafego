@@ -637,14 +637,16 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
       return isExpert || isCoprodutor;
     });
     
-    // Aplicar filtros de tipo
-    if (typeFilter === 'EXPERT' || tipoPerfil.includes('expert')) {
+    // Aplicar filtro de tipo só quando um único tipo está selecionado (Expert OU Coprodutor)
+    // Se ambos estiverem selecionados (ou nenhum), mostrar todos os perfis
+    const wantExpert = typeFilter === 'EXPERT' || tipoPerfil.includes('expert');
+    const wantCoprodutor = typeFilter === 'COPRODUTOR' || tipoPerfil.includes('coprodutor');
+    if (wantExpert && !wantCoprodutor) {
       users = users.filter((u: any) => {
         const mp = u.tinder_mentor_profiles;
         return mp && (mp.is_expert || false) && !(mp.is_coproducer || false);
       });
-    }
-    if (typeFilter === 'COPRODUTOR' || tipoPerfil.includes('coprodutor')) {
+    } else if (wantCoprodutor && !wantExpert) {
       users = users.filter((u: any) => {
         const mp = u.tinder_mentor_profiles;
         return mp && (mp.is_coproducer || false) && !(mp.is_expert || false);

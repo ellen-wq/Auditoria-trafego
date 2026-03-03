@@ -12,7 +12,6 @@ import TrendingPosts from '../components/comunidade/TrendingPosts';
 import GlobalSearch from '../components/search/GlobalSearch';
 import { useDebounce } from '../hooks/useDebounce';
 import type { PostWithCounts } from '../types/comunidade';
-import TinderFilters from '../components/tinder/TinderFilters';
 import ProfileDiscoveryCard from '../components/tinder/ProfileDiscoveryCard';
 import MatchModal from '../components/tinder/MatchModal';
 import MatchesList from '../components/tinder/MatchesList';
@@ -133,36 +132,17 @@ export function TinderExpertPage() {
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedUser, setMatchedUser] = useState<any>(null);
   
-  // Filters
-  const [partnershipTypes, setPartnershipTypes] = useState<string[]>([]);
+  // Header: busca + Expert/Coprodutor (sem filtros de parceria/cidade)
   const [lookingFor, setLookingFor] = useState<string[]>([]);
-  const [cities, setCities] = useState<string[]>([]);
-  const [availableCities, setAvailableCities] = useState<string[]>([]);
-  // Busca do header (placeholder: "Buscar por objetivo, nome...")
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
   const currentUser = api.getUser();
 
-  // Load available cities
-  useEffect(() => {
-    loadAvailableCities();
-  }, []);
-
-  // Load discovery profiles (inclui busca por nome/objetivo)
+  // Load discovery profiles (busca por nome/objetivo + tipo Expert/Coprodutor)
   useEffect(() => {
     loadDiscoveryProfiles();
-  }, [partnershipTypes, lookingFor, cities, debouncedSearchQuery]);
-
-  const loadAvailableCities = async () => {
-    try {
-      const res = await api.get<{ cities: string[] }>('/api/tinder-do-fluxo/cities');
-      setAvailableCities(res.cities || []);
-    } catch (err) {
-      console.error('Erro ao carregar cidades:', err);
-      setAvailableCities([]);
-    }
-  };
+  }, [lookingFor, debouncedSearchQuery]);
 
   const loadDiscoveryProfiles = async () => {
     setLoading(true);
@@ -182,9 +162,6 @@ export function TinderExpertPage() {
             params.append('tipo_perfil', 'coprodutor');
           }
         }
-      }
-      if (cities.length > 0) {
-        cities.forEach(city => params.append('city', city));
       }
       params.append('smart_ordering', 'true');
 
@@ -354,11 +331,11 @@ export function TinderExpertPage() {
   };
 
   const handleClearFilters = () => {
-    setPartnershipTypes([]);
     setLookingFor([]);
-    setCities([]);
     setSearchQuery('');
   };
+
+  const hasActiveFilters = lookingFor.length > 0 || !!searchQuery.trim();
 
   const currentProfile = discoveryProfiles[currentProfileIndex];
 
@@ -372,7 +349,7 @@ export function TinderExpertPage() {
 
   return (
     <TinderDoFluxoPageShell title="Expert & Coprodutor" subtitle="Descubra perfis e faça matches">
-      <div id="tinder-expert-page-root" data-page="expert">
+      <div id="tinder-expert-page-root" data-page="expert" data-expert-version="2-no-filtros">
       {/* Header com busca (spec: Buscar por objetivo, nome...) + Expert/Coprodutor + ícones */}
       <header
         data-page="expert-search"
@@ -506,45 +483,15 @@ export function TinderExpertPage() {
               }}
             />
           </Link>
-          <button
-            type="button"
-            style={{
-              width: 40,
-              height: 40,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-              background: 'var(--bg-secondary)',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-            }}
-            title="Filtros"
-            onClick={() => document.querySelector('.tinder-filters-card')?.scrollIntoView({ behavior: 'smooth' })}
-          >
-            ⚙️
-          </button>
         </div>
       </header>
 
-      {/* Link rápido para matches (mantido) */}
+      {/* Link rápido para matches */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
         <Link to="/tinder-do-fluxo/matches" className="btn btn-outline">
           👋 Ver Matches
         </Link>
       </div>
-
-      {/* Filters */}
-      <TinderFilters
-        partnershipTypes={partnershipTypes}
-        onPartnershipTypesChange={setPartnershipTypes}
-        lookingFor={lookingFor}
-        onLookingForChange={setLookingFor}
-        cities={cities}
-        onCitiesChange={setCities}
-        availableCities={availableCities}
-      />
 
       {/* Discovery Card */}
         {loading ? (
@@ -555,13 +502,13 @@ export function TinderExpertPage() {
       ) : discoveryProfiles.length === 0 ? (
         <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
           <p style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
-            {partnershipTypes.length > 0 || lookingFor.length > 0 || searchQuery.trim()
-              ? 'Nenhum perfil encontrado com os filtros ou busca selecionados.'
+            {hasActiveFilters
+              ? 'Nenhum perfil encontrado com a busca ou tipo selecionado.'
               : 'Nenhum perfil disponível no momento. O feed mostra outros usuários Expert ou Coprodutor; verifique se há outros perfis no sistema.'}
           </p>
-          {(partnershipTypes.length > 0 || lookingFor.length > 0 || searchQuery.trim()) && (
+          {hasActiveFilters && (
             <button className="btn btn-outline" onClick={handleClearFilters}>
-              Limpar filtros
+              Limpar busca e filtros
             </button>
           )}
         </div>

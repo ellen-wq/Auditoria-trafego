@@ -244,38 +244,44 @@ export class SmartOrderingService {
       return profiles;
     }
 
-    // Buscar ratings de todos os perfis de uma vez
-    const profileIds = profiles.map(p => p.id);
-    const { data: ratings } = await this.supabase
-      .from('profile_rating')
-      .select('user_id, rating')
-      .in('user_id', profileIds);
-    
-    const ratingMap = new Map((ratings || []).map((r: any) => [r.user_id, r.rating || 0]));
+    const ratingSource = this.config.rating.source;
+    const ratingField = this.config.rating.field;
+    const nullsPosition = this.config.rating.nulls_position || 'last';
+
+    // Rating: usar tinder_mentor_profiles.average_rating (já vem no objeto do feed)
+    const getRating = (profile: UserProfile): number | null => {
+      if (ratingSource === 'tinder_mentor_profiles' && profile.tinder_mentor_profiles) {
+        const val = profile.tinder_mentor_profiles[ratingField];
+        return typeof val === 'number' && !Number.isNaN(val) ? val : null;
+      }
+      return null;
+    };
 
     // Calcular scores para cada perfil
     const profilesWithScores = await Promise.all(
       profiles.map(async (profile) => {
         const compatibilityScore = await this.calculateCompatibilityScore(profile, currentUserProfile);
-        const rating = ratingMap.get(profile.id) || 0;
+        const rating = getRating(profile);
         const recentActivity = profile.tinder_mentor_profiles?.updated_at || profile.tinder_mentor_profiles?.created_at || '';
 
         return {
           ...profile,
           compatibility_score: compatibilityScore,
-          rating: rating,
+          rating: rating ?? undefined,
           recent_activity: recentActivity,
         };
       })
     );
 
-    // Ordenar conforme priority_order
+    // Ordenar conforme priority_order (nulls_position: "last" no rating_desc)
     profilesWithScores.sort((a, b) => {
       for (const order of this.config.priority_order) {
         let comparison = 0;
 
         if (order === 'rating_desc') {
-          comparison = (b.rating || 0) - (a.rating || 0);
+          const aVal = a.rating ?? (nullsPosition === 'last' ? -Infinity : 0);
+          const bVal = b.rating ?? (nullsPosition === 'last' ? -Infinity : 0);
+          comparison = bVal - aVal;
         } else if (order === 'compatibility_score_desc') {
           comparison = (b.compatibility_score || 0) - (a.compatibility_score || 0);
         } else if (order === 'recent_profile_activity_desc') {
