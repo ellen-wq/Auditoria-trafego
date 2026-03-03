@@ -688,7 +688,7 @@ button { font-family: inherit; }
   align-items: flex-start;
   margin-bottom: 2px;
 }
-.matches-chat-message-row .meta .name { font-size: 0.875rem; font-weight: 600; truncate; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matches-chat-message-row .meta .name { font-size: 0.875rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .matches-chat-message-row .meta .time { font-size: 10px; color: var(--text-muted); }
 .matches-chat-message-row .meta .preview { font-size: 0.75rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .matches-chat-message-row.active .meta .preview { color: var(--text-primary); font-weight: 600; }
