@@ -839,9 +839,11 @@ export function TinderVagasPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = searchParams.get('tab') || 'minhas';
-  const statusTab: 'minhas' | 'abertas' | 'encerradas' =
-    tabParam === 'todas' ? 'minhas' : tabParam === 'abertas' || tabParam === 'encerradas' ? tabParam : 'minhas';
+  const tabParam = searchParams.get('tab') || 'todas';
+  const statusTab: 'todas' | 'minhas' | 'abertas' | 'encerradas' =
+    (tabParam === 'todas' || tabParam === 'minhas' || tabParam === 'abertas' || tabParam === 'encerradas')
+      ? tabParam
+      : 'todas';
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [filters, setFilters] = useState({
@@ -858,6 +860,8 @@ export function TinderVagasPage() {
   const perPage = 12;
 
   const statusFilterApi = statusTab === 'minhas' ? 'all' : statusTab === 'abertas' ? 'open' : 'closed';
+  const apiTab = statusTab === 'todas' ? 'abertas' : statusTab === 'minhas' ? 'minhas' : statusTab === 'abertas' ? 'minhas' : 'minhas';
+  const apiStatusFilter = statusTab === 'todas' ? 'open' : statusFilterApi;
   const hasActiveFilters = !!(
     debouncedSearch ||
     filters.tipo_vaga ||
@@ -865,6 +869,18 @@ export function TinderVagasPage() {
     filters.pretensao_max ||
     filters.modelo_trabalho
   );
+
+  // Sincronizar URL com aba padrão "Todas" ao abrir a página (sem ?tab=)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (!tab) {
+      setSearchParams((p) => {
+        const next = new URLSearchParams(p);
+        next.set('tab', 'todas');
+        return next;
+      }, { replace: true });
+    }
+  }, []);
 
   useEffect(() => {
     if ((location.state as { fromApply?: boolean })?.fromApply) {
@@ -882,8 +898,8 @@ export function TinderVagasPage() {
     setError('');
     try {
       const params = new URLSearchParams();
-      params.set('tab', 'minhas');
-      params.set('status_filter', statusFilterApi);
+      params.set('tab', apiTab);
+      if (apiTab === 'minhas') params.set('status_filter', apiStatusFilter);
       params.set('page', page.toString());
       params.set('per_page', perPage.toString());
       if (debouncedSearch) params.set('q', debouncedSearch);
@@ -918,7 +934,7 @@ export function TinderVagasPage() {
       subtitle="Gerencie suas oportunidades e encontre talentos de elite."
       headerRight={
         <div className="vagas-tabs">
-          {(['minhas', 'abertas', 'encerradas'] as const).map((t) => (
+          {(['todas', 'minhas', 'abertas', 'encerradas'] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -932,7 +948,7 @@ export function TinderVagasPage() {
                 setPage(1);
               }}
             >
-              {t === 'minhas' ? 'Minhas' : t === 'abertas' ? 'Abertas' : 'Encerradas'}
+              {t === 'todas' ? 'Todas' : t === 'minhas' ? 'Minhas vagas' : t === 'abertas' ? 'Abertas' : 'Encerradas'}
             </button>
           ))}
         </div>
@@ -1058,9 +1074,17 @@ export function TinderVagasPage() {
           <>
             {(jobs.length === 0 && !canCreate) ? (
               <div className="card" style={{ padding: 48, textAlign: 'center', borderRadius: 16 }}>
-                <EmptyState text="Você ainda não publicou nenhuma vaga." />
+                <EmptyState
+                  text={
+                    statusTab === 'todas'
+                      ? 'Nenhuma vaga aberta no momento.'
+                      : 'Você ainda não publicou nenhuma vaga.'
+                  }
+                />
                 <p style={{ marginTop: 12, color: 'var(--text-muted)' }}>
-                  Vagas criadas por você aparecerão aqui (Minhas, Abertas e Encerradas).
+                  {statusTab === 'todas'
+                    ? 'As vagas abertas de todos os usuários aparecem na aba Todas.'
+                    : 'Vagas criadas por você aparecerão aqui (Minhas, Abertas e Encerradas).'}
                 </p>
               </div>
             ) : jobs.length === 0 && hasActiveFilters ? (
@@ -1115,26 +1139,28 @@ export function TinderVagasPage() {
                           {open ? 'Aberta' : 'Encerrada'}
                         </span>
                       </div>
-                      <div
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          marginBottom: 12,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: 'var(--accent-dark)',
-                          background: 'rgba(163,230,53,0.12)',
-                          padding: '4px 10px',
-                          borderRadius: 8
-                        }}
-                        title="Criada por você"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                          person
-                        </span>
-                        Sua vaga
-                      </div>
+                      {user && (j as { creator_id?: string }).creator_id === user.id && (
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            marginBottom: 12,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: 'var(--accent-dark)',
+                            background: 'rgba(163,230,53,0.12)',
+                            padding: '4px 10px',
+                            borderRadius: 8
+                          }}
+                          title="Criada por você"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                            person
+                          </span>
+                          Sua vaga
+                        </div>
+                      )}
                       <h3 className="vagas-card-title" style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: 'var(--text-primary)' }}>
                         {j.title || j.titulo}
                       </h3>

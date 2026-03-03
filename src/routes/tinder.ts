@@ -1379,6 +1379,7 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
       const creatorName = creatorMap.get(j.creator_id) || 'Não especificado';
       return {
         id: j.id,
+        creator_id: j.creator_id,
         title: j.title,
         titulo: j.title,
         empresa: creatorName,
@@ -1402,8 +1403,9 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
     });
     res.json({ jobs: jobsWithCreator, total_vagas: total });
     return;
-  } else {
-    // abertas: buscar OPEN e filtrar em memória (deadline null ou >= hoje)
+  }
+  if (tabStr === 'abertas' || tabStr === 'todas' || tabStr === '') {
+    // Todas as vagas abertas (sem filtrar por criador)
     const { data: openJobs, error: openErr } = await query.eq('status', 'OPEN');
     if (openErr) {
       console.error('[GET /jobs] Erro:', openErr);
@@ -1469,6 +1471,7 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
       const creatorName = creatorMap.get(job.creator_id) || 'Não especificado';
       return {
         id: job.id,
+        creator_id: job.creator_id,
         titulo: job.title,
         empresa: creatorName,
         localizacao: job.location || '',
@@ -1561,6 +1564,7 @@ router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
     const creatorName = creatorMap.get(job.creator_id) || 'Não especificado';
     return {
       id: job.id,
+      creator_id: job.creator_id,
       titulo: job.title,
       empresa: creatorName,
       localizacao: job.location || '',
@@ -1646,19 +1650,29 @@ router.post('/jobs', async (req: Request, res: Response): Promise<void> => {
     res.status(400).json({ error: 'Título e descrição são obrigatórios.' });
     return;
   }
+  const deadlineRaw = cleanOptionalString(req.body.deadline, 20);
+  if (!deadlineRaw) {
+    res.status(400).json({ error: 'Data de encerramento da vaga é obrigatória.' });
+    return;
+  }
+  const deadlineMatch = String(deadlineRaw).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const deadline = deadlineMatch ? `${deadlineMatch[1]}-${deadlineMatch[2]}-${deadlineMatch[3]}` : null;
+  if (!deadline) {
+    res.status(400).json({ error: 'Data de encerramento deve estar no formato AAAA-MM-DD.' });
+    return;
+  }
   if (workingConditions) {
     description = description + '\n\nCondições de trabalho: ' + workingConditions;
   }
   
-  // Criar vaga com creator_id da sessão
   const payload = {
-    creator_id: userId, // Sempre da sessão
+    creator_id: userId,
     title,
     description,
     specialty: cleanString(req.body.specialty || '', 60),
-    model: cleanString(req.body.model || '', 60), // Modelo de trabalho: Online, Presencial, Híbrido, Indiferente
-    value: req.body.value ? Number(req.body.value) : null, // Salarial
-    deadline: cleanOptionalString(req.body.deadline, 20),
+    model: cleanString(req.body.model || '', 60),
+    value: req.body.value ? Number(req.body.value) : null,
+    deadline,
     location: cleanString(req.body.location || '', 120),
     status: 'OPEN'
   };
