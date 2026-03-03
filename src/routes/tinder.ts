@@ -974,12 +974,26 @@ router.get('/matches', async (req: Request, res: Response): Promise<void> => {
     res.json({ matches: matchesList.map((m: any) => ({ ...m, otherUser: null })) });
     return;
   }
-  const { data: rolesData } = await supabase.from('user_roles').select('user_id, name').in('user_id', otherUserIds);
-  const { data: mentorData } = await supabase.from('tinder_mentor_profiles').select('user_id, city, photo_url, whatsapp').in('user_id', otherUserIds);
-  const { data: expertData } = await supabase.from('tinder_expert_profiles').select('user_id, goal_text, is_expert, is_coproducer').in('user_id', otherUserIds);
-  const rolesMap = new Map((rolesData || []).map((r: any) => [r.user_id, r]));
-  const mentorMap = new Map((mentorData || []).map((m: any) => [m.user_id, m]));
-  const expertMap = new Map((expertData || []).map((e: any) => [e.user_id, e]));
+  const matchIds = matchesList.map((m: any) => m.id);
+  const [rolesRes, mentorRes, expertRes, messagesRes] = await Promise.all([
+    supabase.from('user_roles').select('user_id, name').in('user_id', otherUserIds),
+    supabase.from('tinder_mentor_profiles').select('user_id, city, photo_url, whatsapp').in('user_id', otherUserIds),
+    supabase.from('tinder_expert_profiles').select('user_id, goal_text, is_expert, is_coproducer').in('user_id', otherUserIds),
+    matchIds.length > 0
+      ? supabase.from('tinder_messages').select('match_id, body, created_at, sender_id').in('match_id', matchIds).order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] as any[] })
+  ]);
+  const rolesData = rolesRes.data || [];
+  const mentorData = mentorRes.data || [];
+  const expertData = expertRes.data || [];
+  const messagesList = messagesRes.data || [];
+  const rolesMap = new Map(rolesData.map((r: any) => [r.user_id, r]));
+  const mentorMap = new Map(mentorData.map((m: any) => [m.user_id, m]));
+  const expertMap = new Map(expertData.map((e: any) => [e.user_id, e]));
+  const lastMessagesMap: Record<number, { body: string; created_at: string; sender_id: string }> = {};
+  messagesList.forEach((msg: any) => {
+    if (!lastMessagesMap[msg.match_id]) lastMessagesMap[msg.match_id] = msg;
+  });
   const getTypeLabel = (ep: any) => {
     if (!ep) return '';
     const parts: string[] = [];
@@ -987,19 +1001,6 @@ router.get('/matches', async (req: Request, res: Response): Promise<void> => {
     if (ep.is_coproducer) parts.push('Coprodutor');
     return parts.join(' / ') || '';
   };
-  const matchIds = matchesList.map((m: any) => m.id);
-  let lastMessagesMap: Record<number, { body: string; created_at: string; sender_id: string }> = {};
-  if (matchIds.length > 0) {
-    const { data: messagesRows } = await supabase
-      .from('tinder_messages')
-      .select('match_id, body, created_at, sender_id')
-      .in('match_id', matchIds)
-      .order('created_at', { ascending: false });
-    const messagesList = messagesRows || [];
-    messagesList.forEach((msg: any) => {
-      if (!lastMessagesMap[msg.match_id]) lastMessagesMap[msg.match_id] = msg;
-    });
-  }
 
   const matches = matchesList.map((m: any) => {
     const otherId = m.user1_id === req.user!.id ? m.user2_id : m.user1_id;

@@ -52,19 +52,10 @@ async function requireAuth(req: Request, res: Response, next: NextFunction): Pro
       return;
     }
 
-    // Buscar email do auth.users
-    let email = decoded.email;
-    try {
-      const { data: authUser } = await supabase.auth.admin.getUserById(decoded.id);
-      email = authUser?.user?.email || decoded.email;
-    } catch (authErr) {
-      console.warn('[requireAuth] Erro ao buscar email do auth.users, usando do token:', authErr);
-    }
-
     const user: SafeUser = {
       id: roleData.user_id,
       name: roleData.name || '',
-      email: email,
+      email: decoded.email || '',
       role: roleData.role as 'LIDERANCA' | 'MENTORADO' | 'PRESTADOR',
       has_seen_tinder_do_fluxo_tutorial: roleData.has_seen_tinder_do_fluxo_tutorial || false,
       created_at: roleData.created_at
