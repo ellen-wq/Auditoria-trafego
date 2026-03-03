@@ -809,6 +809,17 @@ button { font-family: inherit; }
   text-align: right;
 }
 .matches-chat-msg-bubble .bubble.sent .time { color: inherit; opacity: 0.8; }
+.matches-chat-typing-bubble { min-height: auto; }
+.matches-chat-typing-dots {
+  display: inline-block;
+  font-size: 1.25rem;
+  letter-spacing: 2px;
+  animation: typing-dots 1.4s ease-in-out infinite;
+}
+@keyframes typing-dots {
+  0%, 60%, 100% { opacity: 0.3; }
+  30% { opacity: 1; }
+}
 .matches-chat-input-area {
   padding: 24px 32px;
   background: var(--bg-white);

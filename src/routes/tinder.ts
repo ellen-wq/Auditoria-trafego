@@ -1103,6 +1103,79 @@ router.post('/matches/:matchId/messages', async (req: Request, res: Response): P
   res.status(201).json({ message: inserted });
 });
 
+// Indicador "digitando" em memória (sem Supabase)
+const typingExpires = new Map<string, number>();
+const TYPING_TTL_MS = 5000;
+
+function getOtherUserId(matchRow: { user1_id: string; user2_id: string }, currentUserId: string): string {
+  return matchRow.user1_id === currentUserId ? matchRow.user2_id : matchRow.user1_id;
+}
+
+router.post('/matches/:matchId/typing', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  const matchId = toPositiveInt(req.params.matchId);
+  const typing = req.body.typing === true;
+  if (!matchId) {
+    res.status(400).json({ error: 'ID do match inválido.' });
+    return;
+  }
+  const supabase = getSupabase();
+  const { data: matchRow, error: matchError } = await supabase
+    .from('tinder_matches')
+    .select('id, user1_id, user2_id')
+    .eq('id', matchId)
+    .single();
+  if (matchError || !matchRow) {
+    res.status(404).json({ error: 'Match não encontrado.' });
+    return;
+  }
+  const userId = req.user!.id;
+  if (matchRow.user1_id !== userId && matchRow.user2_id !== userId) {
+    res.status(403).json({ error: 'Sem permissão.' });
+    return;
+  }
+  const key = `${matchId}:${userId}`;
+  if (typing) {
+    typingExpires.set(key, Date.now() + TYPING_TTL_MS);
+  } else {
+    typingExpires.delete(key);
+  }
+  res.json({ ok: true });
+});
+
+router.get('/matches/:matchId/typing', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  const matchId = toPositiveInt(req.params.matchId);
+  if (!matchId) {
+    res.status(400).json({ error: 'ID do match inválido.' });
+    return;
+  }
+  const supabase = getSupabase();
+  const { data: matchRow, error: matchError } = await supabase
+    .from('tinder_matches')
+    .select('id, user1_id, user2_id')
+    .eq('id', matchId)
+    .single();
+  if (matchError || !matchRow) {
+    res.status(404).json({ error: 'Match não encontrado.' });
+    return;
+  }
+  const userId = req.user!.id;
+  if (matchRow.user1_id !== userId && matchRow.user2_id !== userId) {
+    res.status(403).json({ error: 'Sem permissão.' });
+    return;
+  }
+  const otherUserId = getOtherUserId(matchRow, userId);
+  const key = `${matchId}:${otherUserId}`;
+  const expires = typingExpires.get(key);
+  const now = Date.now();
+  if (expires != null && expires < now) {
+    typingExpires.delete(key);
+  }
+  const typing = expires != null && expires >= now;
+  res.json({ typing });
+});
+
 router.post('/favorite', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
   const targetUserId = isValidUUID(req.body.targetUserId);

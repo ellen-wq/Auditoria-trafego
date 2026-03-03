@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '../components/AppLayout';
@@ -1379,6 +1379,11 @@ function MatchesListSkeleton() {
   );
 }
 
+const POLL_MESSAGES_MS = 4000;
+const POLL_TYPING_MS = 1500;
+const TYPING_DEBOUNCE_START_MS = 400;
+const TYPING_DEBOUNCE_STOP_MS = 2000;
+
 export function TinderMatchesPage() {
   const queryClient = useQueryClient();
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
@@ -1386,8 +1391,11 @@ export function TinderMatchesPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
+  const [otherTyping, setOtherTyping] = useState(false);
   const navigate = useNavigate();
   const currentUser = api.getUser() as { id: string; name: string; photo_url?: string } | null;
+  const typingStartRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: matches = [], isLoading: loading } = useQuery({
     queryKey: MATCHES_QUERY_KEY,
@@ -1404,6 +1412,10 @@ export function TinderMatchesPage() {
     }
   }, [matches, selectedMatchId]);
 
+  const fetchMessages = useCallback((matchId: number) => {
+    return api.get<{ messages: any[] }>(`/api/tinder-do-fluxo/matches/${matchId}/messages`).then((r) => r.messages || []);
+  }, []);
+
   useEffect(() => {
     if (!selectedMatchId) {
       setMessages([]);
@@ -1411,14 +1423,61 @@ export function TinderMatchesPage() {
     }
     let cancelled = false;
     setMessagesLoading(true);
-    api.get<{ messages: any[] }>(`/api/tinder-do-fluxo/matches/${selectedMatchId}/messages`)
-      .then((r) => {
-        if (!cancelled) setMessages(r.messages || []);
-      })
+    fetchMessages(selectedMatchId)
+      .then((list) => { if (!cancelled) setMessages(list); })
       .catch(() => { if (!cancelled) setMessages([]); })
       .finally(() => { if (!cancelled) setMessagesLoading(false); });
-    return () => { cancelled = true; };
+    const interval = setInterval(() => {
+      if (cancelled) return;
+      fetchMessages(selectedMatchId)
+        .then((list) => { if (!cancelled) setMessages(list); })
+        .catch(() => {});
+    }, POLL_MESSAGES_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [selectedMatchId, fetchMessages]);
+
+  useEffect(() => {
+    if (!selectedMatchId) {
+      setOtherTyping(false);
+      return;
+    }
+    let cancelled = false;
+    const poll = () => {
+      if (cancelled) return;
+      api.get<{ typing: boolean }>(`/api/tinder-do-fluxo/matches/${selectedMatchId}/typing`)
+        .then((r) => { if (!cancelled) setOtherTyping(r.typing); })
+        .catch(() => {});
+    };
+    poll();
+    const interval = setInterval(poll, POLL_TYPING_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [selectedMatchId]);
+
+  const sendTyping = useCallback((matchId: number, typing: boolean) => {
+    api.post(`/api/tinder-do-fluxo/matches/${matchId}/typing`, { typing }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!selectedMatchId) return;
+    if (typingStartRef.current) clearTimeout(typingStartRef.current);
+    if (typingStopRef.current) clearTimeout(typingStopRef.current);
+    if (!inputValue.trim()) {
+      sendTyping(selectedMatchId, false);
+      return;
+    }
+    typingStartRef.current = setTimeout(() => sendTyping(selectedMatchId, true), TYPING_DEBOUNCE_START_MS);
+    typingStopRef.current = setTimeout(() => sendTyping(selectedMatchId, false), TYPING_DEBOUNCE_STOP_MS);
+    return () => {
+      if (typingStartRef.current) clearTimeout(typingStartRef.current);
+      if (typingStopRef.current) clearTimeout(typingStopRef.current);
+    };
+  }, [selectedMatchId, inputValue, sendTyping]);
 
   const selectedMatch = selectedMatchId ? matches.find((m) => m.id === selectedMatchId) : null;
   const sortedByRecent = [...matches].sort((a, b) => {
@@ -1430,6 +1489,7 @@ export function TinderMatchesPage() {
   const handleSend = async () => {
     const text = inputValue.trim();
     if (!text || !selectedMatchId || sending) return;
+    sendTyping(selectedMatchId, false);
     setSending(true);
     setInputValue('');
     try {
@@ -1564,7 +1624,7 @@ export function TinderMatchesPage() {
                   )}
                   <div>
                     <div className="name">{selectedMatch.otherUser?.name || 'Usuário'}</div>
-                    <div className="status">Online agora</div>
+                    <div className="status">{otherTyping ? 'digitando...' : 'Online agora'}</div>
                   </div>
                 </div>
                 <div className="actions">
@@ -1591,24 +1651,34 @@ export function TinderMatchesPage() {
                     <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>Carregando mensagens...</p>
                   </div>
                 ) : (
-                  messages.map((msg) => {
-                    const isSent = msg.sender_id === currentUser?.id;
-                    const senderName = isSent ? (currentUser?.name || 'Você') : (selectedMatch.otherUser?.name || 'Usuário');
-                    const senderPhoto = isSent ? currentUser?.photo_url : selectedMatch.otherUser?.photo_url;
-                    return (
-                      <div key={msg.id} className={`matches-chat-msg-bubble ${isSent ? 'sent' : ''}`}>
-                        {senderPhoto ? (
-                          <img src={senderPhoto} alt="" className="small-avatar" />
-                        ) : (
-                          <div className="small-avatar-placeholder">{senderName.charAt(0).toUpperCase()}</div>
-                        )}
-                        <div className={`bubble ${isSent ? 'sent' : 'received'}`}>
-                          <p>{msg.body}</p>
-                          <span className="time">{formatMessageTime(msg.created_at)}</span>
+                  <>
+                    {messages.map((msg) => {
+                      const isSent = msg.sender_id === currentUser?.id;
+                      const senderName = isSent ? (currentUser?.name || 'Você') : (selectedMatch.otherUser?.name || 'Usuário');
+                      const senderPhoto = isSent ? currentUser?.photo_url : selectedMatch.otherUser?.photo_url;
+                      return (
+                        <div key={msg.id} className={`matches-chat-msg-bubble ${isSent ? 'sent' : ''}`}>
+                          {senderPhoto ? (
+                            <img src={senderPhoto} alt="" className="small-avatar" />
+                          ) : (
+                            <div className="small-avatar-placeholder">{senderName.charAt(0).toUpperCase()}</div>
+                          )}
+                          <div className={`bubble ${isSent ? 'sent' : 'received'}`}>
+                            <p>{msg.body}</p>
+                            <span className="time">{formatMessageTime(msg.created_at)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {otherTyping && (
+                      <div className="matches-chat-msg-bubble">
+                        <div className="small-avatar-placeholder">{(selectedMatch.otherUser?.name || 'U').charAt(0).toUpperCase()}</div>
+                        <div className="bubble received matches-chat-typing-bubble">
+                          <span className="matches-chat-typing-dots">...</span>
                         </div>
                       </div>
-                    );
-                  })
+                    )}
+                  </>
                 )}
               </div>
 
@@ -1623,6 +1693,7 @@ export function TinderMatchesPage() {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                    onBlur={() => selectedMatchId && sendTyping(selectedMatchId, false)}
                   />
                   <button
                     type="button"
