@@ -58,7 +58,7 @@ export default function LoginPage() {
         // ignora
       }
       api.setAuth(data.token, data.user);
-      navigate(DEFAULT_AFTER_LOGIN, { replace: true });
+      navigate(DEFAULT_AFTER_LOGIN, { state: { fromLogin: true, user: data.user }, replace: true });
     } catch (err: any) {
       setError(err.message || 'Erro ao entrar.');
     } finally {

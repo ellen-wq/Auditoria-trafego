@@ -2022,20 +2022,99 @@ export function TinderMatchesPage() {
   );
 }
 
+function getInitials(name: string | undefined, fallback: string): string {
+  if (!name || !name.trim()) return fallback.slice(0, 2).toUpperCase();
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+function formatFavoriteType(type: string): string {
+  const t = (type || '').toUpperCase();
+  if (t === 'COMUNIDADE') return 'Comunidade';
+  if (t === 'EXPERT') return 'Expert';
+  if (t === 'COPRODUTOR') return 'Coprodutor';
+  return type || 'Favorito';
+}
+
 export function TinderFavoritosPage() {
   const [favorites, setFavorites] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   useEffect(() => {
     api.get<{ favorites: any[] }>('/api/tinder-do-fluxo/favorites').then((r) => setFavorites(r.favorites || []));
   }, []);
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return favorites;
+    return favorites.filter((f) => {
+      const name = (f.users?.name || '').toLowerCase();
+      const type = (f.type || '').toLowerCase();
+      return name.includes(q) || type.includes(q);
+    });
+  }, [favorites, searchQuery]);
+
   return (
     <TinderDoFluxoPageShell title="Favoritos">
-      <div className="card">
-        {favorites.length === 0 ? <EmptyState text="Nenhum favorito salvo." /> : (
-          <div style={{ display: 'grid', gap: 8 }}>
-            {favorites.map((f) => <div key={f.id} className="quick-action">{f.users?.name || `Usuário ${f.target_user_id}`} • {f.type}</div>)}
-          </div>
-        )}
-      </div>
+      <header className="favoritos-page-header" data-page="favoritos">
+        <div className="favoritos-search-wrap">
+          <span className="favoritos-search-icon" aria-hidden>🔍</span>
+          <input
+            type="search"
+            placeholder="Buscar por objetivo, nome..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Buscar favoritos"
+          />
+        </div>
+        <div className="favoritos-header-actions">
+          <button type="button" className="favoritos-filter-dropdown" aria-haspopup="listbox" aria-label="Filtro">
+            Favoritos <span style={{ fontSize: 14 }}>▼</span>
+          </button>
+          <Link to="/tinder-do-fluxo/matches" className="favoritos-header-btn" title="Matches">🔔</Link>
+          <Link to="/tinder-do-fluxo/perfil" className="favoritos-header-btn" title="Meu perfil">👤</Link>
+        </div>
+      </header>
+
+      {favorites.length === 0 ? (
+        <div className="favoritos-empty">
+          <p>Nenhum favorito salvo.</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="favoritos-empty">
+          <p>Nenhum favorito encontrado para &quot;{searchQuery}&quot;.</p>
+        </div>
+      ) : (
+        <div className="favoritos-grid">
+          {filtered.map((f) => {
+            const name = f.users?.name || `Usuário ${f.target_user_id}`;
+            const typeLabel = formatFavoriteType(f.type);
+            const profileUrl = `/tinder-do-fluxo/u/${f.target_user_id}`;
+            return (
+              <article key={f.id} className="favoritos-card">
+                <div className="favoritos-card-top">
+                  <div className="favoritos-card-avatar">
+                    <span>{getInitials(name, 'U')}</span>
+                    <span className="favoritos-card-badge-pct">—</span>
+                  </div>
+                  <div className="favoritos-card-info">
+                    <div className="favoritos-card-name-row">
+                      <h3 className="favoritos-card-name">{name}</h3>
+                      <span className="favoritos-card-expert-badge">{typeLabel.toUpperCase()}</span>
+                    </div>
+                    <p className="favoritos-card-role">{typeLabel}</p>
+                    <p className="favoritos-card-quote">&quot;Perfil favoritado na comunidade.&quot;</p>
+                  </div>
+                </div>
+                <div className="favoritos-card-actions">
+                  <Link to={profileUrl} className="favoritos-card-btn-profile">Ver Perfil</Link>
+                  <Link to={profileUrl} className="favoritos-card-btn-chat" title="Ver perfil / Contato">💬</Link>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </TinderDoFluxoPageShell>
   );
 }
