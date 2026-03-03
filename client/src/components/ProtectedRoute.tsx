@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import type { User } from '../services/api';
 import ProfileRequired from './ProfileRequired';
@@ -19,10 +19,28 @@ function getMainDashboardPath(role?: string): string {
 }
 
 export default function ProtectedRoute({ children, requiredRole, allowedRoles, redirectTo, skipProfileCheck }: Props) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isChecking, setIsChecking] = useState(true);
+  const location = useLocation();
+  const userFromLogin = (location.state as { fromLogin?: boolean; user?: User } | null)?.fromLogin && (location.state as { user?: User })?.user
+    ? (location.state as { user: User }).user
+    : null;
+
+  const [user, setUser] = useState<User | null>(() => userFromLogin ?? null);
+  const [isChecking, setIsChecking] = useState(() => !userFromLogin);
 
   useEffect(() => {
+    // Se já temos usuário vindo do login, só sincronizar em background
+    if (userFromLogin) {
+      api.get<{ user: User }>('/api/auth/me')
+        .then((res) => {
+          if (res?.user) {
+            api.setUser(res.user);
+            setUser(res.user);
+          }
+        })
+        .catch(() => {});
+      return;
+    }
+
     // Verificar usuário do localStorage primeiro (rápido)
     try {
       const cachedUser = api.getUser();
@@ -79,7 +97,14 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles, r
       mounted = false;
       clearTimeout(timeoutId);
     };
-  }, []); // Executar apenas uma vez
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname === '/tinder-do-fluxo/matches' && !user) {
+      const u = api.getUser();
+      if (u) setUser(u);
+    }
+  }, [location.pathname, user]);
 
   if (isChecking) {
     return (
@@ -89,8 +114,17 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles, r
       </div>
     );
   }
-  
-  if (!user) return <Navigate to="/login" replace />;
+
+  const isMatchesPage = location.pathname === '/tinder-do-fluxo/matches';
+  if (!user) {
+    if (isMatchesPage) return <>{children}</>;
+    const retryUser = api.getUser();
+    if (retryUser) {
+      setUser(retryUser);
+      return null;
+    }
+    return <Navigate to="/login" replace />;
+  }
 
   if (requiredRole && user.role !== requiredRole) {
     return <Navigate to={redirectTo || getMainDashboardPath(user.role)} replace />;
