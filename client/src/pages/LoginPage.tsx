@@ -94,13 +94,13 @@ export default function LoginPage() {
         <div className="login-page-left-content">
           <div className="login-page-brand">
             <BrandIcon />
-            <span className="login-page-brand-name">Fluxo</span>
+            <span className="login-page-brand-name">Ladeira Club</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <p className="login-page-tagline">O digital não precisa ser solitário.</p>
-            <h1 className="login-page-title">Fluxo</h1>
+            <h1 className="login-page-title">Ladeira Club</h1>
             <p className="login-page-desc">
-              O ecossistema do Fluxo, porque o ambiente define tudo.
+              O ecossistema do Ladeira, porque o ambiente define tudo.
             </p>
           </div>
         </div>
@@ -112,7 +112,7 @@ export default function LoginPage() {
           {/* Mobile brand */}
           <div className="login-page-mobile-brand">
             <BrandIcon />
-            <h2 className="login-page-brand-name">Fluxo</h2>
+            <h2 className="login-page-brand-name">Ladeira Club</h2>
           </div>
 
           <div className="login-page-form-header">
@@ -202,7 +202,7 @@ export default function LoginPage() {
           </form>
 
           <p className="login-page-footer">
-            © {new Date().getFullYear()} Fluxo. Todos os direitos reservados.
+            © {new Date().getFullYear()} Ladeira Club. Todos os direitos reservados.
           </p>
         </div>
       </div>
