@@ -5,7 +5,7 @@ import { api } from '../services/api';
 const LOGIN_EMAIL_KEY = 'fluxer_login_email';
 const DEFAULT_AFTER_LOGIN = '/tinder-do-fluxo/matches';
 const LOGIN_LEFT_BG =
-  'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80';
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuBruqDRdbXOOjahIIZiT4c0jTos8e_ckYYB1deqjNnd0EQ6H9fMt1RJeYSKoKkwiCG3wL8SCRKXBS8Zz127auZS2hak71tOwB9WkC5I_9zT9gjlkOEvrSdwt63npsm_19ZN1dg0haIoSwzUIucqGmyZ_b8wl02sWbJniJUIN54W2s5X7nEATuHUv1nIprxMWybzMF86GU9gyeDFQXOPx7iOOZ0mjmDXj0dW8HspHDiQufTC3uhQw9RJ25OjS-6HcPrE02i6k4ERXCjb';
 
 function getStoredEmail(): string {
   try {
@@ -131,7 +131,6 @@ export default function LoginPage() {
             onSubmit={handleSubmit}
             onKeyDown={handleFormKeyDown}
             action="javascript:void(0)"
-            style={{ marginTop: '2rem' }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="login-field">
@@ -195,9 +194,9 @@ export default function LoginPage() {
               <div className="login-page-divider">
                 <span>ou</span>
               </div>
-              <Link to="/register" className="login-btn-secondary">
-                Cadastre-se
-              </Link>
+              <a href="#" className="login-btn-secondary">
+                Entrar com convite
+              </a>
             </div>
           </form>
 
