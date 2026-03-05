@@ -4,6 +4,12 @@ import { api } from '../services/api';
 import type { User } from '../services/api';
 import ProfileRequired from './ProfileRequired';
 
+interface AuthMeResponse {
+  user: User;
+  hasProfile?: boolean;
+  profileRequired?: boolean;
+}
+
 interface Props {
   children: React.ReactNode;
   requiredRole?: 'MENTORADO' | 'LIDERANCA';
@@ -20,67 +26,84 @@ function getMainDashboardPath(role?: string): string {
 
 export default function ProtectedRoute({ children, requiredRole, allowedRoles, redirectTo, skipProfileCheck }: Props) {
   const location = useLocation();
-  const userFromLogin = (location.state as { fromLogin?: boolean; user?: User } | null)?.fromLogin && (location.state as { user?: User })?.user
-    ? (location.state as { user: User }).user
-    : null;
+  const state = location.state as { fromLogin?: boolean; user?: User } | null;
+  const userFromLogin = state?.fromLogin && state?.user ? state.user : null;
 
-  const [user, setUser] = useState<User | null>(() => userFromLogin ?? null);
-  const [isChecking, setIsChecking] = useState(() => !userFromLogin);
+  const cachedUser = (() => {
+    try {
+      return api.getUser();
+    } catch {
+      return null;
+    }
+  })();
+
+  const needsProfileCheck = !skipProfileCheck && cachedUser?.role !== 'LIDERANCA' && userFromLogin?.role !== 'LIDERANCA';
+
+  const [user, setUser] = useState<User | null>(() => userFromLogin ?? cachedUser ?? null);
+  const [hasProfileFromMe, setHasProfileFromMe] = useState<boolean | null>(null);
+  const [isChecking, setIsChecking] = useState(() => {
+    if (userFromLogin && !needsProfileCheck) return false;
+    if (userFromLogin && needsProfileCheck) return true;
+    if (cachedUser && !needsProfileCheck) return false;
+    if (cachedUser && needsProfileCheck) return true;
+    return true;
+  });
 
   useEffect(() => {
-    // Se já temos usuário vindo do login, só sincronizar em background
     if (userFromLogin) {
-      api.get<{ user: User }>('/api/auth/me')
+      api.setUser(userFromLogin);
+      setUser(userFromLogin);
+      if (!needsProfileCheck) setIsChecking(false);
+      api.get<AuthMeResponse>('/api/auth/me')
         .then((res) => {
           if (res?.user) {
             api.setUser(res.user);
             setUser(res.user);
+            if (res.hasProfile !== undefined) setHasProfileFromMe(res.hasProfile);
           }
+          setIsChecking(false);
         })
-        .catch(() => {});
+        .catch(() => {
+          setIsChecking(false);
+        });
       return;
     }
 
-    // Verificar usuário do localStorage primeiro (rápido)
-    try {
-      const cachedUser = api.getUser();
-      if (cachedUser) {
-        setUser(cachedUser);
-        setIsChecking(false);
-        // Verificar no servidor em background (não bloqueia)
-        api.get<{ user: User }>('/api/auth/me')
-          .then((res) => {
-            if (res?.user) {
-              api.setUser(res.user);
-              setUser(res.user);
-            }
-          })
-          .catch(() => {
-            // Se falhar, usar cache
-          });
-        return;
-      }
-    } catch (err) {
-      console.error('[ProtectedRoute] Erro ao ler cache:', err);
+    if (cachedUser) {
+      setUser(cachedUser);
+      if (!needsProfileCheck) setIsChecking(false);
+      api.get<AuthMeResponse>('/api/auth/me')
+        .then((res) => {
+          if (res?.user) {
+            api.setUser(res.user);
+            setUser(res.user);
+            if (res.hasProfile !== undefined) setHasProfileFromMe(res.hasProfile);
+          }
+          setIsChecking(false);
+        })
+        .catch(() => {
+          setIsChecking(false);
+        });
+      return;
     }
 
-    // Se não tem cache, verificar no servidor
     let mounted = true;
     const timeoutId = setTimeout(() => {
       if (mounted) {
-        setIsChecking(false);
         const cached = api.getUser();
         setUser(cached);
+        setIsChecking(false);
       }
-    }, 2000); // Timeout de 2 segundos
+    }, 3000);
 
-    api.get<{ user: User }>('/api/auth/me')
+    api.get<AuthMeResponse>('/api/auth/me')
       .then((res) => {
         clearTimeout(timeoutId);
         if (!mounted) return;
         if (res?.user) {
           api.setUser(res.user);
           setUser(res.user);
+          if (res.hasProfile !== undefined) setHasProfileFromMe(res.hasProfile);
         } else {
           setUser(null);
         }
@@ -135,7 +158,11 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles, r
 
   // Check profile requirement (except for profile page itself)
   if (!skipProfileCheck) {
-    return <ProfileRequired user={user}>{children}</ProfileRequired>;
+    return (
+      <ProfileRequired user={user} initialHasProfile={hasProfileFromMe ?? undefined}>
+        {children}
+      </ProfileRequired>
+    );
   }
 
   return <>{children}</>;

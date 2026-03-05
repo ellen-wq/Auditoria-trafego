@@ -359,8 +359,46 @@ router.post('/recover-password', async (req: Request, res: Response): Promise<vo
   }
 });
 
-router.get('/me', requireAuth, (req: Request, res: Response): void => {
-  res.json({ user: req.user });
+router.get('/me', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const supabase = getSupabase();
+
+  if (user.role === 'LIDERANCA') {
+    res.json({ user, hasProfile: true, profileRequired: false });
+    return;
+  }
+
+  if (user.role === 'MENTORADO') {
+    const { data, error } = await supabase
+      .from('tinder_mentor_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (error) {
+      console.error('[GET /me] Erro ao verificar perfil mentor:', error);
+      res.json({ user, hasProfile: false, profileRequired: true });
+      return;
+    }
+    res.json({ user, hasProfile: !!data, profileRequired: true });
+    return;
+  }
+
+  if (user.role === 'PRESTADOR') {
+    const { data, error } = await supabase
+      .from('tinder_service_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (error) {
+      console.error('[GET /me] Erro ao verificar perfil prestador:', error);
+      res.json({ user, hasProfile: false, profileRequired: true });
+      return;
+    }
+    res.json({ user, hasProfile: !!data, profileRequired: true });
+    return;
+  }
+
+  res.json({ user, hasProfile: false, profileRequired: false });
 });
 
 export default router;

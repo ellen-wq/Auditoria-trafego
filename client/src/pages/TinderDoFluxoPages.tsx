@@ -2201,12 +2201,12 @@ export function TinderFavoritosPage() {
 }
 
 const FAVORITOS_2_MOCK: Array<{ id: string; nome: string; especialidade: string; tags: string[]; avatarUrl: string }> = [
-  { id: '1', nome: 'Ana Silva', especialidade: 'Estrategista Digital', tags: ['VENDA TODO SANTO DIA', '+2 CURSOS'], avatarUrl: '' },
-  { id: '2', nome: 'Marcos Oliveira', especialidade: 'Copywriter Senior', tags: ['COPYWRITING PRO', 'LANÇAMENTO METEÓRICO'], avatarUrl: '' },
-  { id: '3', nome: 'Juliana Costa', especialidade: 'Gestora de Tráfego', tags: ['GESTÃO DE TRÁFEGO'], avatarUrl: '' },
-  { id: '4', nome: 'Ricardo Santos', especialidade: 'Social Media', tags: ['CONTEÚDO INFINITO', 'CANVA PRO'], avatarUrl: '' },
-  { id: '5', nome: 'Beatriz Lima', especialidade: 'Lançadora', tags: ['ESTRATÉGIA DE LANÇAMENTO'], avatarUrl: '' },
-  { id: '6', nome: 'Felipe Mendes', especialidade: 'UX Designer', tags: ['DESIGN PARA CONVERSÃO', 'FIGMA MASTER'], avatarUrl: '' },
+  { id: '1', nome: 'Ana Silva', especialidade: 'Estrategista Digital', tags: ['VENDA TODO SANTO DIA', '+2 CURSOS'], avatarUrl: 'https://i.pravatar.cc/192?u=ana-silva-1' },
+  { id: '2', nome: 'Marcos Oliveira', especialidade: 'Copywriter Senior', tags: ['COPYWRITING PRO', 'LANÇAMENTO METEÓRICO'], avatarUrl: 'https://i.pravatar.cc/192?u=marcos-oliveira-2' },
+  { id: '3', nome: 'Juliana Costa', especialidade: 'Gestora de Tráfego', tags: ['GESTÃO DE TRÁFEGO'], avatarUrl: 'https://i.pravatar.cc/192?u=juliana-costa-3' },
+  { id: '4', nome: 'Ricardo Santos', especialidade: 'Social Media', tags: ['CONTEÚDO INFINITO', 'CANVA PRO'], avatarUrl: 'https://i.pravatar.cc/192?u=ricardo-santos-4' },
+  { id: '5', nome: 'Beatriz Lima', especialidade: 'Lançadora', tags: ['ESTRATÉGIA DE LANÇAMENTO'], avatarUrl: 'https://i.pravatar.cc/192?u=beatriz-lima-5' },
+  { id: '6', nome: 'Felipe Mendes', especialidade: 'UX Designer', tags: ['DESIGN PARA CONVERSÃO', 'FIGMA MASTER'], avatarUrl: 'https://i.pravatar.cc/192?u=felipe-mendes-6' },
 ];
 
 function getInitialsF2(name: string): string {
@@ -2576,46 +2576,81 @@ export function TinderServiceDetailPage() {
   );
 }
 
+// Dados mock para a página Minhas Candidaturas (apenas frontend)
+const MOCK_MY_APPLICATIONS = [
+  {
+    id: 1,
+    message: 'Tenho experiência em tráfego pago e gestão de campanhas em Meta e Google Ads. Posso começar imediatamente.',
+    portfolio_link: 'https://exemplo.com/portfolio',
+    created_at: '2025-03-01T14:30:00.000Z',
+    tinder_jobs: {
+      id: 101,
+      title: 'Gestor de Tráfego',
+      description: 'Buscamos profissional para gestão de campanhas em Meta e Google Ads. Atuação remota, trabalho em equipe com criação e planejamento.',
+      specialty: 'Tráfego Pago',
+      model: 'Remoto',
+      location: 'Brasil',
+      value: 5000,
+      deadline: '2025-04-15',
+      status: 'OPEN',
+      created_at: '2025-02-20T10:00:00.000Z',
+    },
+  },
+  {
+    id: 2,
+    message: 'Atuo há 3 anos com tráfego e tenho cases de e-commerce e infoprodutos.',
+    portfolio_link: null,
+    created_at: '2025-02-28T09:15:00.000Z',
+    tinder_jobs: {
+      id: 102,
+      title: 'Especialista em Meta Ads',
+      description: 'Vaga para especialista em campanhas no Facebook e Instagram. Foco em conversão e ROAS.',
+      specialty: 'Meta Ads',
+      model: 'Híbrido',
+      location: 'São Paulo',
+      value: 4500,
+      deadline: '2025-04-01',
+      status: 'OPEN',
+      created_at: '2025-02-18T08:00:00.000Z',
+    },
+  },
+  {
+    id: 3,
+    message: 'Interesse em atuar com gestão de tráfego para projetos de educação.',
+    portfolio_link: 'https://meuportfolio.com',
+    created_at: '2025-02-25T16:45:00.000Z',
+    tinder_jobs: {
+      id: 103,
+      title: 'Gestor de Tráfego - Projeto Educacional',
+      description: 'Projeto de longa duração. Requer experiência com audiências e remarketing.',
+      specialty: 'Tráfego Pago',
+      model: 'Remoto',
+      location: null,
+      value: null,
+      deadline: '2025-03-30',
+      status: 'CLOSED',
+      created_at: '2025-02-10T12:00:00.000Z',
+    },
+  },
+];
+
 export function TinderMyApplicationsPage() {
-  const [applications, setApplications] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    loadApplications();
-  }, []);
-  
-  const loadApplications = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<{ applications: any[] }>('/api/tinder-do-fluxo/jobs/my-applications');
-      setApplications(res.applications || []);
-    } catch (err: any) {
-      console.error('Erro ao carregar candidaturas:', err);
-      setApplications([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
+  const applications = MOCK_MY_APPLICATIONS;
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', { 
-      day: '2-digit', 
-      month: '2-digit', 
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
-  
+
   return (
     <TinderDoFluxoPageShell title="Minhas Candidaturas" subtitle="Vagas que você se candidatou">
-      {loading ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
-          <div className="loading-spinner" />
-          <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando candidaturas...</p>
-        </div>
-      ) : applications.length === 0 ? (
+      {applications.length === 0 ? (
         <div className="card">
           <EmptyState text="Você ainda não se candidatou para nenhuma vaga." />
         </div>
