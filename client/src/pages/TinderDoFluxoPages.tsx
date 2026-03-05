@@ -336,6 +336,9 @@ export function TinderExpertPage() {
   const handlePass = () => {
     if (currentProfileIndex < discoveryProfiles.length - 1) {
       setCurrentProfileIndex(currentProfileIndex + 1);
+    } else if (discoveryProfiles.length > 0) {
+      // Recomeçar do início quando acabar as opções (só fica vazio se não achar nos filtros)
+      setCurrentProfileIndex(0);
     } else {
       loadDiscoveryProfiles();
     }
@@ -406,7 +409,11 @@ export function TinderExpertPage() {
 
   const hasActiveFilters = lookingFor.length > 0 || !!searchQuery.trim();
 
-  const currentProfile = discoveryProfiles[currentProfileIndex];
+  // Quando há perfis, sempre mostrar um (volta ao primeiro se índice fora do range) — vazio só quando filtros não acham ninguém
+  const currentProfile =
+    discoveryProfiles.length > 0
+      ? discoveryProfiles[currentProfileIndex] ?? discoveryProfiles[0]
+      : undefined;
 
   const toggleLookingFor = (value: 'expert' | 'coprodutor') => {
     if (lookingFor.includes(value)) {
