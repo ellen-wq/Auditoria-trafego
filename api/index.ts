@@ -63,7 +63,8 @@ async function ensureDbInit(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
       const dbModule = await import('../dist/db/database.js');
-      await dbModule.initDb({ seedUsers: true, ensureStorageBucket: false });
+      const seedUsers = !process.env.VERCEL;
+      await dbModule.initDb({ seedUsers, ensureStorageBucket: false });
     })().catch((err) => {
       initPromise = null;
       throw err;
