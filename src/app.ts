@@ -60,14 +60,22 @@ app.get('*', (req, res) => {
   }
 
   if (spaNotBuilt) {
-    // Em desenvolvimento: redirecionar para o servidor Vite (SPA) para que todas as rotas funcionem
     const isDev = process.env.NODE_ENV !== 'production';
     const viteDevUrl = (process.env.VITE_DEV_URL || 'http://localhost:5174').replace(/\/$/, '');
-    if (isDev && (req.path !== '/' && req.path !== '/login')) {
-      return res.redirect(302, viteDevUrl + req.originalUrl);
-    }
-    if (isDev && (req.path === '/' || req.path === '/login')) {
-      return res.redirect(302, req.path === '/' ? viteDevUrl + '/' : viteDevUrl + '/login');
+    // Em desenvolvimento: página com instruções e link para o Vite (evita redirect quebrado se o client não estiver rodando)
+    if (isDev) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.status(200).send(
+        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fluxer - Dev</title></head><body style="font-family:sans-serif;padding:2rem;text-align:center;max-width:420px;margin:2rem auto;">
+<p style="margin-bottom:1rem;">Backend rodando na porta 3000.</p>
+<p style="margin-bottom:1rem;">Para ver a aplicação, use o frontend (Vite) na porta 5174.</p>
+<p style="margin-bottom:1.5rem;"><strong>Se ainda não iniciou o frontend</strong>, em outro terminal rode:</p>
+<pre style="background:#f0f0f0;padding:1rem;text-align:left;border-radius:6px;">npm run dev</pre>
+<p style="margin-top:1.5rem;">Ou só o client: <code>npm run dev:client</code></p>
+<p style="margin-top:1.5rem;"><a href="${viteDevUrl}/" style="display:inline-block;background:#2563eb;color:white;padding:0.6rem 1.2rem;text-decoration:none;border-radius:6px;">Abrir app em localhost:5174</a></p>
+</body></html>`
+      );
+      return;
     }
     console.error('index.html not found at:', indexPath);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');

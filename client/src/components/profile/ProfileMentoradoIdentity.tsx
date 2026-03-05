@@ -6,9 +6,12 @@ export interface ProfileMentoradoIdentityProps {
   cidade?: string;
   nicho?: string;
   hobbies?: string;
+  instagram?: string;
   nivelFluxo?: string;
   isExpert: boolean;
   isCoprodutor: boolean;
+  /** Se true, exibe selo "Mentorado Fluxo" */
+  isMentoradoFluxo?: boolean;
   onEdit?: () => void;
 }
 
@@ -18,12 +21,15 @@ export function ProfileMentoradoIdentity({
   cidade,
   nicho,
   hobbies,
+  instagram,
   nivelFluxo,
   isExpert,
   isCoprodutor,
+  isMentoradoFluxo,
   onEdit,
 }: ProfileMentoradoIdentityProps) {
   const badgeLabel = isExpert ? 'Expert' : isCoprodutor ? 'Coprodutor' : '';
+  const showFluxoBadge = isMentoradoFluxo ?? !!nivelFluxo;
 
   return (
     <div
@@ -70,25 +76,45 @@ export function ProfileMentoradoIdentity({
             </div>
           )}
         </div>
-        {badgeLabel && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 4,
-              right: 4,
-              background: 'var(--accent)',
-              color: 'var(--text-primary)',
-              fontSize: 10,
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              padding: '4px 8px',
-              borderRadius: 9999,
-              border: '2px solid var(--bg-white)',
-              boxShadow: 'var(--shadow)',
-            }}
-          >
-            {badgeLabel}
+        {(badgeLabel || showFluxoBadge) && (
+          <div style={{ position: 'absolute', bottom: 4, right: 4, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+            {showFluxoBadge && (
+              <span
+                className="badge-mentorado-fluxo"
+                style={{
+                  background: 'linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%)',
+                  color: 'white',
+                  fontSize: 9,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  padding: '3px 6px',
+                  borderRadius: 9999,
+                  border: '2px solid var(--bg-white)',
+                  boxShadow: 'var(--shadow)',
+                }}
+              >
+                Fluxo
+              </span>
+            )}
+            {badgeLabel && (
+              <span
+                style={{
+                  background: 'var(--accent)',
+                  color: 'var(--text-primary)',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  padding: '4px 8px',
+                  borderRadius: 9999,
+                  border: '2px solid var(--bg-white)',
+                  boxShadow: 'var(--shadow)',
+                }}
+              >
+                {badgeLabel}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -130,6 +156,25 @@ export function ProfileMentoradoIdentity({
         )}
         {nivelFluxo && (
           <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>📊 {nivelFluxo}</p>
+        )}
+        {instagram && (
+          <a
+            href={`https://instagram.com/${instagram.replace(/^@/, '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              marginTop: 8,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: 14,
+              color: 'var(--accent)',
+              textDecoration: 'none',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>camera_alt</span>
+            @{instagram.replace(/^@/, '')}
+          </a>
         )}
       </div>
       {onEdit && (

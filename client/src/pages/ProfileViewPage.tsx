@@ -55,7 +55,7 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
       });
   }, [targetUserId, !!profileData]);
 
-  // Handler para dar match
+  // Handler para criar conexão
   const handleMatch = async () => {
     if (!userId || !isViewingOtherProfile || isSendingInterest) return;
 
@@ -67,9 +67,9 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
       );
       
       if (res?.matched) {
-        alert('👋 Deu match! Vocês demonstraram interesse mútuo.');
+        alert('👋 Nova conexão! Vocês demonstraram interesse mútuo.');
       } else {
-        alert('👋 Interesse registrado! Você será notificado quando houver match.');
+        alert('👋 Interesse registrado! Você será notificado quando houver conexão.');
       }
       
       // Voltar para página de descoberta
@@ -153,7 +153,7 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
   return (
     <TinderDoFluxoPageShell title={isViewingOtherProfile ? `Perfil de ${user.nome}` : "Meu Perfil"}>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 16px' }}>
-        {/* Botão de Match se estiver vendo perfil de outro usuário */}
+        {/* Botão de Conexão se estiver vendo perfil de outro usuário */}
         {(isViewingOtherProfile || returnTo) && (
           <div style={{ marginBottom: 16, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <button 
@@ -168,7 +168,7 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
                 onClick={handleMatch}
                 disabled={isSendingInterest}
               >
-                {isSendingInterest ? 'Enviando...' : '👋 Match'}
+                {isSendingInterest ? 'Enviando...' : '👋 Conexão'}
               </button>
             )}
           </div>
@@ -182,6 +182,7 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
           cidade={profile?.cidade}
           nicho={profile?.nicho}
           hobbies={profile?.hobbies}
+          instagram={(profile as { instagram?: string })?.instagram}
           nivelFluxo={profile?.nivel_fluxo_label}
           isExpert={profileData.isExpert}
           isCoprodutor={profileData.isCoprodutor}

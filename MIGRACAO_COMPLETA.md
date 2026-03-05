@@ -48,7 +48,7 @@
    - Comunidade
    - Expert & Coprodutor
    - Vagas
-   - Matches
+   - Conexões
    - Favoritos
 
 ## Notas Importantes:

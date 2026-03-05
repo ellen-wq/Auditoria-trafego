@@ -1,5 +1,5 @@
 -- ============================================================
--- ATRIBUIR PERFIS EXISTENTES PARA APARECER NA PÁGINA DE MATCHES
+-- ATRIBUIR PERFIS EXISTENTES PARA APARECER NA PÁGINA DE CONEXÕES
 -- Execute este script no Supabase SQL Editor
 -- ============================================================
 

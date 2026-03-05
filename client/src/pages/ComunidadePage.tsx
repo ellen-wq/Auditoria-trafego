@@ -200,7 +200,7 @@ export default function ComunidadePage() {
 
           <div className="mt-12 flex items-center gap-8 text-slate-400 text-xs font-medium uppercase tracking-widest">
             <div className="flex items-center gap-2">
-              <span className="text-primary font-bold">42</span> Novos matches hoje
+              <span className="text-primary font-bold">42</span> Novas conexões hoje
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
             <div className="flex items-center gap-2">

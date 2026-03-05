@@ -28,7 +28,7 @@ export default function MatchesList({ matches, onViewWhatsApp, onViewProfile }: 
     return (
       <div className="card" style={{ padding: 40, textAlign: 'center' }}>
         <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-          Você ainda não fez nenhum match.
+          Você ainda não fez nenhuma conexão.
         </p>
       </div>
     );
@@ -42,7 +42,7 @@ export default function MatchesList({ matches, onViewWhatsApp, onViewProfile }: 
         marginBottom: 16,
         color: 'var(--text)'
       }}>
-        Seus Matches
+        Suas Conexões
       </h3>
       <div style={{ 
         display: 'grid', 

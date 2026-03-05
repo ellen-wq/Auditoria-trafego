@@ -1,10 +1,11 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
+  "outputDirectory": "public_dist",
   "functions": {
     "api/index.ts": {
       "maxDuration": 30,
-      "includeFiles": "public_dist/**,dist/**,src/**"
+      "includeFiles": "dist/**,src/**"
     }
   },
   "rewrites": [
@@ -14,7 +15,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/api/index"
+      "destination": "/index.html"
     }
   ]
 }

@@ -15,7 +15,7 @@ Este documento explica as políticas de segurança (RLS) aplicadas às tabelas d
 - ✅ Pode gerenciar próprio perfil (mentor e expert)
 - ✅ Pode ver outros mentorados e experts (feed)
 - ✅ Pode criar e ver próprias vagas (jobs)
-- ✅ Pode ver matches e favorites próprios
+- ✅ Pode ver conexões e favorites próprios
 - ✅ Pode criar reviews de prestadores
 - ✅ Pode criar aplicações para vagas
 - ✅ Pode gerenciar próprias auditorias, campanhas e criativos
@@ -25,7 +25,7 @@ Este documento explica as políticas de segurança (RLS) aplicadas às tabelas d
 - ✅ Pode ver reviews do próprio perfil
 - ✅ Pode ver vagas abertas
 - ✅ Pode criar aplicações para vagas
-- ✅ Pode ver matches e favorites próprios
+- ✅ Pode ver conexões e favorites próprios
 
 ## 📊 Políticas por Tabela
 
@@ -52,7 +52,7 @@ Este documento explica as políticas de segurança (RLS) aplicadas às tabelas d
 - **UPDATE/DELETE**: Criador ou LIDERANCA
 
 ### 6. **tinder_matches**
-- **SELECT/INSERT/UPDATE/DELETE**: Usuários envolvidos no match ou LIDERANCA
+- **SELECT/INSERT/UPDATE/DELETE**: Usuários envolvidos na conexão ou LIDERANCA
 
 ### 7. **tinder_favorites**
 - **SELECT/INSERT/DELETE**: Próprios favoritos ou LIDERANCA

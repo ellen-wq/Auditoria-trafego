@@ -5,6 +5,7 @@ interface ProfileHeaderProps {
   cidade?: string;
   nicho?: string;
   hobbies?: string;
+  instagram?: string;
   nivelFluxo?: string;
   onEdit?: () => void;
   onProposeProject?: () => void;
@@ -37,6 +38,7 @@ export function ProfileHeader({
   cidade,
   nicho,
   hobbies,
+  instagram,
   nivelFluxo,
   onEdit, 
   onProposeProject,
@@ -101,25 +103,43 @@ export function ProfileHeader({
               {name.charAt(0).toUpperCase()}
             </div>
           )}
-          {/* Badge Expert/Coprodutor na foto */}
-          {(isExpert || isCoprodutor) && (
-            <div style={{
-              position: 'absolute',
-              bottom: 0,
-              right: 0,
-              padding: '4px 10px',
-              borderRadius: 'var(--radius)',
-              background: 'var(--purple)',
-              color: 'white',
-              fontSize: 11,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-            }}>
-              {isExpert ? 'Expert' : 'Coprodutor'}
-            </div>
-          )}
+          {/* Badge Mentorado Fluxo + Expert/Coprodutor na foto */}
+          <div style={{ position: 'absolute', bottom: 0, right: 0, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+            {nivelFluxo && (
+              <span
+                style={{
+                  padding: '3px 8px',
+                  borderRadius: 'var(--radius)',
+                  background: 'linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%)',
+                  color: 'white',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                }}
+              >
+                Fluxo
+              </span>
+            )}
+            {(isExpert || isCoprodutor) && (
+              <span
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius)',
+                  background: 'var(--purple)',
+                  color: 'white',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                }}
+              >
+                {isExpert ? 'Expert' : 'Coprodutor'}
+              </span>
+            )}
+          </div>
         </div>
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
           <h1 style={{ 
@@ -167,11 +187,23 @@ export function ProfileHeader({
             </p>
           )}
           {nivelFluxo && (
-            <p style={{ marginTop: 0, marginBottom: 12, fontSize: 14, color: 'var(--text-muted)', wordBreak: 'break-word' }}>
+            <p style={{ marginTop: 0, marginBottom: 6, fontSize: 14, color: 'var(--text-muted)', wordBreak: 'break-word' }}>
               📊 Nível: {nivelFluxo}
             </p>
           )}
-          {!nicho && !hobbies && !nivelFluxo && cidade && <div style={{ marginBottom: 12 }} />}
+          {instagram && (
+            <p style={{ marginTop: 0, marginBottom: 12, fontSize: 14, wordBreak: 'break-word' }}>
+              <a
+                href={`https://instagram.com/${instagram.replace(/^@/, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'var(--accent)', textDecoration: 'none' }}
+              >
+                📷 @{instagram.replace(/^@/, '')}
+              </a>
+            </p>
+          )}
+          {!nicho && !hobbies && !nivelFluxo && !instagram && cidade && <div style={{ marginBottom: 12 }} />}
           
           {/* Necessidades do Expert - destacado no topo */}
           {isExpert && expertNeeds.length > 0 && (

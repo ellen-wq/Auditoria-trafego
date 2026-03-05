@@ -793,7 +793,7 @@ export default function ProfileFormPage() {
             <span className="material-symbols-outlined" style={{ color: 'var(--accent)', fontSize: 28 }}>info</span>
             <div>
               <h4 style={{ fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Mantenha seu perfil atualizado</h4>
-              <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '4px 0 0' }}>Perfis completos e atualizados têm 3x mais chances de encontrar o match ideal no Fluxo.</p>
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '4px 0 0' }}>Perfis completos e atualizados têm 3x mais chances de encontrar a conexão ideal no Fluxo.</p>
             </div>
           </div>
         </form>

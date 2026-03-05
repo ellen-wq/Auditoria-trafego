@@ -61,7 +61,7 @@ export default function MatchModal({
           fontWeight: 700,
           color: 'var(--text)'
         }}>
-          Deu match!
+          Nova conexão!
         </h2>
 
         <div style={{ 
@@ -157,7 +157,7 @@ export default function MatchModal({
             }}>
               {isMutualMatch 
                 ? 'Vocês demonstraram interesse mútuo!' 
-                : 'Interesse registrado! Você será notificado quando houver match.'}
+                : 'Interesse registrado! Você será notificado quando houver conexão.'}
             </p>
           )}
           <button 

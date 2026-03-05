@@ -15,6 +15,7 @@ export interface ProfileViewData {
     cidade?: string;
     nicho?: string;
     hobbies?: string;
+    instagram?: string;
     whatsapp?: string;
     objetivo?: string;
     bio_busca?: string;

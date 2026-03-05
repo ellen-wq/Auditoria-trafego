@@ -7,6 +7,8 @@ interface ProfileDiscoveryCardProps {
     photo_url?: string;
     isExpert?: boolean;
     isCoprodutor?: boolean;
+    /** Nível no Fluxo – quando preenchido exibe selo Mentorado Fluxo */
+    nivelFluxo?: string;
     /** Objetivo - tinder_mentor_profiles.goal_text - exibido abaixo do nome */
     objective?: string;
     /** Bio - tinder_mentor_profiles.bio */
@@ -167,20 +169,39 @@ export default function ProfileDiscoveryCard({
               <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>
                 {profile.name}
               </h2>
-              {profileType && (
-                <span style={{
-                  flexShrink: 0,
-                  padding: '4px 10px',
-                  borderRadius: 'var(--radius-xs)',
-                  background: profileTypeColor,
-                  color: 'white',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  {profileType}
-                </span>
+              {(profile.nivelFluxo || profileType) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {profile.nivelFluxo && (
+                    <span style={{
+                      flexShrink: 0,
+                      padding: '4px 8px',
+                      borderRadius: 'var(--radius-xs)',
+                      background: 'linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%)',
+                      color: 'white',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Fluxo
+                    </span>
+                  )}
+                  {profileType && (
+                    <span style={{
+                      flexShrink: 0,
+                      padding: '4px 10px',
+                      borderRadius: 'var(--radius-xs)',
+                      background: profileTypeColor,
+                      color: 'white',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      {profileType}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
             {onFavorite && (

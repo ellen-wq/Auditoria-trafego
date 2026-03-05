@@ -201,29 +201,31 @@ export function TinderExpertPage() {
           ? tags.map((t: string) => interesseLabels[t] || t).filter(Boolean).join(', ')
           : undefined;
 
+        const mentor = Array.isArray(mentorProfile) ? mentorProfile[0] : mentorProfile;
         return {
           id: u.id,
           name: u.name,
-          photo_url: mentorProfile?.photo_url,
-          objective: mentorProfile?.goal_text || mentorProfile?.headline || expertProfile?.goal_text || '',
-          bio: mentorProfile?.bio || '',
-          niche: mentorProfile?.niche || undefined,
+          photo_url: mentor?.photo_url,
+          objective: mentor?.goal_text || mentor?.headline || expertProfile?.goal_text || '',
+          bio: mentor?.bio || '',
+          niche: mentor?.niche || undefined,
           formato: formato || undefined,
+          nivelFluxo: mentor?.nivel_fluxo || undefined,
           isExpert: isExpert && !isCoprodutor,
           isCoprodutor: isCoprodutor && !isExpert,
           products: [],
           needs: isExpert && !isCoprodutor ? {
-            precisa_trafego_pago: mentorProfile?.precisa_trafego_pago || false,
-            precisa_copy: mentorProfile?.precisa_copy || false,
-            precisa_automacoes: mentorProfile?.precisa_automacoes || false,
-            precisa_estrategista: mentorProfile?.precisa_estrategista || false,
+            precisa_trafego_pago: mentor?.precisa_trafego_pago || false,
+            precisa_copy: mentor?.precisa_copy || false,
+            precisa_automacoes: mentor?.precisa_automacoes || false,
+            precisa_estrategista: mentor?.precisa_estrategista || false,
           } : undefined,
           capabilities: isCoprodutor && !isExpert ? {
-            faz_perpetuo: mentorProfile?.faz_perpetuo || false,
-            faz_pico_vendas: mentorProfile?.faz_pico_vendas || false,
-            faz_trafego_pago: mentorProfile?.faz_trafego_pago || false,
-            faz_copy: mentorProfile?.faz_copy || false,
-            faz_automacoes: mentorProfile?.faz_automacoes || false,
+            faz_perpetuo: mentor?.faz_perpetuo || false,
+            faz_pico_vendas: mentor?.faz_pico_vendas || false,
+            faz_trafego_pago: mentor?.faz_trafego_pago || false,
+            faz_copy: mentor?.faz_copy || false,
+            faz_automacoes: mentor?.faz_automacoes || false,
           } : undefined,
           skills: [],
           skillsExtra: [],
@@ -296,7 +298,7 @@ export function TinderExpertPage() {
         { toUserId: currentProfile.id, type: 'EXPERT' }
       );
       
-      // Sempre mostrar modal quando dá match
+      // Sempre mostrar modal quando há conexão
       setMatchedUser({
         id: currentProfile.id,
         name: currentProfile.name,
@@ -305,7 +307,7 @@ export function TinderExpertPage() {
       });
     setShowMatchModal(true);
       
-      // Se não for match mútuo, passar automaticamente após 1.5s
+      // Se não for conexão mútua, passar automaticamente após 1.5s
       if (!res?.matched) {
         setTimeout(() => {
           setShowMatchModal(false);
@@ -329,7 +331,7 @@ export function TinderExpertPage() {
 
   const handleViewWhatsApp = () => {
     if (matchedUser) {
-      // Buscar WhatsApp do match
+      // Buscar WhatsApp da conexão
       api.get<{ matches: any[] }>('/api/tinder-do-fluxo/matches')
         .then((r) => {
           const match = r.matches.find(m => m.otherUser?.id === matchedUser.id);
@@ -380,7 +382,7 @@ export function TinderExpertPage() {
   };
 
   return (
-    <TinderDoFluxoPageShell title="Expert & Coprodutor" subtitle="Descubra perfis e faça matches">
+    <TinderDoFluxoPageShell title="Expert & Coprodutor" subtitle="Descubra perfis e faça conexões">
       <div id="tinder-expert-page-root" data-page="expert" style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', minHeight: 0 }}>
       {/* Header: glass, busca + Expert/Coprodutor + ícones (design HTML) */}
       <header
@@ -485,7 +487,7 @@ export function TinderExpertPage() {
               textDecoration: 'none',
               position: 'relative',
             }}
-            title="Notificações / Matches"
+            title="Notificações / Conexões"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 22 }}>notifications</span>
             <span style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: '50%', background: 'var(--red)', border: '2px solid white' }} />
@@ -578,7 +580,7 @@ export function TinderExpertPage() {
         )}
       </div>
 
-      {/* Match Modal */}
+      {/* Modal de Conexão */}
       <MatchModal
         isOpen={showMatchModal}
         matchedUser={matchedUser}
@@ -1773,7 +1775,7 @@ const MATCHES_QUERY_KEY = ['tinder-do-fluxo', 'matches'] as const;
 function MatchesListSkeleton() {
   return (
     <>
-      <div className="matches-chat-section-title">Novos Matches</div>
+      <div className="matches-chat-section-title">Novas Conexões</div>
       <div className="matches-chat-new-matches" style={{ gap: 16 }}>
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="matches-chat-new-match-item" style={{ cursor: 'default' }}>
@@ -1943,15 +1945,14 @@ export function TinderMatchesPage() {
         {/* Left panel */}
         <aside className="matches-chat-left">
           <div className="matches-chat-left-header">
-            <h2>Faça amigos no <span className="accent">Fluxo!</span></h2>
-            <p>Gerencie suas conexões e conversas</p>
+            <h2>Conexões</h2>
           </div>
 
           {loading ? (
             <MatchesListSkeleton />
           ) : (
             <>
-              <div className="matches-chat-section-title">Novos Matches</div>
+              <div className="matches-chat-section-title">Novas Conexões</div>
               <div className="matches-chat-new-matches">
                 {matches.map((match) => {
                   const user = match.otherUser;
@@ -2031,7 +2032,7 @@ export function TinderMatchesPage() {
         <section className="matches-chat-right">
           {!selectedMatch ? (
             <div className="matches-chat-empty-right">
-              {loading ? 'Carregando...' : matches.length === 0 ? 'Você ainda não fez nenhum match. Descubra perfis para começar!' : 'Selecione uma conversa'}
+              {loading ? 'Carregando...' : matches.length === 0 ? 'Você ainda não fez nenhuma conexão. Descubra perfis para começar!' : 'Selecione uma conversa'}
             </div>
           ) : (
             <>
@@ -2047,6 +2048,21 @@ export function TinderMatchesPage() {
                   <div>
                     <div className="name">{selectedMatch.otherUser?.name || 'Usuário'}</div>
                     <div className="status">{otherTyping ? 'digitando...' : 'Online agora'}</div>
+                    {/* Cultivo (mock – front only): nível de relacionamento com a conexão */}
+                    <div
+                      style={{
+                        marginTop: 4,
+                        fontSize: 11,
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                      title="Cultivo: quanto mais vocês interagem, mais a conexão cresce."
+                    >
+                      <span>{(selectedMatchId ?? 0) % 5 + 1 <= 1 ? '🌱' : (selectedMatchId ?? 0) % 5 + 1 <= 3 ? '🌿' : '🌳'}</span>
+                      <span>Cultivo nível {((selectedMatchId ?? 0) % 5) + 1}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="actions">
@@ -2651,7 +2667,7 @@ const MOCK_MY_APPLICATIONS: Array<{
     applicationStatus: 'ENVIADA',
     created_at: '2023-10-12T10:00:00.000Z',
     tinder_jobs: { id: 101, title: 'Gestor de Tráfego para Perpétuo', specialty: 'Tráfego' },
-    recruiter: { name: 'Bernardo Silva', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC1SRqJrsTD7nx3El7ByFaRR0mUl64vLK_CxxRLhtRzh8Hm1_4EWMykDM2Gcl748MyLxrLux9xBf1E8Dtg6Nb1N4gsyq5hOk8SADBxGB-qzhvXbH8BFPZhSyOPr9lCnNSmaTv6vN2XwL2oQ1XJHygyHx88YAR-2p3QzsAOpgUO-hl8BgcMJvmuAKqjOctd-gI4pSwmXnSbCBM4Lwc_lnYsyFKVTC06lmf73PdnzOyiqJ5lQ8T4aKsG29hcoD8t-A9ZBcXXX--Zi50JY', tags: ['VTSD', 'FLUXO'] },
+    recruiter: { name: 'Bernardo Silva', avatar_url: 'https://i.pravatar.cc/400?u=bernardo-silva', tags: ['VTSD', 'FLUXO'] },
     creator_id: 1,
   },
   {
@@ -2659,7 +2675,7 @@ const MOCK_MY_APPLICATIONS: Array<{
     applicationStatus: 'VISUALIZADA',
     created_at: '2023-10-08T14:30:00.000Z',
     tinder_jobs: { id: 102, title: 'Copywriter para Lançamento High-Ticket', specialty: 'Copy' },
-    recruiter: { name: 'Juliana Rocha', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC28q1YC49W44YujbHN0Omj8gWOHUfXG_SoEGVYqsjXfCCMe1K3RYkm4--e_lIv80zntPm-7guW5n7rFS1uBx1RUTATT_jNZrI3AMeZVFdFkHHFsJ_EzGsfOt7CKgOsExn7kFg-CCQMQWFe9J4Wwo_ygWvM8r_jAZy2QX_uQizHVV1gZpCJxCnn6-ZGgJ_85RHD1QlO1SKhFxUsnE30HRhppwzkRyXJ9N8dAqrMn9gmFib6q612TasJ9nSq4_ZGIPC5AY67mjTElIC1', tags: ['VTSD'] },
+    recruiter: { name: 'Juliana Rocha', avatar_url: 'https://i.pravatar.cc/400?u=juliana-rocha', tags: ['VTSD'] },
     creator_id: 2,
   },
   {
@@ -2667,7 +2683,7 @@ const MOCK_MY_APPLICATIONS: Array<{
     applicationStatus: 'EM_CONVERSA',
     created_at: '2023-10-05T09:15:00.000Z',
     tinder_jobs: { id: 103, title: 'Especialista em Automação (n8n/Make)', specialty: 'Automação' },
-    recruiter: { name: 'Marcos Olive', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBcqYbANZg7ueMQpsf9mWkMuguZKJ8OOJEGZkxMgPXnZ2kc-k6ofn2udr_YgksUZHL38TukV1W-cJxeSuQqUGCY3z76TSVLw2LQ7UPmCzatlxwYRYTdq4CDQl4FCRp1SJ8XKl_qXrEdqoq7Teyt9MArwrCo7OLZhwkyMoqn2wiV1WL2NhLOby1KTyFo7YVeTWpH5ELFmUDH_lw0rR7B13_x1B-K15B5UT6bI80gv1Cjo0pp8L23WI8p6m6gxfhPqE9pkmYra38diqS5', tags: ['VTSD', 'FLUXO'] },
+    recruiter: { name: 'Marcos Olive', avatar_url: 'https://i.pravatar.cc/400?u=marcos-olive', tags: ['VTSD', 'FLUXO'] },
     creator_id: 3,
   },
   {

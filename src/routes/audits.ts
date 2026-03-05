@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth';
 import upload from '../middleware/upload';
 import { parseSpreadsheetBuffer } from '../utils/parser';
 import { analyzeAllCampaigns } from '../engine/rules';
+import { getFileBuffer } from '../utils/getFileBuffer';
 
 const router = Router();
 
@@ -24,19 +25,6 @@ function parseAdvantagePlusCampaigns(rawValue: unknown): string[] {
     }
   }
   return [];
-}
-
-function getFileBuffer(file: Express.Multer.File): Buffer | null {
-  if (!file || (file as any).buffer === undefined) return null;
-  const buf = (file as any).buffer;
-  if (Buffer.isBuffer(buf)) return buf;
-  try {
-    if (buf instanceof Uint8Array) return Buffer.from(buf);
-    if (Array.isArray(buf)) return Buffer.from(buf as number[]);
-    return Buffer.from(buf);
-  } catch {
-    return null;
-  }
 }
 
 function handleMulterError(err: any, _req: Request, res: Response, next: () => void): void {
@@ -65,7 +53,7 @@ router.post('/preview-campaigns', requireAuth, (req: Request, res: Response, nex
       res.status(400).json({ error: 'Arquivo da planilha é obrigatório (.xlsx ou .csv).' });
       return;
     }
-    const buffer = getFileBuffer(req.file);
+    const buffer = await getFileBuffer(req.file);
     if (!buffer || buffer.length === 0) {
       res.status(400).json({ error: 'O arquivo está vazio ou não pôde ser lido. Tente enviar novamente (máx. 4 MB recomendado).' });
       return;
@@ -112,7 +100,7 @@ router.post('/', requireAuth, (req: Request, res: Response, next: () => void) =>
       res.status(400).json({ error: 'Arquivo da planilha é obrigatório (.xlsx ou .csv).' });
       return;
     }
-    const buffer = getFileBuffer(req.file);
+    const buffer = await getFileBuffer(req.file);
     if (!buffer || buffer.length === 0) {
       res.status(400).json({ error: 'O arquivo está vazio ou não pôde ser lido. Tente enviar novamente (máx. 4 MB recomendado).' });
       return;

@@ -10,7 +10,7 @@
     "build": "npm run build:server && npm run build:client",
     "start": "node dist/server.js",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "ts-node src/server.ts",
+    "dev:server": "node --import tsx src/server.ts",
     "dev:client": "cd client && npm run dev",
     "dev:all": "npm run dev",
     "create-tables": "ts-node scripts/create-tables-node.ts"
@@ -41,6 +41,7 @@
     "concurrently": "^9.1.0",
     "pg": "^8.19.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
     "typescript": "~5.6.2"
   },
   "overrides": {

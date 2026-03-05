@@ -56,14 +56,14 @@ Se funcionar no SQL Editor, o problema não é RLS.
 
 ### LIDERANCA
 - ✅ **Acesso total** a todas as tabelas (CRUD completo)
-- ✅ Pode ver todos os usuários, vagas, matches, reviews, logs
+- ✅ Pode ver todos os usuários, vagas, conexões, reviews, logs
 - ✅ Backend usa SERVICE_ROLE_KEY que bypassa RLS
 
 ### MENTORADO
 - ✅ Pode ver/editar próprio perfil (mentor e expert)
 - ✅ Pode ver outros mentorados/experts no feed
 - ✅ Pode criar vagas
-- ✅ Pode ver matches e favorites próprios
+- ✅ Pode ver conexões e favorites próprios
 - ✅ Pode criar reviews de prestadores
 - ✅ Pode criar aplicações para vagas
 
@@ -72,7 +72,7 @@ Se funcionar no SQL Editor, o problema não é RLS.
 - ✅ Pode ver reviews do próprio perfil
 - ✅ Pode ver vagas abertas
 - ✅ Pode criar aplicações para vagas
-- ✅ Pode ver matches e favorites próprios
+- ✅ Pode ver conexões e favorites próprios
 
 ## 🚨 Se ainda não funcionar
 

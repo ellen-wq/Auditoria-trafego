@@ -30,7 +30,7 @@ const TinderAdminLogsPage = React.lazy(() => import('./pages/TinderDoFluxoPages'
 const TinderAdminReviewsPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderAdminReviewsPage })));
 const TinderAdminUsersPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderAdminUsersPage })));
 const TinderAvaliacoesPrestadorPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderAvaliacoesPrestadorPage })));
-const TinderComunidadePage = React.lazy(() => import('./pages/ComunidadePage'));
+const TinderComunidadePage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderComunidadePage })));
 const TinderExpertPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderExpertPage })));
 const TinderFavoritosPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderFavoritosPage })));
 const TinderFavoritos2Page = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderFavoritos2Page })));
@@ -43,6 +43,9 @@ const TinderServiceDetailPage = React.lazy(() => import('./pages/TinderDoFluxoPa
 const TinderSimplePlaceholderPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderSimplePlaceholderPage })));
 const TinderUserPublicPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderUserPublicPage })));
 const TinderVagasPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderVagasPage })));
+const PerguntasPage = React.lazy(() => import('./pages/PerguntasPage'));
+const ConhecaProdutosPage = React.lazy(() => import('./pages/ConhecaProdutosPage'));
+const RankingPage = React.lazy(() => import('./pages/RankingPage'));
 
 function PageLoadFallback() {
   return (
@@ -93,6 +96,9 @@ export default function App() {
 
         {/* Tinder do Fluxo */}
         <Route path="/tinder-do-fluxo/comunidade" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderComunidadePage /></ProtectedRoute>} />
+        <Route path="/tinder-do-fluxo/perguntas" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><PerguntasPage /></ProtectedRoute>} />
+        <Route path="/tinder-do-fluxo/conheca-produtos" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA', 'PRESTADOR']}><ConhecaProdutosPage /></ProtectedRoute>} />
+        <Route path="/tinder-do-fluxo/ranking" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><RankingPage /></ProtectedRoute>} />
         <Route path="/tinder-do-fluxo/expert" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderExpertPage /></ProtectedRoute>} />
         <Route path="/tinder-do-fluxo/prestadores" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderPrestadoresPage /></ProtectedRoute>} />
         <Route path="/tinder-do-fluxo/prestadores/:id" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderServiceDetailPage /></ProtectedRoute>} />
