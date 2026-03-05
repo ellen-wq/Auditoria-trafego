@@ -12,6 +12,7 @@ import { ProfileReviews } from '../components/profile/ProfileReviews';
 import { ExpertProductsList } from '../components/profile/ExpertProductsList';
 import { CoprodutorCapabilitiesList } from '../components/profile/CoprodutorCapabilitiesList';
 import { PrestadorDetailsView } from '../components/profile/PrestadorDetailsView';
+import { ProfileMentoradoLayout } from '../components/profile/ProfileMentoradoLayout';
 import TinderDoFluxoPageShell from '../components/tinder-do-fluxo/TinderDoFluxoPageShell';
 import { api } from '../services/api';
 
@@ -34,12 +35,11 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [isSendingInterest, setIsSendingInterest] = useState(false);
 
-  // Buscar reviews
+  const targetUserId = (userId || currentUser?.id) ?? '';
+
+  // Buscar reviews (dependências primitivas para evitar loop de re-renders)
   useEffect(() => {
-    if (!profileData) return;
-    
-    const targetUserId = userId || currentUser?.id;
-    if (!targetUserId) return;
+    if (!profileData || !targetUserId) return;
 
     setReviewsLoading(true);
     api.get<{ reviews: any[] }>(`/api/tinder-do-fluxo/profile-reviews?userId=${targetUserId}`)
@@ -53,7 +53,7 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
       .finally(() => {
         setReviewsLoading(false);
       });
-  }, [profileData, userId, currentUser?.id]);
+  }, [targetUserId, !!profileData]);
 
   // Handler para dar match
   const handleMatch = async () => {
@@ -120,6 +120,35 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
     projects, 
     metrics 
   } = profileData;
+
+  // Novo layout: próprio perfil e perfil de mentorado (Expert ou Coprodutor, ou sem prestadorDetails = não é aluno)
+  const isMentorado =
+    profileData.isExpert ||
+    profileData.isCoprodutor ||
+    (!!profileData.expertDetails && Object.keys(profileData.expertDetails).length > 0) ||
+    (!!profileData.coprodutorDetails && Object.keys(profileData.coprodutorDetails).length > 0) ||
+    !profileData.prestadorDetails;
+  const useNewLayout = !isViewingOtherProfile && isMentorado;
+
+  if (useNewLayout) {
+    return (
+      <TinderDoFluxoPageShell title="Meu Perfil">
+        <ProfileMentoradoLayout
+          data={profileData}
+          reviews={reviews.map((r) => ({
+            id: r.id,
+            autor_nome: r.autor_nome,
+            rating: r.rating,
+            depoimento: r.depoimento,
+            created_at: r.created_at,
+          }))}
+          reviewsLoading={reviewsLoading}
+          isOwnProfile
+          onEdit={() => navigate('/tinder-do-fluxo/perfil?edit=true')}
+        />
+      </TinderDoFluxoPageShell>
+    );
+  }
 
   return (
     <TinderDoFluxoPageShell title={isViewingOtherProfile ? `Perfil de ${user.nome}` : "Meu Perfil"}>

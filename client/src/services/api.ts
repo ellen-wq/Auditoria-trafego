@@ -89,6 +89,10 @@ class ApiService {
     return this.request<T>(url, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });
   }
 
+  delete<T = any>(url: string, body?: any): Promise<T> {
+    return this.request<T>(url, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined });
+  }
+
   setAuth(token: string, user: User) {
     this.token = token;
     this.safeSet('token', token);

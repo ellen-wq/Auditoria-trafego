@@ -11,6 +11,8 @@ export interface ProfileFormData {
   headline: string;
   cidade: string;
   whatsapp: string;
+  instagram?: string;
+  nicho?: string;
   idiomas: string[];
   anos_experiencia: number;
   photo_url?: string;
@@ -82,6 +84,10 @@ export interface ProfileFormData {
   // Flags
   isExpert?: boolean;
   isCoprodutor?: boolean;
+
+  // Nível no Fluxo (mentorado)
+  nivel_fluxo_label?: string;
+  nivel_fluxo_percent?: number | null;
 }
 
 export interface ProfileResponse {
@@ -172,9 +178,11 @@ export function useProfileForm() {
     
     const result: any = {
       photo_url: (data.profile as any)?.photo_url || '',
-      headline: data.profile?.headline || '',
+      headline: ((data.profile as any)?.objetivo ?? data.profile?.headline) || '',
       cidade: data.profile?.city || '',
       whatsapp: data.profile?.whatsapp || '',
+      instagram: (data.profile as any)?.instagram ?? '',
+      nicho: (data.profile as any)?.nicho ?? (data.profile as any)?.niche ?? '',
       idiomas: data.profile?.idiomas || [],
       anos_experiencia: data.profile?.anos_experiencia || 0,
       bio_busca: data.profile?.bio || data.profile?.search_bio || '',
@@ -223,6 +231,8 @@ export function useProfileForm() {
       } : undefined,
       isExpert: data.isExpert || false,
       isCoprodutor: data.isCoprodutor || false,
+      nivel_fluxo_label: (data.profile as any)?.nivel_fluxo_label ?? '',
+      nivel_fluxo_percent: (data.profile as any)?.nivel_fluxo_percent ?? null,
     };
     
     // Armazenar no ref para próxima comparação
@@ -240,8 +250,11 @@ export function useProfileForm() {
         profile: {
           photo_url: data.photo_url,
           headline: data.headline,
+          objetivo: data.headline,
           cidade: data.cidade,
           whatsapp: data.whatsapp,
+          instagram: data.instagram ?? '',
+          nicho: data.nicho ?? '',
           idiomas: data.idiomas,
           anos_experiencia: data.anos_experiencia,
           bio_busca: data.bio_busca,
@@ -249,6 +262,8 @@ export function useProfileForm() {
           horas_semanais: data.horas_semanais,
           availability_tags: data.availability_tags || [],
           modelo_trabalho: (data as any).modelo_trabalho || 'remoto',
+          nivel_fluxo_label: (data as any).nivel_fluxo_label ?? '',
+          nivel_fluxo_percent: (data as any).nivel_fluxo_percent ?? null,
         },
         skills: Object.entries(data.skills)
           .filter(([_, nivel]) => nivel !== undefined && nivel > 0)

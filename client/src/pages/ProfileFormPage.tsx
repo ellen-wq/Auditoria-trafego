@@ -9,6 +9,7 @@ import { PrestadorSection } from '../components/profile/PrestadorSection';
 import { SkillsSection } from '../components/profile/SkillsSection';
 import { ProjectsSection } from '../components/profile/ProjectsSection';
 import { api } from '../services/api';
+import { getNivelFluxoDisplayLabel } from '../utils/format';
 
 const idiomasOptions = ['Português', 'Inglês', 'Espanhol', 'Francês', 'Italiano', 'Alemão'];
 const countryCodes = [
@@ -16,6 +17,15 @@ const countryCodes = [
   { code: '+1', flag: '🇺🇸', label: 'EUA/Canadá (+1)' },
   { code: '+351', flag: '🇵🇹', label: 'Portugal (+351)' }
 ];
+
+const NIVEL_FLUXO_OPTIONS = [
+  { value: 'newbie', label: 'Newbie', desc: '0 vendas' },
+  { value: 'soft', label: 'Soft', desc: '1 a 10 mil' },
+  { value: 'hard', label: 'Hard', desc: '10 a 100 mil' },
+  { value: 'pro', label: 'Pro', desc: '100 mil a 1 milhão' },
+  { value: 'Pro +', label: 'Pro +', desc: '1 milhão a 2 milhões' },
+  { value: 'master', label: 'Master', desc: '2 milhões +' },
+] as const;
 
 export default function ProfileFormPage() {
   const navigate = useNavigate();
@@ -39,6 +49,8 @@ export default function ProfileFormPage() {
     headline: '',
     cidade: '',
     whatsapp: '',
+    instagram: '',
+    nicho: '',
     idiomas: [],
     anos_experiencia: 0,
     bio_busca: '',
@@ -68,6 +80,8 @@ export default function ProfileFormPage() {
         cidade: formData.cidade,
         bio_busca: formData.bio_busca,
         photo_url: formData.photo_url,
+        instagram: formData.instagram,
+        nicho: formData.nicho,
         projectsCount: formData.projects?.length || 0,
       });
       
@@ -76,6 +90,8 @@ export default function ProfileFormPage() {
         cidade: localFormData?.cidade,
         bio_busca: localFormData?.bio_busca,
         photo_url: localFormData?.photo_url,
+        instagram: localFormData?.instagram,
+        nicho: localFormData?.nicho,
         projectsCount: localFormData?.projects?.length || 0,
       });
       
@@ -286,13 +302,22 @@ export default function ProfileFormPage() {
 
   return (
     <TinderDoFluxoPageShell title="Meu Perfil">
-      <form className="card" onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 20, padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0 }}>
-            <strong>⚠️ Perfil obrigatório:</strong> Você precisa criar seu perfil antes de acessar outras áreas do sistema.
-          </p>
+      <div className="perfil-mentorado-page">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 40 }}>
+          <div>
+            <h2 style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.025em', margin: 0 }}>Perfil do Mentorado</h2>
+            <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0', fontSize: 14 }}>Gerencie suas informações no ecossistema Fluxer</p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-outline" onClick={() => navigate('/tinder-do-fluxo/profile-view')} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>visibility</span>
+              Ver como outros veem
+            </button>
+          </div>
         </div>
 
+        <form onSubmit={handleSubmit}>
+          <div className="perfil-mentorado-card">
         {/* DADOS BÁSICOS */}
         <div style={{ marginBottom: 24, padding: 20, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
           <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Dados Básicos</h3>
@@ -379,13 +404,13 @@ export default function ProfileFormPage() {
           </div>
           
           <div className="form-group">
-            <label>Headline Profissional</label>
+            <label>Objetivo de parceria</label>
             <input
               type="text"
               value={localFormData?.headline || ''}
               onChange={(e) => updateFormData({ headline: e.target.value })}
-              placeholder="Ex: Especialista em Marketing Digital e Automação"
-              maxLength={200}
+              placeholder="Ex: Escalar meu negócio e criar parcerias estratégicas"
+              maxLength={400}
             />
           </div>
           
@@ -398,7 +423,44 @@ export default function ProfileFormPage() {
               placeholder="Ex: São Paulo, SP"
             />
           </div>
-          
+          <div className="form-group">
+            <label>Instagram</label>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontWeight: 500 }}>@</span>
+              <input
+                type="text"
+                value={localFormData?.instagram || ''}
+                onChange={(e) => updateFormData({ instagram: e.target.value })}
+                placeholder="usuario"
+                style={{ paddingLeft: 28, width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', fontSize: 14 }}
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Nicho</label>
+            <input
+              type="text"
+              value={localFormData?.nicho || ''}
+              onChange={(e) => updateFormData({ nicho: e.target.value })}
+              placeholder="Ex: Tráfego Pago, E-commerce"
+              style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', fontSize: 14 }}
+            />
+          </div>
+          {tipoUsuario === 'mentorado' && (
+            <div className="form-group">
+              <label>Nível no Fluxo</label>
+              <select
+                value={getNivelFluxoDisplayLabel((localFormData as any)?.nivel_fluxo_label) || ''}
+                onChange={(e) => updateFormData({ nivel_fluxo_label: e.target.value } as Partial<ProfileFormData>)}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', fontSize: 14 }}
+              >
+                <option value="">Selecione</option>
+                {NIVEL_FLUXO_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label} – {opt.desc}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="form-group">
             <label>WhatsApp</label>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -490,12 +552,14 @@ export default function ProfileFormPage() {
           <div className="form-group">
             <label>Bio</label>
             <textarea
-              rows={8}
-              style={{ minHeight: '200px', width: '100%', resize: 'vertical', boxSizing: 'border-box' }}
+              rows={4}
+              maxLength={250}
+              style={{ minHeight: '120px', width: '100%', resize: 'vertical', boxSizing: 'border-box' }}
               value={localFormData?.bio_busca || ''}
               onChange={(e) => updateFormData({ bio_busca: e.target.value })}
-              placeholder="Descreva o que você busca em parcerias..."
+              placeholder="Conte um pouco sobre sua jornada e o que você busca no ecossistema..."
             />
+            <p style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Máximo 250 caracteres</p>
           </div>
         </div>
 
@@ -691,10 +755,23 @@ export default function ProfileFormPage() {
         )}
 
         {/* BOTÃO SALVAR */}
-        <button className="btn btn-primary" type="submit" disabled={isSaving} style={{ marginTop: 24, width: '100%' }}>
-          {isSaving ? 'Salvando...' : 'Salvar Perfil'}
-        </button>
-      </form>
+        <div style={{ marginTop: 48, display: 'flex', justifyContent: 'flex-end' }}>
+          <button className="btn btn-primary" type="submit" disabled={isSaving} style={{ minWidth: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>save</span>
+            {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+        </div>
+          </div>
+
+          <div style={{ marginTop: 32, padding: 24, background: 'rgba(163, 230, 53, 0.08)', borderRadius: '1rem', border: '1px solid rgba(163, 230, 53, 0.25)', display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+            <span className="material-symbols-outlined" style={{ color: 'var(--accent)', fontSize: 28 }}>info</span>
+            <div>
+              <h4 style={{ fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Mantenha seu perfil atualizado</h4>
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '4px 0 0' }}>Perfis completos e atualizados têm 3x mais chances de encontrar o match ideal no Fluxo.</p>
+            </div>
+          </div>
+        </form>
+      </div>
     </TinderDoFluxoPageShell>
   );
 }

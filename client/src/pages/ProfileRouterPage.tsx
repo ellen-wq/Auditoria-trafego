@@ -37,8 +37,8 @@ export default function ProfileRouterPage() {
       setIsChecking(false);
       return;
     }
-    if (user) checkProfile();
-  }, [user?.role, user, checkProfile]);
+    if (user?.id) checkProfile();
+  }, [user?.role, user?.id, checkProfile]);
 
   if (isChecking) {
     return (

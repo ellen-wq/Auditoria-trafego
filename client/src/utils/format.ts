@@ -18,3 +18,11 @@ export function escapeHtml(str: string | null | undefined): string {
   div.textContent = str;
   return div.innerHTML;
 }
+
+/** Normaliza valor de nível no fluxo para exibição: "pro-plus" / "pro+" → "Pro +". */
+export function getNivelFluxoDisplayLabel(raw: string | null | undefined): string {
+  if (raw == null || typeof raw !== 'string') return '';
+  const n = raw.trim().toLowerCase();
+  if (n === 'pro-plus' || n === 'pro+' || n === 'pro +') return 'Pro +';
+  return raw.trim() || '';
+}

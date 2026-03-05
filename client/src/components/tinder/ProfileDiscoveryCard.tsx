@@ -7,13 +7,13 @@ interface ProfileDiscoveryCardProps {
     photo_url?: string;
     isExpert?: boolean;
     isCoprodutor?: boolean;
-    /** Objetivo / headline (ex.: "Especialista em Tráfego Pago") - exibido abaixo do nome */
+    /** Objetivo - tinder_mentor_profiles.goal_text - exibido abaixo do nome */
     objective?: string;
     /** Bio - tinder_mentor_profiles.bio */
     bio?: string;
     /** Nicho - tinder_mentor_profiles.niche */
     niche?: string;
-    /** Formato = interesses (availability_tags): Projetos, Parcerias, Coprodução, Sociedade */
+    /** Interesses (availability_tags): Projetos, Parcerias, Coprodução, Sociedade */
     formato?: string;
     // Expert fields
     products?: Array<{
@@ -54,6 +54,10 @@ interface ProfileDiscoveryCardProps {
   onPass: () => void;
   onMatch: () => void;
   onSwipe?: (direction: 'left' | 'right') => void;
+  /** Se o perfil está nos favoritos do usuário logado */
+  isFavorited?: boolean;
+  /** Callback ao clicar na estrela (favoritar/desfavoritar) */
+  onFavorite?: () => void;
 }
 
 const categoriaLabels: Record<string, string> = {
@@ -81,7 +85,9 @@ export default function ProfileDiscoveryCard({
   profile, 
   onPass, 
   onMatch,
-  onSwipe 
+  onSwipe,
+  isFavorited = false,
+  onFavorite
 }: ProfileDiscoveryCardProps) {
   const navigate = useNavigate();
 
@@ -97,10 +103,6 @@ export default function ProfileDiscoveryCard({
     : '';
 
   const profileTypeColor = profile.isCoprodutor ? 'var(--purple)' : 'var(--accent-dark)';
-
-  // Get top 3 products for Expert
-  const products = profile.products?.slice(0, 3) || [];
-  const productsRemaining = (profile.products?.length || 0) - products.length;
 
   // Get needs for Expert
   const needs = profile.needs ? Object.entries(profile.needs)
@@ -122,12 +124,8 @@ export default function ProfileDiscoveryCard({
     ...(profile.skillsExtra || [])
   ].sort((a, b) => b.nivel - a.nivel).slice(0, 3);
 
-  // Get top 3 projects for Coprodutor
-  const projects = profile.projects?.slice(0, 3) || [];
-  const projectsRemaining = (profile.projects?.length || 0) - projects.length;
-
   return (
-    <div className="card" style={{ 
+    <div className="card" data-discovery-card="v2" style={{ 
       padding: 0,
       marginBottom: 24,
       maxWidth: 600,
@@ -167,25 +165,59 @@ export default function ProfileDiscoveryCard({
 
         {/* Lado dos detalhes */}
         <div style={{ flex: 1, padding: 20, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-          {/* Nome e badge Expert/Coprodutor na mesma linha */}
+          {/* Nome, badge Expert/Coprodutor e botão favoritar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 4 }}>
-            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>
-              {profile.name}
-            </h2>
-            {profileType && (
-              <span style={{
-                flexShrink: 0,
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-xs)',
-                background: profileTypeColor,
-                color: 'white',
-                fontSize: 11,
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}>
-                {profileType}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>
+                {profile.name}
+              </h2>
+              {profileType && (
+                <span style={{
+                  flexShrink: 0,
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-xs)',
+                  background: profileTypeColor,
+                  color: 'white',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  {profileType}
+                </span>
+              )}
+            </div>
+            {onFavorite && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onFavorite(); }}
+                aria-label={isFavorited ? 'Remover dos favoritos' : 'Favoritar'}
+                style={{
+                  flexShrink: 0,
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'transparent',
+                  color: isFavorited ? 'var(--green)' : 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: 22,
+                  transition: 'color 0.15s, transform 0.15s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--green)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = isFavorited ? 'var(--green)' : 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: isFavorited ? '"FILL" 1' : '"FILL" 0' }}>star</span>
+              </button>
             )}
           </div>
           {/* Objetivo abaixo do nome */}
@@ -195,7 +227,7 @@ export default function ProfileDiscoveryCard({
             </p>
           )}
 
-          {/* Nicho e Formato em grid */}
+          {/* Nicho e Interesses em grid */}
           {(profile.niche || profile.formato) && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
               {profile.niche && (
@@ -206,7 +238,7 @@ export default function ProfileDiscoveryCard({
               )}
               {profile.formato && (
                 <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', margin: '0 0 4px 0' }}>Formato</p>
+                  <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', margin: '0 0 4px 0' }}>Interesses</p>
                   <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>{profile.formato}</p>
                 </div>
               )}
@@ -228,51 +260,7 @@ export default function ProfileDiscoveryCard({
         {/* EXPERT CONTENT */}
         {profile.isExpert && (
           <>
-            {/* 1. O QUE A PESSOA FAZ MELHOR - Produtos */}
-            {products.length > 0 && (
-              <div>
-                <label style={{ 
-                  fontSize: 13, 
-                  fontWeight: 600, 
-                  color: 'var(--text-secondary)', 
-                  marginBottom: 8,
-                  display: 'block'
-                }}>
-                  Produtos
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {products.map((product, idx) => (
-                    <span 
-                      key={product.id || idx}
-                      style={{ 
-                        padding: '8px 16px', 
-                        background: 'var(--bg-sidebar)', 
-                        color: 'white',
-                        borderRadius: 'var(--radius)',
-                        fontSize: 13,
-                        fontWeight: 600
-                      }}
-                    >
-                      {product.tipo_produto}
-                    </span>
-                  ))}
-                  {productsRemaining > 0 && (
-                    <span style={{ 
-                      padding: '8px 16px', 
-                      background: 'var(--bg-sidebar)', 
-                      color: 'white',
-                      borderRadius: 'var(--radius)',
-                      fontSize: 13,
-                      fontWeight: 600
-                    }}>
-                      +{productsRemaining}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 2. O QUE ELA PROCURA - Precisa de */}
+            {/* O QUE ELA PROCURA - Precisa de */}
             {needs.length > 0 && (
               <div>
                 <label style={{ 
@@ -428,51 +416,6 @@ export default function ProfileDiscoveryCard({
               </div>
             )}
 
-            {/* 2. O QUE ELA PROCURA - Projetos */}
-            {projects.length > 0 && (
-              <div>
-                <label style={{ 
-                  fontSize: 13, 
-                  fontWeight: 600, 
-                  color: 'var(--text-secondary)', 
-                  marginBottom: 8,
-                  display: 'block'
-                }}>
-                  Projetos
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {projects.map((project, idx) => (
-                    <span 
-                      key={idx}
-                      style={{ 
-                        padding: '8px 14px',
-                        borderRadius: 'var(--radius)',
-                        background: 'var(--green)',
-                        color: 'white',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        boxShadow: '0 2px 4px rgba(34, 197, 94, 0.2)'
-                      }}
-                    >
-                      {project.nome}
-                    </span>
-                  ))}
-                  {projectsRemaining > 0 && (
-                    <span style={{ 
-                      padding: '8px 14px',
-                      borderRadius: 'var(--radius)',
-                      background: 'var(--green)',
-                      color: 'white',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      boxShadow: '0 2px 4px rgba(34, 197, 94, 0.2)'
-                    }}>
-                      +{projectsRemaining}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
           </>
         )}
         </div>

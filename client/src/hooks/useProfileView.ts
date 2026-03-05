@@ -21,6 +21,8 @@ export interface ProfileViewData {
     horas_semanais?: number;
     anos_experiencia?: number;
     idiomas?: string[];
+    nivel_fluxo_label?: string;
+    nivel_fluxo_percent?: number | null;
   };
   expertDetails?: {
     products?: Array<{

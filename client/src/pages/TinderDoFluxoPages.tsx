@@ -131,13 +131,24 @@ export function TinderExpertPage() {
   const [isSendingInterest, setIsSendingInterest] = useState(false);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedUser, setMatchedUser] = useState<any>(null);
-  
+  const [favoritedIds, setFavoritedIds] = useState<Set<string>>(() => new Set());
+
   // Header: busca + Expert/Coprodutor (sem filtros de parceria/cidade)
   const [lookingFor, setLookingFor] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
   const currentUser = api.getUser();
+
+  // Carregar favoritos ao montar a página
+  useEffect(() => {
+    api.get<{ favorites: { target_user_id: string }[] }>('/api/tinder-do-fluxo/favorites')
+      .then((r) => {
+        const ids = new Set((r.favorites || []).map((f) => f.target_user_id).filter(Boolean));
+        setFavoritedIds(ids);
+      })
+      .catch(() => {});
+  }, []);
 
   // Load discovery profiles (busca por nome/objetivo + tipo Expert/Coprodutor)
   useEffect(() => {
@@ -194,7 +205,7 @@ export function TinderExpertPage() {
           id: u.id,
           name: u.name,
           photo_url: mentorProfile?.photo_url,
-          objective: mentorProfile?.headline || expertProfile?.goal_text || '',
+          objective: mentorProfile?.goal_text || mentorProfile?.headline || expertProfile?.goal_text || '',
           bio: mentorProfile?.bio || '',
           niche: mentorProfile?.niche || undefined,
           formato: formato || undefined,
@@ -250,7 +261,7 @@ export function TinderExpertPage() {
           if (idx === currentProfileIndex) {
             return {
               ...p,
-              objective: profileObj.headline || p.objective,
+              objective: profileObj.goal_text || profileObj.headline || p.objective,
               bio: profileObj.bio_busca || profileObj.bio || p.bio,
               products: profileData.expertDetails?.products || [],
               skills: profileData.skills || [],
@@ -346,6 +357,25 @@ export function TinderExpertPage() {
       setLookingFor(lookingFor.filter((t) => t !== value));
     } else {
       setLookingFor([...lookingFor, value]);
+    }
+  };
+
+  const handleToggleFavorite = async (userId: string) => {
+    const isFav = favoritedIds.has(userId);
+    try {
+      if (isFav) {
+        await api.delete('/api/tinder-do-fluxo/favorite', { targetUserId: userId, type: 'EXPERT' });
+        setFavoritedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(userId);
+          return next;
+        });
+      } else {
+        await api.post('/api/tinder-do-fluxo/favorite', { targetUserId: userId, type: 'EXPERT' });
+        setFavoritedIds((prev) => new Set(prev).add(userId));
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar favorito:', err);
     }
   };
 
@@ -527,6 +557,8 @@ export function TinderExpertPage() {
             onPass={handlePass}
             onMatch={handleMatch}
             onSwipe={handleSwipe}
+            isFavorited={favoritedIds.has(currentProfile.id)}
+            onFavorite={() => handleToggleFavorite(currentProfile.id)}
           />
         </SwipeActions>
       )}

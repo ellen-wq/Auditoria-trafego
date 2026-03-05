@@ -141,13 +141,18 @@ export class ProfileService {
           headline: mentorProfile.headline || '',
           cidade: mentorProfile.city || '',
           whatsapp: mentorProfile.whatsapp || '',
+          instagram: (mentorProfile as any).instagram || '',
+          nicho: (mentorProfile as any).niche || '',
           bio_busca: mentorProfile.search_bio || mentorProfile.bio || '',
+          objetivo: (mentorProfile as any).goal_text || mentorProfile.headline || '',
           modelo_trabalho: mentorProfile.modelo_trabalho || 'remoto',
           disponivel: mentorProfile.disponivel ?? true,
           horas_semanais: mentorProfile.horas_semanais || 0,
           anos_experiencia: mentorProfile.anos_experiencia || 0,
           idiomas: mentorProfile.idiomas || [],
           availability_tags: mentorProfile.availability_tags || [],
+          nivel_fluxo_label: (mentorProfile as any).nivel_fluxo_label || '',
+          nivel_fluxo_percent: (mentorProfile as any).nivel_fluxo_percent ?? null,
         };
         profile.isExpert = mentorProfile.is_expert || false;
         profile.isCoprodutor = mentorProfile.is_coproducer || false;
@@ -304,6 +309,10 @@ export class ProfileService {
         modelo_trabalho: (payload.profile as any).modelo_trabalho || 'remoto',
         updated_at: new Date().toISOString(),
       };
+      const instagram = (payload.profile as any).instagram;
+      const nicho = (payload.profile as any).nicho;
+      if (instagram !== undefined) profileData.instagram = instagram ?? '';
+      if (nicho !== undefined) profileData.niche = nicho ?? '';
       
       // Adicionar availability_tags apenas se a coluna existir (será adicionada via migration)
       const availabilityTags = (payload.profile as any).availability_tags || [];
@@ -314,6 +323,11 @@ export class ProfileService {
       if (tipoUsuario === 'mentorado') {
         profileData.bio = payload.profile.bio_busca || '';
         profileData.search_bio = payload.profile.bio_busca || '';
+        profileData.goal_text = (payload.profile as any).objetivo ?? payload.profile.headline ?? '';
+        const nivelLabel = (payload.profile as any).nivel_fluxo_label;
+        const nivelPercent = (payload.profile as any).nivel_fluxo_percent;
+        if (nivelLabel !== undefined) profileData.nivel_fluxo_label = nivelLabel ?? '';
+        if (nivelPercent !== undefined) profileData.nivel_fluxo_percent = nivelPercent == null ? null : Math.min(100, Math.max(0, Number(nivelPercent)));
         
         // Campos de Expert/Coprodutor agora são salvos diretamente em tinder_mentor_profiles
         // IMPORTANTE: Expert e Coprodutor são mutuamente exclusivos

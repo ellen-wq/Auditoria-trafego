@@ -4,12 +4,12 @@ import AppLayout from '../AppLayout';
 export interface TinderDoFluxoPageShellProps {
   title: string;
   subtitle?: string;
+  /** Conteúdo à direita do título (ex.: abas). Quando definido, título e subtitle ficam à esquerda em linha (md). */
   headerRight?: React.ReactNode;
   children?: React.ReactNode;
 }
 
 export default function TinderDoFluxoPageShell({ title, subtitle, headerRight, children }: TinderDoFluxoPageShellProps) {
-
   const breadcrumbs = useMemo(() => ([
     { label: 'Tinder do Fluxo' },
     { label: title }
@@ -17,13 +17,20 @@ export default function TinderDoFluxoPageShell({ title, subtitle, headerRight, c
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div>
+      {headerRight != null ? (
+        <div className="vagas-header-row">
+          <div>
+            <h1 className="vagas-title">{title}</h1>
+            {subtitle != null && subtitle !== '' && <p className="vagas-subtitle">{subtitle}</p>}
+          </div>
+          {headerRight}
+        </div>
+      ) : (
+        <>
           <h1 className="page-title">{title}</h1>
           {subtitle && <p className="page-subtitle">{subtitle}</p>}
-        </div>
-        {headerRight && <div>{headerRight}</div>}
-      </div>
+        </>
+      )}
       {children || (
         <div className="card">
           <div className="card-header">
