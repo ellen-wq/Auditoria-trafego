@@ -10,6 +10,7 @@ import { SkillsSection } from '../components/profile/SkillsSection';
 import { ProjectsSection } from '../components/profile/ProjectsSection';
 import { api } from '../services/api';
 import { getNivelFluxoDisplayLabel } from '../utils/format';
+import { HOBBIES_OPTIONS } from '../constants/registration';
 
 const idiomasOptions = ['Português', 'Inglês', 'Espanhol', 'Francês', 'Italiano', 'Alemão'];
 const countryCodes = [
@@ -51,7 +52,7 @@ export default function ProfileFormPage() {
     whatsapp: '',
     instagram: '',
     nicho: '',
-    hobbies: '',
+    hobbies: [] as string[],
     idiomas: [],
     anos_experiencia: 0,
     bio_busca: '',
@@ -448,14 +449,28 @@ export default function ProfileFormPage() {
             />
           </div>
           <div className="form-group">
-            <label>Hobbies</label>
-            <input
-              type="text"
-              value={localFormData?.hobbies || ''}
-              onChange={(e) => updateFormData({ hobbies: e.target.value })}
-              placeholder="Ex: Leitura, esportes, música"
-              style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', fontSize: 14 }}
-            />
+            <label style={{ display: 'block', marginBottom: 8 }}>Hobbies (pode selecionar vários)</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px' }}>
+              {HOBBIES_OPTIONS.map((h) => {
+                const hobbiesList = Array.isArray(localFormData?.hobbies) ? localFormData.hobbies : (localFormData?.hobbies ? String(localFormData.hobbies).split(',').map(s => s.trim()).filter(Boolean) : []);
+                const checked = hobbiesList.includes(h);
+                return (
+                  <label key={h} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        const current = Array.isArray(localFormData?.hobbies) ? localFormData.hobbies : (localFormData?.hobbies ? String(localFormData.hobbies).split(',').map(s => s.trim()).filter(Boolean) : []);
+                        const next = e.target.checked ? [...current, h] : current.filter((x) => x !== h);
+                        updateFormData({ hobbies: next });
+                      }}
+                      style={{ margin: 0, cursor: 'pointer', width: 18, height: 18, accentColor: 'var(--accent-dark)' }}
+                    />
+                    <span>{h}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
           {tipoUsuario === 'mentorado' && (
             <div className="form-group">

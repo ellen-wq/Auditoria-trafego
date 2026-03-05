@@ -12,7 +12,9 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     const { name, email, password, niche, hobbies, city, cidade, level, nivel } = req.body;
     const profileCity = (city ?? cidade ?? '').toString().trim();
     const profileNiche = (niche ?? '').toString().trim();
-    const profileHobbies = (hobbies ?? '').toString().trim();
+    const profileHobbies = Array.isArray(hobbies)
+      ? hobbies.map((h: unknown) => String(h).trim()).filter(Boolean).join(', ')
+      : (hobbies ?? '').toString().trim();
     const profileLevel = (level ?? nivel ?? '').toString().trim();
     console.log('[Register API] Recebido:', { name, email: email?.toLowerCase()?.trim(), hasPassword: !!password, profileCity, profileNiche, profileLevel });
     
@@ -265,7 +267,9 @@ router.post('/register-prestador', async (req: Request, res: Response): Promise<
     const { name, email, password, niche, hobbies, city, cidade, level, nivel } = req.body;
     const profileCity = (city ?? cidade ?? '').toString().trim();
     const profileNiche = (niche ?? '').toString().trim();
-    const profileHobbies = (hobbies ?? '').toString().trim();
+    const profileHobbies = Array.isArray(hobbies)
+      ? hobbies.map((h: unknown) => String(h).trim()).filter(Boolean).join(', ')
+      : (hobbies ?? '').toString().trim();
     const profileLevel = (level ?? nivel ?? '').toString().trim();
     if (!name || !email || !password) {
       res.status(400).json({ error: 'Nome, email e senha são obrigatórios.' });

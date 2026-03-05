@@ -666,6 +666,28 @@ const SPECIALTY_TABS = [
   { value: 'AUTOMACAO', label: 'Automação' },
 ] as const;
 
+/** Perfil fake apenas para visualização no front-end (não existe no Supabase). */
+const FAKE_SERVICE_ID = 'demo';
+const FAKE_SERVICE_PROFILE = {
+  id: FAKE_SERVICE_ID,
+  photo_url: 'https://i.pravatar.cc/400?u=demo-prestador',
+  users: { id: FAKE_SERVICE_ID, name: 'Maria Silva', email: '', role: 'PRESTADOR' },
+  city: 'São Paulo',
+  state: 'SP',
+  bio: 'Profissional de marketing digital com foco em tráfego pago e copy. Mais de 5 anos de experiência ajudando marcas a escalar resultados.',
+  experience: 'Trabalhei em agências e no setor in-house. Especialista em Meta Ads e Google Ads.',
+  specialty: 'COPY',
+  certification: 'Meta Blueprint Certified',
+  headline: 'Especialista em Tráfego e Copy',
+  portfolio: 'Diversos projetos para e-commerce e infoprodutos. Cases com ROI documentado.',
+  rating_avg: 4.8,
+  rating_count: 24,
+  preco_minimo: 1500,
+  whatsapp: '',
+  beneficios: ['Análise de Avatar Gratuita', '2 Rodadas de Revisão', 'Entrega em até 7 dias úteis'],
+  created_at: '2023-06-01T00:00:00Z',
+} as const;
+
 function prestadoresAvatarUrl(s: { photo_url?: string | null; users?: { name?: string } | null }): string {
   if (s.photo_url && s.photo_url.trim()) return s.photo_url;
   const name = s.users?.name || 'Prestador';
@@ -703,7 +725,7 @@ export function TinderPrestadoresPage() {
       if (ratingMin != null) params.append('rating_min', String(ratingMin));
 
       const res = await api.get<{ services: any[] }>(`/api/tinder-do-fluxo/services?${params.toString()}`);
-      setServices(res.services || []);
+      setServices([FAKE_SERVICE_PROFILE as any, ...(res.services || [])]);
       setCurrentPage(1);
     } catch (err) {
       console.error('Erro ao carregar prestadores:', err);
@@ -2398,6 +2420,12 @@ export function TinderServiceDetailPage() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
+    if (id === FAKE_SERVICE_ID) {
+      setService(FAKE_SERVICE_PROFILE as any);
+      setReviews([]);
+      setLoading(false);
+      return;
+    }
     Promise.all([
       api.get<{ service: any }>(`/api/tinder-do-fluxo/services/${id}`).then((r) => r.service),
       api.get<{ reviews: any[] }>(`/api/tinder-do-fluxo/services/${id}/reviews`).then((r) => r.reviews || []),
@@ -2558,13 +2586,17 @@ export function TinderServiceDetailPage() {
                   ))
                 )}
                 {reviews.length > 10 && <button type="button" className="prestador-profile-btn-all-reviews">Ver todas as {reviews.length} avaliações</button>}
-                <div className="prestador-profile-form-review">
-                  <h4 style={{ marginBottom: 16 }}>Deixar avaliação</h4>
-                  <div className="form-group"><label>Nota (1-5)</label><input type="number" min={1} max={5} value={rating} onChange={(e) => setRating(Number(e.target.value))} /></div>
-                  <div className="form-group"><label>Comentário</label><textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Conte sua experiência..." /></div>
-                  <button className="btn btn-primary" type="button" onClick={submitReview}>Avaliar prestador</button>
-                  {message && <p style={{ marginTop: 8, color: 'var(--green)' }}>{message}</p>}
-                </div>
+                {id === FAKE_SERVICE_ID ? (
+                  <p style={{ marginTop: 16, color: 'var(--text-muted)', fontSize: 14 }}>Perfil de demonstração — avaliações desativadas.</p>
+                ) : (
+                  <div className="prestador-profile-form-review">
+                    <h4 style={{ marginBottom: 16 }}>Deixar avaliação</h4>
+                    <div className="form-group"><label>Nota (1-5)</label><input type="number" min={1} max={5} value={rating} onChange={(e) => setRating(Number(e.target.value))} /></div>
+                    <div className="form-group"><label>Comentário</label><textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Conte sua experiência..." /></div>
+                    <button className="btn btn-primary" type="button" onClick={submitReview}>Avaliar prestador</button>
+                    {message && <p style={{ marginTop: 8, color: 'var(--green)' }}>{message}</p>}
+                  </div>
+                )}
               </section>
             )}
           </div>

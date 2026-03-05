@@ -2,15 +2,7 @@ import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import logoFluxo from '../assets/fluxo.logo.animation.svg';
-
-const NIVEL_OPTIONS = [
-  { value: 'newbie', label: 'Newbie (0 vendas)' },
-  { value: 'soft', label: 'Soft (1 a 10 mil)' },
-  { value: 'hard', label: 'Hard (10 a 100 mil)' },
-  { value: 'pro', label: 'Pro (100 mil a 1 milhão)' },
-  { value: 'Pro +', label: 'Pro + (1 a 2 milhões)' },
-  { value: 'master', label: 'Master (2 milhões +)' },
-];
+import { NIVEL_OPTIONS, HOBBIES_OPTIONS } from '../constants/registration';
 
 export default function RegisterPrestadorPage() {
   const navigate = useNavigate();
@@ -19,7 +11,7 @@ export default function RegisterPrestadorPage() {
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [niche, setNiche] = useState('');
-  const [hobbies, setHobbies] = useState('');
+  const [hobbies, setHobbies] = useState<string[]>([]);
   const [city, setCity] = useState('');
   const [level, setLevel] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -55,7 +47,7 @@ export default function RegisterPrestadorPage() {
       email: email.toLowerCase().trim(),
       password,
       niche: niche.trim() || undefined,
-      hobbies: hobbies.trim() || undefined,
+      hobbies: hobbies.length > 0 ? hobbies : undefined,
       city: city.trim() || undefined,
       level: level.trim() || undefined,
     };
@@ -74,7 +66,7 @@ export default function RegisterPrestadorPage() {
         setPassword('');
         setPassword2('');
         setNiche('');
-        setHobbies('');
+        setHobbies([]);
         setCity('');
         setLevel('');
         setAcceptTerms(false);
@@ -182,14 +174,23 @@ export default function RegisterPrestadorPage() {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="hobbies">Hobbies</label>
-            <input
-              type="text"
-              id="hobbies"
-              placeholder="Ex: Leitura, esportes, música"
-              value={hobbies}
-              onChange={(e) => setHobbies(e.target.value)}
-            />
+            <label style={{ display: 'block', marginBottom: 8 }}>Hobbies (pode selecionar vários)</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px' }}>
+              {HOBBIES_OPTIONS.map((h) => (
+                <label key={h} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}>
+                  <input
+                    type="checkbox"
+                    checked={hobbies.includes(h)}
+                    onChange={(e) => {
+                      if (e.target.checked) setHobbies((prev) => [...prev, h]);
+                      else setHobbies((prev) => prev.filter((x) => x !== h));
+                    }}
+                    style={{ margin: 0, cursor: 'pointer', width: 18, height: 18, accentColor: 'var(--accent-dark)' }}
+                  />
+                  <span>{h}</span>
+                </label>
+              ))}
+            </div>
           </div>
           <div className="form-group">
             <label htmlFor="city">Cidade</label>
