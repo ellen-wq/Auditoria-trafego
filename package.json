@@ -8,7 +8,7 @@
     "build:server": "tsc",
     "build:server:src-js": "tsc --module ES2020 --target ES2020 --moduleResolution node --outDir src --rootDir src --declaration false --declarationMap false --sourceMap false",
     "build:client": "cd client && npm install && npm run build",
-    "build": "npm run build:server && npm run build:server:src-js && npm run build:client && node scripts/vercel-workaround-chunk.js",
+    "build": "npm run build:server && npm run build:server:src-js && npm run build:client && node scripts/copy-public-to-dist.js && node scripts/vercel-workaround-chunk.js",
     "start": "node dist/server.js",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "node --import tsx src/server.ts",
