@@ -87,7 +87,6 @@ export default function Sidebar({ user }: SidebarProps) {
           {user.role === 'MENTORADO' && (
             <>
               <NavLink to="/tinder-do-fluxo/expert" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Expert & Coprodutor</NavLink>
-              <NavLink to="/tinder-do-fluxo/comunidade" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Comunidade</NavLink>
               <NavLink to="/tinder-do-fluxo/prestadores" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Prestadores</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Vagas</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas/minhas-candidaturas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Minhas Candidaturas</NavLink>
@@ -108,7 +107,6 @@ export default function Sidebar({ user }: SidebarProps) {
             <>
               <div className="sidebar-subgroup-title">Operacional</div>
               <NavLink to="/tinder-do-fluxo/expert" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Expert & Coprodutor</NavLink>
-              <NavLink to="/tinder-do-fluxo/comunidade" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Comunidade</NavLink>
               <NavLink to="/tinder-do-fluxo/prestadores" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Prestadores</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Vagas</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas/minhas-candidaturas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Minhas Candidaturas</NavLink>
