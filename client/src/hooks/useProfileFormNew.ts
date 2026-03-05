@@ -90,10 +90,21 @@ export interface ProfileFormData {
   // Nível no Fluxo (mentorado)
   nivel_fluxo_label?: string;
   nivel_fluxo_percent?: number | null;
+
+  // Prestador (perfil público em /tinder-do-fluxo/prestadores/:id)
+  state?: string;
+  specialty?: string;
+  certification?: string;
+  portfolio?: string;
+  experience?: string;
+  preco_minimo?: number | null;
+  beneficios?: string[];
+  name?: string;
 }
 
 export interface ProfileResponse {
   profile: any;
+  user?: { nome: string };
   expertDetails: any;
   coprodutorDetails: any;
   prestadorDetails: any;
@@ -241,6 +252,14 @@ export function useProfileForm() {
       isCoprodutor: data.isCoprodutor || false,
       nivel_fluxo_label: (data.profile as any)?.nivel_fluxo_label ?? '',
       nivel_fluxo_percent: (data.profile as any)?.nivel_fluxo_percent ?? null,
+      state: (data.profile as any)?.state ?? '',
+      specialty: (data.profile as any)?.specialty ?? '',
+      certification: (data.profile as any)?.certification ?? '',
+      portfolio: (data.profile as any)?.portfolio ?? '',
+      experience: (data.profile as any)?.experience ?? '',
+      preco_minimo: (data.profile as any)?.preco_minimo ?? null,
+      beneficios: Array.isArray((data.profile as any)?.beneficios) ? (data.profile as any).beneficios : [],
+      name: data.user?.nome ?? '',
     };
     
     // Armazenar no ref para próxima comparação
@@ -273,6 +292,14 @@ export function useProfileForm() {
           modelo_trabalho: (data as any).modelo_trabalho || 'remoto',
           nivel_fluxo_label: (data as any).nivel_fluxo_label ?? '',
           nivel_fluxo_percent: (data as any).nivel_fluxo_percent ?? null,
+          state: (data as any).state ?? '',
+          specialty: (data as any).specialty ?? '',
+          certification: (data as any).certification ?? '',
+          portfolio: (data as any).portfolio ?? '',
+          experience: (data as any).experience ?? '',
+          preco_minimo: (data as any).preco_minimo ?? null,
+          beneficios: Array.isArray((data as any).beneficios) ? (data as any).beneficios.map((s: string) => String(s).trim()).filter(Boolean) : [],
+          name: (data as any).name ?? '',
         },
         skills: Object.entries(data.skills)
           .filter(([_, nivel]) => nivel !== undefined && nivel > 0)
@@ -333,5 +360,6 @@ export function useProfileForm() {
     error: queryError || saveMutation.error,
     isExpert: formData?.isExpert || false,
     isCoprodutor: formData?.isCoprodutor || false,
+    serviceProfileId: (profileData as any)?.profile?.id ?? null,
   };
 }
