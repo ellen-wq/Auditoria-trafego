@@ -872,26 +872,6 @@ export function TinderPrestadoresPage() {
           </>
         )}
 
-        {/* Footer */}
-        <footer className="prestadores-footer">
-          <div className="prestadores-footer-inner">
-            <div className="prestadores-footer-logo">
-              <div className="prestadores-footer-logo-icon">
-                <span className="material-symbols-outlined">local_fire_department</span>
-              </div>
-              <span>Tinder do Fluxo</span>
-            </div>
-            <div className="prestadores-footer-links">
-              <a href="#">Sobre</a>
-              <a href="#">Termos de Uso</a>
-              <a href="#">Privacidade</a>
-              <a href="#">Suporte</a>
-            </div>
-            <div className="prestadores-footer-copy">
-              © {new Date().getFullYear()} Tinder do Fluxo. Todos os direitos reservados.
-            </div>
-          </div>
-        </footer>
       </div>
     </TinderDoFluxoPageShell>
   );
@@ -1043,6 +1023,7 @@ export function TinderVagasPage() {
     <TinderDoFluxoPageShell
       title="Minhas Vagas"
       subtitle="Gerencie suas oportunidades e encontre talentos de elite."
+      hideBreadcrumbs
       headerRight={
         <div className="vagas-tabs">
           {(['todas', 'minhas', 'abertas', 'encerradas'] as const).map((t) => (
@@ -2691,117 +2672,166 @@ export function TinderMyApplicationsPage() {
       )
     : applications;
 
+  const badgeClass = (status: ApplicationStatus) => {
+    switch (status) {
+      case 'ENVIADA':
+        return 'px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider rounded';
+      case 'VISUALIZADA':
+        return 'px-2.5 py-1 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider rounded';
+      case 'EM_CONVERSA':
+        return 'px-2.5 py-1 bg-[#B7E35C] text-slate-900 text-[10px] font-bold uppercase tracking-wider rounded';
+      case 'ENCERRADA':
+        return 'px-2.5 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider rounded';
+      default:
+        return 'px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider';
+    }
+  };
+
   return (
     <TinderDoFluxoPageShell title="Minhas Candidaturas" subtitle="Acompanhe as vagas para as quais você se candidatou.">
-      <div className="candidaturas-page">
-        <header className="candidaturas-header">
-          <div className="search-wrap">
-            <span className="material-symbols-outlined search-icon">search</span>
-            <input
-              type="text"
-              placeholder="Buscar candidaturas..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+      <div className="min-h-screen">
+        <header className="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 bg-[var(--bg-main)]/80 dark:bg-[var(--bg-sidebar)]/80 backdrop-blur-md z-10 lg:px-16">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="relative w-full max-w-md">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
+              <input
+                type="text"
+                placeholder="Buscar candidaturas..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary"
+              />
+            </div>
           </div>
-          <div className="header-actions">
-            <button type="button" title="Notificações">
+          <div className="flex items-center gap-4">
+            <button type="button" className="size-10 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative" title="Notificações">
               <span className="material-symbols-outlined">notifications</span>
-              <span className="notif-dot" aria-hidden />
+              <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full" aria-hidden />
             </button>
-            <button type="button" title="Chat">
+            <button type="button" className="size-10 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Chat">
               <span className="material-symbols-outlined">chat_bubble</span>
             </button>
           </div>
         </header>
 
-        <div className="filters">
-          <button type="button">
-            Status
-            <span className="material-symbols-outlined">keyboard_arrow_down</span>
-          </button>
-          <button type="button">
-            Categoria
-            <span className="material-symbols-outlined">keyboard_arrow_down</span>
-          </button>
-          <button type="button">
-            Ordenação (Mais recentes)
-            <span className="material-symbols-outlined">keyboard_arrow_down</span>
-          </button>
-        </div>
-
-        {filteredApplications.length === 0 ? (
-          <div className="card empty-state-card">
-            <EmptyState text={search ? 'Nenhuma candidatura encontrada para essa busca.' : 'Você ainda não se candidatou para nenhuma vaga.'} />
+        <div className="p-8 max-w-5xl mx-auto">
+          <div className="flex flex-wrap gap-3 mb-8">
+            <button type="button" className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium hover:border-primary transition-all">
+              Status
+              <span className="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+            </button>
+            <button type="button" className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium hover:border-primary transition-all">
+              Categoria
+              <span className="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+            </button>
+            <button type="button" className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium hover:border-primary transition-all">
+              Ordenação (Mais recentes)
+              <span className="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+            </button>
           </div>
-        ) : (
-          <>
-            <div className="cards-list">
-              {filteredApplications.map((app) => {
-                const job = app.tinder_jobs;
-                const statusClass = app.applicationStatus.toLowerCase().replace('_', '-');
-                const isEncerrada = app.applicationStatus === 'ENCERRADA';
-                const isEmConversa = app.applicationStatus === 'EM_CONVERSA';
-                return (
-                  <div key={app.id} className={`app-card ${isEncerrada ? 'encerrada' : ''} ${isEmConversa ? 'em-conversa' : ''}`}>
-                    <div className="app-card-body">
-                      <div className="app-card-meta">
-                        <span className={`app-card-badge ${statusClass}`}>{APPLICATION_STATUS_LABEL[app.applicationStatus]}</span>
-                        <span className="app-card-date">Aplicada em {formatDate(app.created_at)}</span>
-                      </div>
-                      <h3 className="app-card-title">{job.title}</h3>
-                      <p className="app-card-category">{job.specialty || 'Vaga'}</p>
-                      <div className="app-card-recruiter">
-                        <div className="avatar">
-                          <img src={app.recruiter.avatar_url} alt="" />
+
+          {filteredApplications.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-xl">
+              <EmptyState text={search ? 'Nenhuma candidatura encontrada para essa busca.' : 'Você ainda não se candidatou para nenhuma vaga.'} />
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-4">
+                {filteredApplications.map((app) => {
+                  const job = app.tinder_jobs;
+                  const isEncerrada = app.applicationStatus === 'ENCERRADA';
+                  const isEmConversa = app.applicationStatus === 'EM_CONVERSA';
+                  return (
+                    <div
+                      key={app.id}
+                      className={
+                        isEncerrada
+                          ? 'bg-slate-50 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 p-6 rounded-xl flex flex-col md:flex-row gap-6 shadow-sm grayscale transition-all hover:grayscale-0'
+                          : isEmConversa
+                            ? 'bg-white dark:bg-slate-900 border border-primary/30 dark:border-primary/20 p-6 rounded-xl flex flex-col md:flex-row gap-6 shadow-sm hover:shadow-md transition-shadow ring-1 ring-primary/10'
+                            : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl flex flex-col md:flex-row gap-6 shadow-sm hover:shadow-md transition-shadow'
+                      }
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className={badgeClass(app.applicationStatus)}>{APPLICATION_STATUS_LABEL[app.applicationStatus]}</span>
+                          <span className="text-xs text-slate-400">Aplicada em {formatDate(app.created_at)}</span>
                         </div>
-                        <div>
-                          <p className="recruiter-name">{app.recruiter.name}</p>
-                          <div className="recruiter-tags">
-                            {app.recruiter.tags.map((tag) => (
-                              <span key={tag}>{tag}</span>
-                            ))}
+                        <h3 className={`text-xl font-bold mb-1 ${isEncerrada ? 'opacity-60' : ''}`}>{job.title}</h3>
+                        <p className={`font-semibold text-sm mb-4 ${isEncerrada ? 'text-slate-500' : 'text-primary'}`}>{job.specialty || 'Vaga'}</p>
+                        <div className={`flex items-center gap-3 mt-4 ${isEncerrada ? 'opacity-60' : ''}`}>
+                          <div className="size-10 rounded-full bg-slate-100 overflow-hidden shrink-0">
+                            <img className="w-full h-full object-cover" src={app.recruiter.avatar_url} alt="" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold leading-tight">{app.recruiter.name}</p>
+                            <div className="flex gap-1 mt-1">
+                              {app.recruiter.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className={isEncerrada ? 'px-1.5 py-0.5 bg-slate-200 text-slate-600 text-[9px] font-black rounded uppercase' : 'px-1.5 py-0.5 bg-primary/20 text-slate-900 text-[9px] font-black rounded uppercase'}
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
+                      <div className="flex flex-row md:flex-col gap-2 justify-end items-center md:items-stretch min-w-[160px]">
+                        {isEmConversa && (
+                          <Link
+                            to="/tinder-do-fluxo/matches"
+                            className="w-full px-4 py-2 bg-primary text-slate-900 text-xs font-bold rounded-lg hover:brightness-105 transition-all flex items-center justify-center gap-2"
+                          >
+                            <span className="material-symbols-outlined text-sm">chat</span>
+                            Abrir conversa
+                          </Link>
+                        )}
+                        {isEncerrada ? (
+                          <button type="button" className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-500 text-xs font-bold rounded-lg cursor-not-allowed">
+                            Encerrada
+                          </button>
+                        ) : (
+                          <Link to={`/tinder-do-fluxo/vagas/${job.id}`} className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-center">
+                            Ver vaga
+                          </Link>
+                        )}
+                        {!isEncerrada && (
+                          <Link to={app.creator_id ? `/tinder-do-fluxo/users/${app.creator_id}` : '#'} className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-center">
+                            Ver perfil
+                          </Link>
+                        )}
+                        {isEncerrada && (
+                          <Link to={`/tinder-do-fluxo/vagas/${job.id}`} className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-center">
+                            Ver vaga
+                          </Link>
+                        )}
+                      </div>
                     </div>
-                    <div className="app-card-actions">
-                      {isEmConversa && (
-                        <Link className="btn-card primary" to="/tinder-do-fluxo/matches">
-                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chat</span>
-                          Abrir conversa
-                        </Link>
-                      )}
-                      {isEncerrada ? (
-                        <button type="button" className="btn-card disabled">Encerrada</button>
-                      ) : (
-                        <Link className="btn-card secondary" to={`/tinder-do-fluxo/vagas/${job.id}`}>Ver vaga</Link>
-                      )}
-                      {!isEncerrada && (
-                        <Link className="btn-card outline" to={app.creator_id ? `/tinder-do-fluxo/users/${app.creator_id}` : '#'}>Ver perfil</Link>
-                      )}
-                      {isEncerrada && (
-                        <Link className="btn-card outline" to={`/tinder-do-fluxo/vagas/${job.id}`}>Ver vaga</Link>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="pagination">
-              <nav>
-                <button type="button" disabled aria-label="Página anterior">
-                  <span className="material-symbols-outlined">chevron_left</span>
-                </button>
-                <button type="button" className="active">1</button>
-                <button type="button">2</button>
-                <button type="button" aria-label="Próxima página">
-                  <span className="material-symbols-outlined">chevron_right</span>
-                </button>
-              </nav>
-            </div>
-          </>
-        )}
+                  );
+                })}
+              </div>
+
+              <div className="mt-12 flex justify-center">
+                <nav className="flex gap-2">
+                  <button type="button" className="size-10 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50" disabled aria-label="Página anterior">
+                    <span className="material-symbols-outlined">chevron_left</span>
+                  </button>
+                  <button type="button" className="size-10 rounded-lg flex items-center justify-center bg-primary text-slate-900 font-bold">
+                    1
+                  </button>
+                  <button type="button" className="size-10 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    2
+                  </button>
+                  <button type="button" className="size-10 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Próxima página">
+                    <span className="material-symbols-outlined">chevron_right</span>
+                  </button>
+                </nav>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </TinderDoFluxoPageShell>
   );

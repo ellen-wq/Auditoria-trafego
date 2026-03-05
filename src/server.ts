@@ -4,7 +4,8 @@ const PORT = process.env.PORT || 3000;
 
 async function start(): Promise<void> {
   await initDb({ seedUsers: true, ensureStorageBucket: true });
-  app.listen(PORT, () => {
+  const HOST = process.env.HOST || '0.0.0.0';
+  app.listen(Number(PORT), HOST, () => {
     console.log(`Fluxer Auditoria rodando em http://localhost:${PORT}`);
   });
 }

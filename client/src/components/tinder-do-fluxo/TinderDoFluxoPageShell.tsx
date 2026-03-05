@@ -6,14 +6,16 @@ export interface TinderDoFluxoPageShellProps {
   subtitle?: string;
   /** Conteúdo à direita do título (ex.: abas). Quando definido, título e subtitle ficam à esquerda em linha (md). */
   headerRight?: React.ReactNode;
+  /** Se true, não exibe o breadcrumb (ex.: "Tinder do Fluxo › Minhas Vagas") no topo. */
+  hideBreadcrumbs?: boolean;
   children?: React.ReactNode;
 }
 
-export default function TinderDoFluxoPageShell({ title, subtitle, headerRight, children }: TinderDoFluxoPageShellProps) {
-  const breadcrumbs = useMemo(() => ([
-    { label: 'Tinder do Fluxo' },
-    { label: title }
-  ]), [title]);
+export default function TinderDoFluxoPageShell({ title, subtitle, headerRight, hideBreadcrumbs, children }: TinderDoFluxoPageShellProps) {
+  const breadcrumbs = useMemo(() =>
+    hideBreadcrumbs ? [] : [{ label: 'Tinder do Fluxo' }, { label: title }],
+    [title, hideBreadcrumbs]
+  );
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>

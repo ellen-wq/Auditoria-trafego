@@ -5,17 +5,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#A3E635',
-        'background-light': '#f8fdf6',
-        'background-dark': '#0a1205',
+        primary: '#b5e359',
+        'background-light': '#f7f8f6',
+        'background-dark': '#1b2012',
       },
       fontFamily: {
-        display: ['Public Sans', 'sans-serif'],
+        display: ['Inter', 'sans-serif'],
       },
       borderRadius: {
-        DEFAULT: '0.25rem',
-        lg: '0.5rem',
-        xl: '0.75rem',
+        DEFAULT: '0.5rem',
+        lg: '1rem',
+        xl: '1.5rem',
         full: '9999px',
       },
     },

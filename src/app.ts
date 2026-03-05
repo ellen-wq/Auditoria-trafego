@@ -60,6 +60,15 @@ app.get('*', (req, res) => {
   }
 
   if (spaNotBuilt) {
+    // Em desenvolvimento: redirecionar para o servidor Vite (SPA) para que todas as rotas funcionem
+    const isDev = process.env.NODE_ENV !== 'production';
+    const viteDevUrl = (process.env.VITE_DEV_URL || 'http://localhost:5174').replace(/\/$/, '');
+    if (isDev && (req.path !== '/' && req.path !== '/login')) {
+      return res.redirect(302, viteDevUrl + req.originalUrl);
+    }
+    if (isDev && (req.path === '/' || req.path === '/login')) {
+      return res.redirect(302, req.path === '/' ? viteDevUrl + '/' : viteDevUrl + '/login');
+    }
     console.error('index.html not found at:', indexPath);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.status(200).send(

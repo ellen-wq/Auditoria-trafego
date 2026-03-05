@@ -93,13 +93,8 @@ export default function ComunidadePage() {
     setProfileIndex((i) => (i + 1) % MOCK_PROFILES.length);
   };
 
-  const breadcrumbs = [
-    { label: 'Tinder do Fluxo' },
-    { label: 'Comunidade' },
-  ];
-
   return (
-    <AppLayout breadcrumbs={breadcrumbs}>
+    <AppLayout hideTopbar>
       <div className="flex h-[calc(100vh-120px)] overflow-hidden font-display">
         <main className="flex-1 flex flex-col items-center p-8 bg-background-light dark:bg-background-dark overflow-y-auto pt-12">
           <div className="w-full max-w-4xl mb-8">

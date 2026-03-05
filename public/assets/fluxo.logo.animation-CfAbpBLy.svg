@@ -1,0 +1,184 @@
+<svg id="FLUXER" xmlns="http://www.w3.org/2000/svg" viewBox="-50 0 600 200">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke-width: 0px;
+      }
+
+      #F {
+        filter: opacity(0);
+        transform: translate(-40px);
+        animation: efe 2s 0.5s;
+        animation-iteration-count: 1;
+        animation-direction: normal;
+        animation-fill-mode: both;
+      }
+
+      @keyframes efe {
+        to {
+          transform: translate(0px);
+          filter: opacity(100);
+        }
+      }
+
+      #L {
+        filter: opacity(0);
+        transform: translate(-80px);
+        animation: ele 1.5s 0.4s;
+        animation-iteration-count: 1;
+        animation-direction: normal;
+        animation-fill-mode: both;
+      }
+
+      @keyframes ele {
+        to {
+          transform: translate(0px);
+          filter: opacity(100);
+        }
+      }
+
+      #X1 {
+        visibility: hidden;
+        transform: translate(-200px);
+        animation: xisum 1s;
+        animation-iteration-count: 1;
+        animation-direction: normal;
+        animation-fill-mode: both;
+      }
+
+      @keyframes xisum {
+        to {
+          transform: translate(0px);
+          visibility: visible;
+        }
+      }
+
+      #U {
+        filter: opacity(0);
+        transform: translate(-150px);
+        animation: uu 1s 0.3s;
+        animation-iteration-count: 1;
+        animation-direction: normal;
+        animation-fill-mode: both;
+      }
+
+      @keyframes uu {
+        to {
+          transform: translate(0px);
+          filter: opacity(100);
+        }
+      }
+
+      #R {
+        stroke-width: 2px;
+        stroke: #000;
+        stroke-dasharray: 3000;
+        stroke-dashoffset: 3000;
+        fill: #00000000;
+        transform: translate(40px);
+        animation: tracado 5s running, erre 1s 1s;
+        animation-iteration-count: 1;
+        animation-direction: alternate;
+        animation-fill-mode: both;
+        animation-timing-function: easy-in-out;
+      }
+
+      #E {
+        stroke-width: 2px;
+        stroke: #000;
+        stroke-dasharray: 3000;
+        stroke-dashoffset: 3000;
+        fill: #00000000;
+        transform: translate(40px);
+        animation: tracado 5s running, erre 1s 1s;
+        animation-iteration-count: 1;
+        animation-direction: alternate;
+        animation-fill-mode: both;
+        animation-timing-function: easy-in-out;
+      }
+
+      @keyframes tracado {
+        to {
+          stroke-dashoffset: 0;
+          transform: translate(0px);
+        }
+      }
+
+      @keyframes erre {
+        to {
+          transform: translate(0px);
+          visibility: visible;
+          transform: translate(0px);
+          fill: #000000;
+          stroke-width: 0px;
+        }
+      }
+
+      #Ponto {
+        stroke-width: 2px;
+        stroke: #000;
+        stroke-dasharray: 3000;
+        stroke-dashoffset: 3000;
+        animation: tracado 5s 1.5s running, loopBolinha 1s 1.5s;
+        animation-iteration-count: 1;
+        animation-direction: alternate;
+        animation-fill-mode: both;
+        animation-timing-function: easy-in-out;
+        fill: #00000000;
+      }
+
+      @keyframes loopBolinha {
+        to {
+          fill: #000000;
+        }
+      }
+
+      #X2 {
+        stroke-width: 2px;
+        stroke: #000;
+        stroke-dasharray: 3000;
+        stroke-dashoffset: 3000;
+        fill: #00000000;
+        transform: translate(40px, -20px);
+        animation: tracado 5s running, xisdois 0.5s 1s;
+        animation-iteration-count: 1;
+        animation-direction: alternate;
+        animation-fill-mode: both;
+        animation-timing-function: easy-in-out;
+      }
+
+      @keyframes xisdois {
+        to {
+          transform: translate(0px 0px);
+          visibility: visible;
+          transform: translate(0px);
+          fill: #000000;
+          stroke-width: 0px;
+        }
+      }
+
+      #X3 {
+        stroke-width: 2px;
+        stroke: #000;
+        stroke-dasharray: 3000;
+        stroke-dashoffset: 3000;
+        fill: #00000000;
+        transform: translate(40px, 20px);
+        animation: tracado 5s running, xisdois 0.5s 1s;
+        animation-iteration-count: 1;
+        animation-direction: alternate;
+        animation-fill-mode: both;
+        animation-timing-function: easy-in-out;
+      }
+    </style>
+  </defs>
+  <path id="X1" class="cls-1" d="m258.63,71.5l-6.18-9.49-9.26-14.22h-31.25l30.15,46.51-29.6,47.24h29.41l9.67-15.37,5.59-8.9,16.18-23.16.38-.56-15.09-22.05Z"></path>
+  <polygon id="X2" class="cls-1" points="274.47 47.8 265.21 62.02 263.31 64.94 264.87 67.34 279.34 88.49 305.72 47.8 274.47 47.8"></polygon>
+  <path id="X3" class="cls-1" d="m278.78,99.43l-15.36,21.99-.16.25,2.83,4.51,9.67,15.37h29.41l-26.39-42.12Z"></path>
+  <path id="F" class="cls-1" d="m36.76,42.46v5.33h22.79v24.82h-22.79v68.93H9.19v-68.93H0v-24.82h9.19v-6.43C9.19,17.65,24.08,0,47.61,0h13.05v24.82h-9.56c-9.74,0-14.34,5.7-14.34,17.65Z"></path>
+  <path id="L" class="cls-1" d="m99.08,0v141.54h-27.57V0h27.57Z"></path>
+  <path id="U" class="cls-1" d="m200,48.04v93.75h-17.46l-4.78-6.25c-6.62,6.25-15.44,9.01-24.82,9.01-20.96,0-34.93-12.32-34.93-42.09v-54.41h27.57v54.96c0,11.03,5.15,16.54,13.42,16.54,6.62,0,13.42-5.15,13.42-14.89v-56.62h27.57Z"></path>
+  <path id="E" class="cls-1" d="m394.62,78.13v21.88h-55.88v1.65c0,12.68,6.43,17.83,15.07,17.83,6.07,0,13.05-3.49,13.05-8.64v-1.84h27.57c0,19.85-16.54,32.54-40.99,32.54-26.47,0-42.28-16.36-42.28-41.18v-17.46c0-24.82,15.81-40.62,42.28-40.62,24.08,0,41.18,15.44,41.18,35.85Zm-28.12,2.21v-2.21c0-9.19-4.04-13.79-12.87-13.79-9.56,0-14.52,5.52-14.89,15.99h27.76Z"></path>
+  <path id="R" data-name="R" class="cls-1" d="m460.12,45.96v23.9c-3.12-.92-6.43-1.65-9.56-1.65-9.38,0-18.01,5.7-18.01,18.75v54.6h-27.57V47.79h18.2l5.33,7.54c7.72-6.43,17.83-9.56,27.21-9.56,1.47,0,2.94,0,4.41.18Z"></path>
+  <circle id="Ponto" class="cls-1" cx="472.32" cy="130.04" r="11.5"></circle>
+</svg>
