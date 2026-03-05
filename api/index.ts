@@ -15,7 +15,9 @@ function resolvePublicDist(): string {
     return (global as any).__PUBLIC_DIST__;
   }
   const cwd = process.cwd();
+  // Incluir cwd: na Vercel, includeFiles "public/**" pode colocar arquivos na raiz do pacote
   const candidates = [
+    cwd,
     path.join(cwd, 'public'),
     path.join(cwd, 'public_dist'),
     path.join(cwd, '..', 'public'),

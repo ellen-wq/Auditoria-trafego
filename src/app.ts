@@ -25,6 +25,8 @@ const { rootDir, publicDistDir } = (() => {
   const cwd = process.cwd();
   const dirOfThisFile = path.dirname(fileURLToPath(import.meta.url));
   const parent = path.join(dirOfThisFile, '..');
+  // Checar cwd primeiro (Vercel pode colocar index.html na raiz do pacote)
+  if (fs.existsSync(path.join(cwd, 'index.html'))) return { rootDir: cwd, publicDistDir: cwd };
   for (const base of [cwd, parent]) {
     const pub = path.join(base, 'public');
     const pd = path.join(base, 'public_dist');
