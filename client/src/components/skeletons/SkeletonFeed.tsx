@@ -9,7 +9,7 @@ export default function SkeletonFeed() {
             borderRadius: 'var(--radius)',
             border: '1px solid var(--border)',
             padding: 20,
-            animation: 'pulse 1.5s ease-in-out infinite',
+            animation: 'pulse 0.7s ease-in-out infinite',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>

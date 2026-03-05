@@ -6,7 +6,7 @@ export default function SkeletonCard() {
         borderRadius: 'var(--radius)',
         border: '1px solid var(--border)',
         padding: 16,
-        animation: 'pulse 1.5s ease-in-out infinite',
+        animation: 'pulse 0.7s ease-in-out infinite',
       }}
     >
       <div

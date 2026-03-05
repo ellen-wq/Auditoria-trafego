@@ -12,7 +12,7 @@ export default function SkeletonList() {
             display: 'flex',
             alignItems: 'center',
             gap: 16,
-            animation: 'pulse 1.5s ease-in-out infinite',
+            animation: 'pulse 0.7s ease-in-out infinite',
           }}
         >
           <div

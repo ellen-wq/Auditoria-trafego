@@ -182,7 +182,6 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
           cidade={profile?.cidade}
           nicho={profile?.nicho}
           hobbies={profile?.hobbies}
-          instagram={(profile as { instagram?: string })?.instagram}
           nivelFluxo={profile?.nivel_fluxo_label}
           isExpert={profileData.isExpert}
           isCoprodutor={profileData.isCoprodutor}

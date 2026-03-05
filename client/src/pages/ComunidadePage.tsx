@@ -35,10 +35,10 @@ const MOCK_PROFILES: MockProfile[] = [
     imageUrl:
       'https://lh3.googleusercontent.com/aida-public/AB6AXuB0HMZu3MgpQRiHZkWgPPxKugufeGll-MrO67qB7LNB_LuSuNwOml-m_0jIvs0OONvHi0DiFaAwW97h5GWdvi_MCo4CNgWZFSWJHLJUh_ldBFf7_NkcnWrvlnBr-L0rxK0BKcBFWAkQOtxdzcN2iPUptI-dyU0bzjB7WfNnXXFBMyHrhUSxYEhtch0rgF2cu5aTY2GxcOcXirRazxV8Kz3kpvRrzewUj10DSNjAoP_qSaIzd8xshuVSYlHlXxjRsnKPTdaUhkPkBQk',
     tags: [
-      { icon: 'sports_soccer', label: 'Football' },
-      { icon: 'camera_alt', label: 'Photography' },
-      { icon: 'headphones', label: 'Techno' },
-      { icon: 'terminal', label: 'Coding' },
+      { icon: 'sports_soccer', label: 'Futebol' },
+      { icon: 'camera_alt', label: 'Fotografia' },
+      { icon: 'headphones', label: 'Tecno' },
+      { icon: 'terminal', label: 'Programação' },
     ],
   },
   {
@@ -77,9 +77,9 @@ const MOCK_PROFILES: MockProfile[] = [
     imageUrl:
       'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=800&q=80',
     tags: [
-      { icon: 'psychology', label: 'Mindset' },
+      { icon: 'psychology', label: 'Mentalidade' },
       { icon: 'fitness_center', label: 'Fitness' },
-      { icon: 'eco', label: 'Sustainability' },
+      { icon: 'eco', label: 'Sustentabilidade' },
       { icon: 'groups', label: 'Networking' },
     ],
   },
