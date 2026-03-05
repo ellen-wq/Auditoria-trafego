@@ -1,20 +1,69 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 
-// Mock data – frontend only, no API
-const MOCK_CARD = {
-  name: 'Ricardo',
-  location: 'São Paulo, SP',
-  level: 'Pro+Master',
-  imageUrl:
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuB0HMZu3MgpQRiHZkWgPPxKugufeGll-MrO67qB7LNB_LuSuNwOml-m_0jIvs0OONvHi0DiFaAwW97h5GWdvi_MCo4CNgWZFSWJHLJUh_ldBFf7_NkcnWrvlnBr-L0rxK0BKcBFWAkQOtxdzcN2iPUptI-dyU0bzjB7WfNnXXFBMyHrhUSxYEhtch0rgF2cu5aTY2GxcOcXirRazxV8Kz3kpvRrzewUj10DSNjAoP_qSaIzd8xshuVSYlHlXxjRsnKPTdaUhkPkBQk',
-  tags: [
-    { icon: 'sports_soccer', label: 'Football' },
-    { icon: 'camera_alt', label: 'Photography' },
-    { icon: 'headphones', label: 'Techno' },
-    { icon: 'terminal', label: 'Coding' },
-  ],
+type MockProfile = {
+  name: string;
+  location: string;
+  level: string;
+  imageUrl: string;
+  tags: { icon: string; label: string }[];
 };
+
+// Mock profiles – frontend only, no API
+const MOCK_PROFILES: MockProfile[] = [
+  {
+    name: 'Ricardo',
+    location: 'São Paulo, SP',
+    level: 'Pro+Master',
+    imageUrl:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuB0HMZu3MgpQRiHZkWgPPxKugufeGll-MrO67qB7LNB_LuSuNwOml-m_0jIvs0OONvHi0DiFaAwW97h5GWdvi_MCo4CNgWZFSWJHLJUh_ldBFf7_NkcnWrvlnBr-L0rxK0BKcBFWAkQOtxdzcN2iPUptI-dyU0bzjB7WfNnXXFBMyHrhUSxYEhtch0rgF2cu5aTY2GxcOcXirRazxV8Kz3kpvRrzewUj10DSNjAoP_qSaIzd8xshuVSYlHlXxjRsnKPTdaUhkPkBQk',
+    tags: [
+      { icon: 'sports_soccer', label: 'Football' },
+      { icon: 'camera_alt', label: 'Photography' },
+      { icon: 'headphones', label: 'Techno' },
+      { icon: 'terminal', label: 'Coding' },
+    ],
+  },
+  {
+    name: 'Marina',
+    location: 'Rio de Janeiro, RJ',
+    level: 'Hard',
+    imageUrl:
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80',
+    tags: [
+      { icon: 'palette', label: 'Arte' },
+      { icon: 'menu_book', label: 'Leitura' },
+      { icon: 'hiking', label: 'Trilhas' },
+      { icon: 'coffee', label: 'Café' },
+    ],
+  },
+  {
+    name: 'Lucas',
+    location: 'Belo Horizonte, MG',
+    level: 'Soft',
+    imageUrl:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
+    tags: [
+      { icon: 'music_note', label: 'Música' },
+      { icon: 'videogame_asset', label: 'Games' },
+      { icon: 'restaurant', label: 'Gastronomia' },
+      { icon: 'flight', label: 'Viagens' },
+    ],
+  },
+  {
+    name: 'Julia',
+    location: 'Curitiba, PR',
+    level: 'Pro+Master',
+    imageUrl:
+      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=800&q=80',
+    tags: [
+      { icon: 'psychology', label: 'Mindset' },
+      { icon: 'fitness_center', label: 'Fitness' },
+      { icon: 'eco', label: 'Sustainability' },
+      { icon: 'groups', label: 'Networking' },
+    ],
+  },
+];
 
 const MOCK_RECENT_LIKES = [
   'https://lh3.googleusercontent.com/aida-public/AB6AXuDJKR4yzRTvuBkzlaaQuvS7l-_9ufQM1yAG-e-O95QD1zrQV8abs7CL2Y7-FaAC4xogppb29T7cGEW6cbiD-kPXZLucs8ceVNb9sie7Vo09zH8vCBHACEznwN6gSFKg3cB8_Yok8cwG7jMHCiUBM_lqiJcPkgjup6B7KyfRMO5B4VZr0sbOFF0bC_YzzvV2Jrq0bFubC5IaSxq4Yuvn4_NDLruW9rLE21gqTOh_dsSnHMJA9mzmCoM_wWtcqCvDTlUyvrDtflCI33M',
@@ -23,6 +72,13 @@ const MOCK_RECENT_LIKES = [
 ];
 
 export default function ComunidadePage() {
+  const [profileIndex, setProfileIndex] = useState(0);
+  const profile = MOCK_PROFILES[profileIndex];
+
+  const nextProfile = () => {
+    setProfileIndex((i) => (i + 1) % MOCK_PROFILES.length);
+  };
+
   const breadcrumbs = [
     { label: 'Tinder do Fluxo' },
     { label: 'Comunidade' },
@@ -43,7 +99,7 @@ export default function ComunidadePage() {
             <div className="absolute inset-0 bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl border border-primary/10 flex flex-col">
               <div
                 className="relative h-2/3 w-full bg-cover bg-center"
-                style={{ backgroundImage: `url('${MOCK_CARD.imageUrl}')` }}
+                style={{ backgroundImage: `url('${profile.imageUrl}')` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <div className="absolute top-6 left-6 flex flex-wrap gap-2">
@@ -54,14 +110,14 @@ export default function ComunidadePage() {
                 </div>
                 <div className="absolute bottom-6 left-6 right-6 text-white">
                   <div className="flex items-end gap-2 mb-1">
-                    <h2 className="text-3xl font-black">{MOCK_CARD.name}</h2>
+                    <h2 className="text-3xl font-black">{profile.name}</h2>
                     <span className="material-symbols-outlined text-primary text-2xl filled-icon">
                       verified_user
                     </span>
                   </div>
                   <div className="flex items-center gap-1 text-slate-200 text-sm">
                     <span className="material-symbols-outlined text-sm">location_on</span>
-                    {MOCK_CARD.location}
+                    {profile.location}
                   </div>
                 </div>
               </div>
@@ -73,11 +129,11 @@ export default function ComunidadePage() {
                       Nível de Assinatura
                     </span>
                     <span className="px-3 py-1 bg-primary/20 text-primary text-[11px] font-bold rounded-lg border border-primary/30 uppercase">
-                      {MOCK_CARD.level}
+                      {profile.level}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-6">
-                    {MOCK_CARD.tags.map((tag) => (
+                    {profile.tags.map((tag) => (
                       <div
                         key={tag.label}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700"
@@ -92,18 +148,21 @@ export default function ComunidadePage() {
                 <div className="flex items-center justify-center gap-6">
                   <button
                     type="button"
+                    onClick={nextProfile}
                     className="size-14 rounded-full border-2 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-500 hover:border-rose-500 hover:bg-rose-50 transition-all flex items-center justify-center bg-white dark:bg-slate-800 shadow-lg"
                   >
                     <span className="material-symbols-outlined text-3xl font-bold">close</span>
                   </button>
                   <button
                     type="button"
+                    onClick={nextProfile}
                     className="size-16 rounded-full bg-primary text-background-dark shadow-xl shadow-primary/30 hover:scale-110 active:scale-95 transition-all flex items-center justify-center"
                   >
                     <span className="material-symbols-outlined text-4xl filled-icon">star</span>
                   </button>
                   <button
                     type="button"
+                    onClick={nextProfile}
                     className="size-14 rounded-full border-2 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center bg-white dark:bg-slate-800 shadow-lg"
                   >
                     <span className="material-symbols-outlined text-3xl font-bold filled-icon">
@@ -156,24 +215,28 @@ export default function ComunidadePage() {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
+                  onClick={nextProfile}
                   className="px-3 py-2 text-xs font-bold rounded-xl border border-primary bg-primary/10 text-primary"
                 >
                   All Levels
                 </button>
                 <button
                   type="button"
+                  onClick={nextProfile}
                   className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary text-slate-600 dark:text-slate-400"
                 >
                   Pro+Master
                 </button>
                 <button
                   type="button"
+                  onClick={nextProfile}
                   className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary text-slate-600 dark:text-slate-400"
                 >
                   Hard
                 </button>
                 <button
                   type="button"
+                  onClick={nextProfile}
                   className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary text-slate-600 dark:text-slate-400"
                 >
                   Soft
@@ -197,24 +260,28 @@ export default function ComunidadePage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
+                  onClick={nextProfile}
                   className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-primary bg-primary text-background-dark"
                 >
                   Esportes
                 </button>
                 <button
                   type="button"
+                  onClick={nextProfile}
                   className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
                 >
                   Música
                 </button>
                 <button
                   type="button"
+                  onClick={nextProfile}
                   className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
                 >
                   Arte
                 </button>
                 <button
                   type="button"
+                  onClick={nextProfile}
                   className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
                 >
                   Tecnologia
