@@ -51,6 +51,7 @@ export default function ProfileFormPage() {
     whatsapp: '',
     instagram: '',
     nicho: '',
+    hobbies: '',
     idiomas: [],
     anos_experiencia: 0,
     bio_busca: '',
@@ -443,6 +444,16 @@ export default function ProfileFormPage() {
               value={localFormData?.nicho || ''}
               onChange={(e) => updateFormData({ nicho: e.target.value })}
               placeholder="Ex: Tráfego Pago, E-commerce"
+              style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', fontSize: 14 }}
+            />
+          </div>
+          <div className="form-group">
+            <label>Hobbies</label>
+            <input
+              type="text"
+              value={localFormData?.hobbies || ''}
+              onChange={(e) => updateFormData({ hobbies: e.target.value })}
+              placeholder="Ex: Leitura, esportes, música"
               style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', fontSize: 14 }}
             />
           </div>

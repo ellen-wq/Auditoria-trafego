@@ -3,12 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import logoFluxo from '../assets/fluxo.logo.animation.svg';
 
+const NIVEL_OPTIONS = [
+  { value: 'newbie', label: 'Newbie (0 vendas)' },
+  { value: 'soft', label: 'Soft (1 a 10 mil)' },
+  { value: 'hard', label: 'Hard (10 a 100 mil)' },
+  { value: 'pro', label: 'Pro (100 mil a 1 milhão)' },
+  { value: 'Pro +', label: 'Pro + (1 a 2 milhões)' },
+  { value: 'master', label: 'Master (2 milhões +)' },
+];
+
 export default function RegisterPrestadorPage() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
+  const [niche, setNiche] = useState('');
+  const [hobbies, setHobbies] = useState('');
+  const [city, setCity] = useState('');
+  const [level, setLevel] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +50,15 @@ export default function RegisterPrestadorPage() {
       return;
     }
 
-    const payload = { name: name.trim(), email: email.toLowerCase().trim(), password };
+    const payload = {
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password,
+      niche: niche.trim() || undefined,
+      hobbies: hobbies.trim() || undefined,
+      city: city.trim() || undefined,
+      level: level.trim() || undefined,
+    };
     console.log('[Register Prestador] Payload sendo enviado:', { ...payload, password: '***' });
 
     try {
@@ -52,6 +73,10 @@ export default function RegisterPrestadorPage() {
         setEmail('');
         setPassword('');
         setPassword2('');
+        setNiche('');
+        setHobbies('');
+        setCity('');
+        setLevel('');
         setAcceptTerms(false);
         navigate('/tinder-do-fluxo/perfil', { replace: true });
       } else {
@@ -144,6 +169,51 @@ export default function RegisterPrestadorPage() {
               value={password2}
               onChange={(e) => setPassword2(e.target.value)}
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="niche">Nicho</label>
+            <input
+              type="text"
+              id="niche"
+              placeholder="Ex: Tráfego Pago, Copywriting"
+              value={niche}
+              onChange={(e) => setNiche(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="hobbies">Hobbies</label>
+            <input
+              type="text"
+              id="hobbies"
+              placeholder="Ex: Leitura, esportes, música"
+              value={hobbies}
+              onChange={(e) => setHobbies(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="city">Cidade</label>
+            <input
+              type="text"
+              id="city"
+              placeholder="Ex: São Paulo, SP"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="level">Nível</label>
+            <select
+              id="level"
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border, #ddd)', borderRadius: 'var(--radius-xs, 6px)', fontSize: 14 }}
+            >
+              <option value="">Selecione seu nível</option>
+              {NIVEL_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group" style={{ marginTop: 8 }}>

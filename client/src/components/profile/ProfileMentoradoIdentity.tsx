@@ -4,6 +4,9 @@ export interface ProfileMentoradoIdentityProps {
   name: string;
   photoUrl?: string;
   cidade?: string;
+  nicho?: string;
+  hobbies?: string;
+  nivelFluxo?: string;
   isExpert: boolean;
   isCoprodutor: boolean;
   onEdit?: () => void;
@@ -13,6 +16,9 @@ export function ProfileMentoradoIdentity({
   name,
   photoUrl,
   cidade,
+  nicho,
+  hobbies,
+  nivelFluxo,
   isExpert,
   isCoprodutor,
   onEdit,
@@ -115,6 +121,15 @@ export function ProfileMentoradoIdentity({
             </span>
             <span>{cidade}</span>
           </div>
+        )}
+        {nicho && (
+          <p style={{ margin: '8px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>🎯 {nicho}</p>
+        )}
+        {hobbies && (
+          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>✨ {hobbies}</p>
+        )}
+        {nivelFluxo && (
+          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>📊 {nivelFluxo}</p>
         )}
       </div>
       {onEdit && (

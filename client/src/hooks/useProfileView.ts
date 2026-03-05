@@ -13,6 +13,8 @@ export interface ProfileViewData {
     photo_url?: string;
     headline?: string;
     cidade?: string;
+    nicho?: string;
+    hobbies?: string;
     whatsapp?: string;
     objetivo?: string;
     bio_busca?: string;

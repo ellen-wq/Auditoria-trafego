@@ -9,8 +9,12 @@ const LIDERANCA_EMAILS = ['ellen@vtsd.com.br', 'fernanda@vtsd.com.br'];
 
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, password } = req.body;
-    console.log('[Register API] Recebido:', { name, email: email?.toLowerCase()?.trim(), hasPassword: !!password });
+    const { name, email, password, niche, hobbies, city, cidade, level, nivel } = req.body;
+    const profileCity = (city ?? cidade ?? '').toString().trim();
+    const profileNiche = (niche ?? '').toString().trim();
+    const profileHobbies = (hobbies ?? '').toString().trim();
+    const profileLevel = (level ?? nivel ?? '').toString().trim();
+    console.log('[Register API] Recebido:', { name, email: email?.toLowerCase()?.trim(), hasPassword: !!password, profileCity, profileNiche, profileLevel });
     
     if (!name || !email || !password) {
       console.log('[Register API] Validação falhou: campos obrigatórios faltando');
@@ -71,6 +75,25 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       await supabase.auth.admin.deleteUser(userId);
       res.status(500).json({ error: 'Erro ao criar perfil: ' + roleError.message });
       return;
+    }
+
+    // 2b. Se MENTORADO, criar/atualizar tinder_mentor_profiles com niche, hobbies, city, level
+    if (role === 'MENTORADO' && (profileCity || profileNiche || profileHobbies || profileLevel)) {
+      const mentorProfile: Record<string, unknown> = {
+        user_id: userId,
+        city: profileCity || '',
+        niche: profileNiche || '',
+        nivel_fluxo_label: profileLevel || '',
+        updated_at: new Date().toISOString(),
+      };
+      if (profileHobbies) mentorProfile.hobbies = profileHobbies;
+      const { error: mentorProfileError } = await supabase
+        .from('tinder_mentor_profiles')
+        .upsert(mentorProfile, { onConflict: 'user_id' });
+      if (mentorProfileError) {
+        console.error('[Register API] Erro ao criar perfil mentor (ignorando):', mentorProfileError);
+        // Não falha o registo; o utilizador pode preencher no perfil depois
+      }
     }
 
     console.log('[Register API] Usuário criado com sucesso:', { userId, email: normalizedEmail, role });
@@ -239,7 +262,11 @@ router.post('/login-prestador', async (req: Request, res: Response): Promise<voi
 
 router.post('/register-prestador', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, niche, hobbies, city, cidade, level, nivel } = req.body;
+    const profileCity = (city ?? cidade ?? '').toString().trim();
+    const profileNiche = (niche ?? '').toString().trim();
+    const profileHobbies = (hobbies ?? '').toString().trim();
+    const profileLevel = (level ?? nivel ?? '').toString().trim();
     if (!name || !email || !password) {
       res.status(400).json({ error: 'Nome, email e senha são obrigatórios.' });
       return;
@@ -291,6 +318,22 @@ router.post('/register-prestador', async (req: Request, res: Response): Promise<
       await supabase.auth.admin.deleteUser(userId);
       res.status(500).json({ error: 'Erro ao criar perfil: ' + roleError.message });
       return;
+    }
+
+    // 2b. Criar/atualizar tinder_service_profiles com city e hobbies
+    if (profileCity || profileHobbies) {
+      const serviceProfile: Record<string, unknown> = {
+        user_id: userId,
+        city: profileCity || '',
+        updated_at: new Date().toISOString(),
+      };
+      if (profileHobbies) serviceProfile.hobbies = profileHobbies;
+      const { error: serviceProfileError } = await supabase
+        .from('tinder_service_profiles')
+        .upsert(serviceProfile, { onConflict: 'user_id' });
+      if (serviceProfileError) {
+        console.error('[Register Prestador] Erro ao criar perfil prestador (ignorando):', serviceProfileError);
+      }
     }
 
     const user: SafeUser = {

@@ -180,6 +180,9 @@ export default function ProfileViewPage({ userId: userIdProp }: ProfileViewPageP
           headline={profile?.headline || ''}
           photoUrl={profile?.photo_url}
           cidade={profile?.cidade}
+          nicho={profile?.nicho}
+          hobbies={profile?.hobbies}
+          nivelFluxo={profile?.nivel_fluxo_label}
           isExpert={profileData.isExpert}
           isCoprodutor={profileData.isCoprodutor}
           precisaTrafegoPago={expertDetails?.precisa_trafego_pago || false}

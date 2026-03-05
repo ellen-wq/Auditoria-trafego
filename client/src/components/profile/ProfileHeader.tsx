@@ -3,6 +3,9 @@ interface ProfileHeaderProps {
   headline: string;
   photoUrl?: string;
   cidade?: string;
+  nicho?: string;
+  hobbies?: string;
+  nivelFluxo?: string;
   onEdit?: () => void;
   onProposeProject?: () => void;
   isExpert?: boolean;
@@ -32,6 +35,9 @@ export function ProfileHeader({
   headline, 
   photoUrl, 
   cidade,
+  nicho,
+  hobbies,
+  nivelFluxo,
   onEdit, 
   onProposeProject,
   isExpert,
@@ -142,7 +148,7 @@ export function ProfileHeader({
           {cidade && (
             <p style={{ 
               marginTop: 0, 
-              marginBottom: 12, 
+              marginBottom: 6, 
               fontSize: 14, 
               color: 'var(--text-muted)',
               wordBreak: 'break-word'
@@ -150,6 +156,22 @@ export function ProfileHeader({
               📍 {cidade}
             </p>
           )}
+          {nicho && (
+            <p style={{ marginTop: 0, marginBottom: 6, fontSize: 14, color: 'var(--text-muted)', wordBreak: 'break-word' }}>
+              🎯 Nicho: {nicho}
+            </p>
+          )}
+          {hobbies && (
+            <p style={{ marginTop: 0, marginBottom: 6, fontSize: 14, color: 'var(--text-muted)', wordBreak: 'break-word' }}>
+              ✨ Hobbies: {hobbies}
+            </p>
+          )}
+          {nivelFluxo && (
+            <p style={{ marginTop: 0, marginBottom: 12, fontSize: 14, color: 'var(--text-muted)', wordBreak: 'break-word' }}>
+              📊 Nível: {nivelFluxo}
+            </p>
+          )}
+          {!nicho && !hobbies && !nivelFluxo && cidade && <div style={{ marginBottom: 12 }} />}
           
           {/* Necessidades do Expert - destacado no topo */}
           {isExpert && expertNeeds.length > 0 && (
