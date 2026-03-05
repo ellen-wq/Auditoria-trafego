@@ -3,7 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 
 const LOGIN_EMAIL_KEY = 'fluxer_login_email';
-const DEFAULT_AFTER_LOGIN = '/tinder-do-fluxo/matches';
+
+function getAfterLoginPath(role?: string): string {
+  return role === 'PRESTADOR' ? '/tinder-do-fluxo/vagas' : '/tinder-do-fluxo/matches';
+}
 const LOGIN_LEFT_BG =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuBruqDRdbXOOjahIIZiT4c0jTos8e_ckYYB1deqjNnd0EQ6H9fMt1RJeYSKoKkwiCG3wL8SCRKXBS8Zz127auZS2hak71tOwB9WkC5I_9zT9gjlkOEvrSdwt63npsm_19ZN1dg0haIoSwzUIucqGmyZ_b8wl02sWbJniJUIN54W2s5X7nEATuHUv1nIprxMWybzMF86GU9gyeDFQXOPx7iOOZ0mjmDXj0dW8HspHDiQufTC3uhQw9RJ25OjS-6HcPrE02i6k4ERXCjb';
 
@@ -44,7 +47,7 @@ export default function LoginPage() {
   useEffect(() => {
     const user = api.getUser();
     if (user && !email && !password) {
-      navigate(DEFAULT_AFTER_LOGIN, { replace: true });
+      navigate(getAfterLoginPath(user.role), { replace: true });
     }
   }, [navigate, email, password]);
 
@@ -66,7 +69,7 @@ export default function LoginPage() {
         // ignora
       }
       api.setAuth(data.token, data.user);
-      navigate(DEFAULT_AFTER_LOGIN, { state: { fromLogin: true, user: data.user }, replace: true });
+      navigate(getAfterLoginPath(data.user?.role), { state: { fromLogin: true, user: data.user }, replace: true });
     } catch (err: any) {
       setError(err.message || 'Erro ao entrar.');
     } finally {

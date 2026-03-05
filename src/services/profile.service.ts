@@ -296,8 +296,17 @@ export class ProfileService {
   // ============================================================
 
   async updateProfile(userId: string, tipoUsuario: 'mentorado' | 'aluno', payload: UpdateProfilePayload) {
-    console.log('[ProfileService] updateProfile chamado:', { userId, tipoUsuario, payload: JSON.stringify(payload, null, 2) });
-    
+    // Garantir que PRESTADOR nunca grava em tinder_mentor_profiles (evita RLS)
+    const { data: userRole } = await this.supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const roleIsPrestador = userRole?.role === 'PRESTADOR';
+    const payloadIsPrestador = tipoUsuario === 'aluno' || (payload.prestador && !payload.isExpert && !payload.isCoprodutor);
+    const effectiveTipo = roleIsPrestador || payloadIsPrestador ? 'aluno' : tipoUsuario;
+    console.log('[ProfileService] updateProfile:', { userId, role: userRole?.role, effectiveTipo, payloadIsPrestador });
+
     // 1. Salvar perfil base
     if (payload.profile) {
       const profileData: any = {
@@ -315,16 +324,17 @@ export class ProfileService {
       const nicho = (payload.profile as any).nicho;
       const hobbies = (payload.profile as any).hobbies;
       if (instagram !== undefined) profileData.instagram = instagram ?? '';
-      if (nicho !== undefined) profileData.niche = nicho ?? '';
-      if (hobbies !== undefined) profileData.hobbies = hobbies ?? '';
-      
+      // niche só existe em tinder_mentor_profiles; não enviar para tinder_service_profiles
+      if (effectiveTipo === 'mentorado' && nicho !== undefined) profileData.niche = nicho ?? '';
+      if (effectiveTipo === 'mentorado' && hobbies !== undefined) profileData.hobbies = hobbies ?? '';
+
       // Adicionar availability_tags apenas se a coluna existir (será adicionada via migration)
       const availabilityTags = (payload.profile as any).availability_tags || [];
       if (availabilityTags.length > 0 || true) { // Sempre tentar salvar, se a coluna não existir o erro será claro
         profileData.availability_tags = availabilityTags;
       }
 
-      if (tipoUsuario === 'mentorado') {
+      if (effectiveTipo === 'mentorado') {
         profileData.bio = payload.profile.bio_busca || '';
         profileData.search_bio = payload.profile.bio_busca || '';
         profileData.goal_text = (payload.profile as any).objetivo ?? payload.profile.headline ?? '';
@@ -383,17 +393,53 @@ export class ProfileService {
         }
         console.log('[ProfileService] Perfil mentorado salvo com sucesso:', data);
       } else {
-        profileData.bio = payload.profile.bio_busca || '';
-        
+        // Prestador: upsert apenas colunas que existem em tinder_service_profiles (não tem niche)
+        const precoMinimo = (payload.profile as any).preco_minimo;
+        const serviceProfileData: Record<string, unknown> = {
+          user_id: userId,
+          headline: payload.profile.headline || '',
+          city: payload.profile.cidade || '',
+          whatsapp: payload.profile.whatsapp || '',
+          idiomas: payload.profile.idiomas || [],
+          anos_experiencia: payload.profile.anos_experiencia || 0,
+          horas_semanais: payload.profile.horas_semanais || 0,
+          disponivel: payload.profile.disponivel ?? true,
+          modelo_trabalho: (payload.profile as any).modelo_trabalho || 'remoto',
+          updated_at: new Date().toISOString(),
+          instagram: (payload.profile as any).instagram ?? '',
+          bio: payload.profile.bio_busca || '',
+          photo_url: (payload.profile as any).photo_url ?? '',
+          state: (payload.profile as any).state ?? '',
+          specialty: (payload.profile as any).specialty ?? '',
+          certification: (payload.profile as any).certification ?? '',
+          portfolio: (payload.profile as any).portfolio ?? '',
+          experience: (payload.profile as any).experience ?? '',
+          preco_minimo: precoMinimo === undefined || precoMinimo === '' ? null : Number(precoMinimo),
+          beneficios: Array.isArray((payload.profile as any).beneficios) ? (payload.profile as any).beneficios : [],
+        };
+        const availabilityTags = (payload.profile as any).availability_tags;
+        if (Array.isArray(availabilityTags)) (serviceProfileData as any).availability_tags = availabilityTags;
+        // Garantir que niche nunca seja enviado (tabela pode não ter a coluna até migration ser aplicada)
+        delete (serviceProfileData as any).niche;
+
         const { data, error } = await this.supabase
           .from('tinder_service_profiles')
-          .upsert({ user_id: userId, ...profileData }, { onConflict: 'user_id' });
-        
+          .upsert(serviceProfileData, { onConflict: 'user_id' });
+
         if (error) {
           console.error('[ProfileService] Erro ao salvar tinder_service_profiles:', error);
           throw new Error(`Erro ao salvar perfil: ${error.message}`);
         }
         console.log('[ProfileService] Perfil prestador salvo com sucesso:', data);
+
+        // Atualizar nome em user_roles se enviado (prestador)
+        const name = (payload.profile as any).name ?? (payload as any).user?.nome;
+        if (typeof name === 'string' && name.trim()) {
+          await this.supabase
+            .from('user_roles')
+            .update({ name: name.trim(), updated_at: new Date().toISOString() })
+            .eq('user_id', userId);
+        }
       }
     }
 
@@ -492,7 +538,7 @@ export class ProfileService {
     }
 
     // 4. Salvar prestador_details
-    if (payload.prestador && tipoUsuario === 'aluno') {
+    if (payload.prestador && effectiveTipo === 'aluno') {
       await this.supabase
         .from('prestador_details')
         .upsert({

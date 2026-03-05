@@ -33,7 +33,7 @@ export default function ProfileFormPage() {
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const user = api.getUser();
-  const { formData, isLoading, save, isSaving, error, tipoUsuario, isExpert, isCoprodutor } = useProfileForm();
+  const { formData, isLoading, save, isSaving, error, tipoUsuario, isExpert, isCoprodutor, serviceProfileId } = useProfileForm();
   
   // Se abriu via ?edit=true, forçar refetch dos dados (apenas uma vez)
   const hasRefetchedRef = useRef(false);
@@ -160,38 +160,43 @@ export default function ProfileFormPage() {
     setLocalError('');
     setLocalSuccess('');
     
-    // Validações
-    if (tipoUsuario === 'mentorado' && !isExpertChecked && !isCoprodutorChecked) {
-      setLocalError('Você deve selecionar uma opção: Expert OU Coprodutor.');
-      return;
-    }
-    
-    // Validações específicas para Expert
-    if (tipoUsuario === 'mentorado' && isExpertChecked) {
-      const expert = localFormData.expert || {};
-      const products = (expert as any).products || [];
-      const hasProducts = products.length > 0 && products.some((p: any) => p.tipo_produto && p.tipo_produto.trim());
-      const hasNeeds = expert.precisa_trafego_pago || expert.precisa_copy || expert.precisa_automacoes || expert.precisa_estrategista;
-      
-      if (!hasProducts) {
-        setLocalError('Como Expert, você deve adicionar pelo menos um produto.');
+    // Prestador: não exige Expert/Coprodutor
+    const isPrestadorSubmit = user?.role === 'PRESTADOR' || tipoUsuario === 'aluno';
+
+    // Validações só para mentorado (nunca para prestador)
+    if (!isPrestadorSubmit) {
+      if (tipoUsuario === 'mentorado' && !isExpertChecked && !isCoprodutorChecked) {
+        setLocalError('Você deve selecionar uma opção: Expert OU Coprodutor.');
         return;
       }
-      
-      if (!hasNeeds) {
-        setLocalError('Como Expert, você deve selecionar pelo menos uma necessidade (Tráfego Pago, Copy, Automações ou Estrategista).');
-        return;
+
+      // Validações específicas para Expert
+      if (tipoUsuario === 'mentorado' && isExpertChecked) {
+        const expert = localFormData.expert || {};
+        const products = (expert as any).products || [];
+        const hasProducts = products.length > 0 && products.some((p: any) => p.tipo_produto && p.tipo_produto.trim());
+        const hasNeeds = expert.precisa_trafego_pago || expert.precisa_copy || expert.precisa_automacoes || expert.precisa_estrategista;
+
+        if (!hasProducts) {
+          setLocalError('Como Expert, você deve adicionar pelo menos um produto.');
+          return;
+        }
+
+        if (!hasNeeds) {
+          setLocalError('Como Expert, você deve selecionar pelo menos uma necessidade (Tráfego Pago, Copy, Automações ou Estrategista).');
+          return;
+        }
       }
-    }
-    
-    // Validações específicas para Coprodutor
-    if (tipoUsuario === 'mentorado' && isCoprodutorChecked) {
-      const coprodutor = localFormData.coprodutor || {};
-      const hasCapabilities = coprodutor.faz_perpetuo || coprodutor.faz_pico_vendas || coprodutor.faz_trafego_pago || coprodutor.faz_copy || coprodutor.faz_automacoes;
-      
-      if (!hasCapabilities) {
-        setLocalError('Como Coprodutor, você deve selecionar pelo menos uma capacidade (Faz Perpétuo, Faz Pico de Vendas, Faz Tráfego Pago, Faz Copy ou Faz Automações).');
-        return;
+
+      // Validações específicas para Coprodutor
+      if (tipoUsuario === 'mentorado' && isCoprodutorChecked) {
+        const coprodutor = localFormData.coprodutor || {};
+        const hasCapabilities = coprodutor.faz_perpetuo || coprodutor.faz_pico_vendas || coprodutor.faz_trafego_pago || coprodutor.faz_copy || coprodutor.faz_automacoes;
+
+        if (!hasCapabilities) {
+          setLocalError('Como Coprodutor, você deve selecionar pelo menos uma capacidade (Faz Perpétuo, Faz Pico de Vendas, Faz Tráfego Pago, Faz Copy ou Faz Automações).');
+          return;
+        }
       }
     }
     
@@ -201,11 +206,14 @@ export default function ProfileFormPage() {
       return;
     }
 
-    // Validar se pelo menos uma opção de disponibilidade foi selecionada (OBRIGATÓRIO)
-    const availabilityTags = localFormData.availability_tags || [];
-    if (availabilityTags.length === 0) {
-      setLocalError('Você deve selecionar pelo menos uma opção de disponibilidade (Projetos, Parcerias, Coprodução ou Sociedade).');
-      return;
+    // Validar disponibilidade apenas para mentorado (não para prestador / aluno)
+    const isPrestador = user?.role === 'PRESTADOR' || tipoUsuario === 'aluno';
+    if (!isPrestador) {
+      const availabilityTags = localFormData.availability_tags || [];
+      if (availabilityTags.length === 0) {
+        setLocalError('Você deve selecionar pelo menos uma opção de disponibilidade (Projetos, Parcerias, Coprodução ou Sociedade).');
+        return;
+      }
     }
 
     try {
@@ -277,6 +285,36 @@ export default function ProfileFormPage() {
     }
   };
 
+  // Submit só para prestador: sem validação de Expert/Coprodutor
+  const handlePrestadorSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLocalError('');
+    setLocalSuccess('');
+    if (tipoUsuario === 'aluno' && (!localFormData.prestador?.servicos || localFormData.prestador.servicos.length === 0)) {
+      setLocalError('Você deve selecionar pelo menos um serviço.');
+      return;
+    }
+    try {
+      const whatsapp = `${phoneCountryCode} ${phoneAreaCode} ${formatPhoneNumber(phoneNumber)}`;
+      const dataToSave: ProfileFormData = {
+        ...localFormData,
+        whatsapp,
+        isExpert: false,
+        isCoprodutor: false,
+        expert: undefined,
+        coprodutor: undefined,
+      };
+      await save(dataToSave);
+      setLocalSuccess('Perfil salvo com sucesso!');
+      initializedRef.current = false;
+      await new Promise(resolve => setTimeout(resolve, 800));
+      navigate(serviceProfileId ? `/tinder-do-fluxo/prestadores/${serviceProfileId}` : '/tinder-do-fluxo/profile-view', { replace: true });
+    } catch (err: any) {
+      console.error('[ProfileForm] Erro ao salvar perfil prestador:', err);
+      setLocalError(err.message || 'Erro ao salvar perfil. Tente novamente.');
+    }
+  };
+
   // Mostrar mensagem de carregamento apenas enquanto carrega inicialmente
   if (isLoading && !initializedRef.current) {
     return (
@@ -297,6 +335,180 @@ export default function ProfileFormPage() {
               Como Liderança, você não precisa criar um perfil. Você tem acesso total ao sistema.
             </p>
           </div>
+        </div>
+      </TinderDoFluxoPageShell>
+    );
+  }
+
+  // Formulário apenas para PRESTADOR: quando role é PRESTADOR ou quando o perfil é de prestador (tipoUsuario aluno)
+  const isPrestadorForm = user?.role === 'PRESTADOR' || tipoUsuario === 'aluno';
+  if (isPrestadorForm) {
+    const beneficiosList = (localFormData as any)?.beneficios ?? [];
+    return (
+      <TinderDoFluxoPageShell title="Meu Perfil">
+        <div className="perfil-mentorado-page">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 40 }}>
+            <div>
+              <h2 style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.025em', margin: 0 }}>Perfil do Prestador</h2>
+              <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0', fontSize: 14 }}>Preencha os dados que aparecem no seu perfil para os clientes</p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => navigate(serviceProfileId ? `/tinder-do-fluxo/prestadores/${serviceProfileId}` : '/tinder-do-fluxo/profile-view')}
+                style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>visibility</span>
+                Ver como outros veem
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handlePrestadorSubmit}>
+            <div className="perfil-mentorado-card">
+              {/* Dados básicos prestador */}
+              <div style={{ marginBottom: 24, padding: 20, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Dados Básicos</h3>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ flexShrink: 0 }}>
+                    {localFormData.photo_url ? (
+                      <img src={localFormData.photo_url} alt="" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} />
+                    ) : (
+                      <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', border: '2px solid var(--border)', fontSize: 24 }}>
+                        {(localFormData as any)?.name?.charAt(0) || user?.name?.charAt(0) || '?'}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>Foto de perfil</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingRef.current}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file || uploadingRef.current) return;
+                        if (file.size > 5 * 1024 * 1024) { setLocalError('Arquivo muito grande. Máximo: 5MB.'); return; }
+                        uploadingRef.current = true;
+                        setLocalError('');
+                        try {
+                          const fd = new FormData();
+                          fd.append('avatar', file);
+                          const res = await api.post<{ url: string }>('/api/tinder-do-fluxo/profile/avatar', fd);
+                          if (res?.url) { updateFormData({ photo_url: res.url }); setLocalSuccess('Foto atualizada.'); } else throw new Error('Resposta inválida');
+                        } catch (err: any) { setLocalError(err.message || 'Erro ao enviar foto.'); } finally { uploadingRef.current = false; e.target.value = ''; }
+                      }}
+                    />
+                    <small style={{ color: 'var(--text-muted)', fontSize: 12 }}>PNG ou JPG, até 5MB.</small>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Nome</label>
+                  <input
+                    type="text"
+                    value={(localFormData as any)?.name ?? user?.name ?? ''}
+                    onChange={(e) => updateFormData({ name: e.target.value } as Partial<ProfileFormData>)}
+                    placeholder="Seu nome completo"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Headline (subtítulo do perfil)</label>
+                  <input type="text" value={localFormData?.headline || ''} onChange={(e) => updateFormData({ headline: e.target.value })} placeholder="Ex: Copywriter Especialista em Lançamentos" maxLength={200} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: 16 }}>
+                  <div className="form-group">
+                    <label>Cidade</label>
+                    <input type="text" value={localFormData?.cidade || ''} onChange={(e) => updateFormData({ cidade: e.target.value })} placeholder="Ex: São Paulo" />
+                  </div>
+                  <div className="form-group">
+                    <label>UF</label>
+                    <input type="text" value={(localFormData as any)?.state || ''} onChange={(e) => updateFormData({ state: e.target.value } as Partial<ProfileFormData>)} placeholder="SP" maxLength={2} style={{ textTransform: 'uppercase' }} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Instagram</label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>@</span>
+                    <input type="text" value={localFormData?.instagram || ''} onChange={(e) => updateFormData({ instagram: e.target.value })} placeholder="usuario" style={{ paddingLeft: 28, width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', fontSize: 14 }} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>WhatsApp</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <select value={phoneCountryCode} onChange={(e) => setPhoneCountryCode(e.target.value)} style={{ width: '140px' }}>
+                      {countryCodes.map(cc => (<option key={cc.code} value={cc.code}>{cc.flag} {cc.code}</option>))}
+                    </select>
+                    <input type="text" placeholder="DDD" value={phoneAreaCode} onChange={(e) => setPhoneAreaCode(e.target.value.replace(/\D/g, '').slice(0, 2))} style={{ width: 80 }} maxLength={2} />
+                    <input type="text" placeholder="Número" value={formatPhoneNumber(phoneNumber)} onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 9))} style={{ flex: 1 }} maxLength={10} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Especialidade</label>
+                  <select value={(localFormData as any)?.specialty || ''} onChange={(e) => updateFormData({ specialty: e.target.value } as Partial<ProfileFormData>)} style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', fontSize: 14 }}>
+                    <option value="">Selecione</option>
+                    <option value="COPY">Copy</option>
+                    <option value="TRAFEGO">Tráfego</option>
+                    <option value="AUTOMACAO">Automação</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Certificação</label>
+                  <input type="text" value={(localFormData as any)?.certification || ''} onChange={(e) => updateFormData({ certification: e.target.value } as Partial<ProfileFormData>)} placeholder="Ex: Certificação em Copy" />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 24, padding: 20, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Sobre</h3>
+                <div className="form-group">
+                  <label>Bio profissional</label>
+                  <textarea rows={4} value={localFormData?.bio_busca || ''} onChange={(e) => updateFormData({ bio_busca: e.target.value })} placeholder="Conte sobre sua experiência e o que você oferece" style={{ minHeight: 100, width: '100%', resize: 'vertical' }} />
+                </div>
+                <div className="form-group">
+                  <label>Experiência</label>
+                  <textarea rows={3} value={(localFormData as any)?.experience || ''} onChange={(e) => updateFormData({ experience: e.target.value } as Partial<ProfileFormData>)} placeholder="Detalhes da sua trajetória" style={{ width: '100%', resize: 'vertical' }} />
+                </div>
+                <div className="form-group">
+                  <label>Portfólio</label>
+                  <textarea rows={2} value={(localFormData as any)?.portfolio || ''} onChange={(e) => updateFormData({ portfolio: e.target.value } as Partial<ProfileFormData>)} placeholder="Links ou descrição do seu portfólio" style={{ width: '100%', resize: 'vertical' }} />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 24, padding: 20, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Preço e benefícios</h3>
+                <div className="form-group">
+                  <label>Preço mínimo (R$ /projeto)</label>
+                  <input type="number" min={0} step={1} value={(localFormData as any)?.preco_minimo ?? ''} onChange={(e) => updateFormData({ preco_minimo: e.target.value === '' ? null : Number(e.target.value) } as Partial<ProfileFormData>)} placeholder="Ex: 1500" />
+                </div>
+                <div className="form-group">
+                  <label>Benefícios (um por linha)</label>
+                  <textarea
+                  rows={4}
+                  value={beneficiosList.join('\n')}
+                  onChange={(e) => updateFormData({ beneficios: e.target.value.split('\n') } as Partial<ProfileFormData>)}
+                  placeholder={'Ex: Análise de Avatar Gratuita\n2 Rodadas de Revisão'}
+                  style={{ width: '100%', resize: 'vertical' }}
+                />
+                  <small style={{ color: 'var(--text-muted)', fontSize: 12 }}>Digite um benefício por linha.</small>
+                </div>
+              </div>
+
+              {localFormData?.prestador && <PrestadorSection formData={localFormData} onChange={updateFormData} />}
+
+              {(localError || error) && (
+                <div className="alert alert-error" style={{ marginTop: 16, display: 'block' }}>{localError || (error as any)?.message || 'Erro ao salvar'}</div>
+              )}
+              {localSuccess && (
+                <div style={{ marginTop: 16, padding: 12, background: 'var(--green)', color: 'white', borderRadius: 'var(--radius)', fontSize: 14 }}>✓ {localSuccess}</div>
+              )}
+              <div style={{ marginTop: 48, display: 'flex', justifyContent: 'flex-end' }}>
+                <button type="submit" className="btn btn-primary" disabled={isSaving} style={{ minWidth: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>save</span>
+                  {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       </TinderDoFluxoPageShell>
     );
@@ -472,7 +684,7 @@ export default function ProfileFormPage() {
               })}
             </div>
           </div>
-          {tipoUsuario === 'mentorado' && (
+          {tipoUsuario === 'mentorado' && !isPrestadorForm && (
             <div className="form-group">
               <label>Nível no Fluxo</label>
               <select
@@ -650,8 +862,8 @@ export default function ProfileFormPage() {
           </div>
         </div>
 
-        {/* MENTORADO: Radio buttons Expert/Coprodutor (mutuamente exclusivos) */}
-        {tipoUsuario === 'mentorado' && (
+        {/* MENTORADO: Radio buttons Expert/Coprodutor (só para mentorado, nunca para prestador) */}
+        {tipoUsuario === 'mentorado' && !isPrestadorForm && (
           <div style={{ marginBottom: 24, padding: 20, background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
             <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>
               Quero atuar como: <span style={{ color: 'var(--error)' }}>*</span>
@@ -718,18 +930,18 @@ export default function ProfileFormPage() {
           </div>
         )}
 
-        {/* EXPERT SECTION - Só aparece se Expert estiver marcado */}
-        {tipoUsuario === 'mentorado' && isExpertChecked && (
+        {/* EXPERT SECTION - Só aparece se Expert estiver marcado (nunca para prestador) */}
+        {tipoUsuario === 'mentorado' && !isPrestadorForm && isExpertChecked && (
           <ExpertSection formData={localFormData} onChange={updateFormData} />
         )}
 
-        {/* COPRODUTOR SECTION - Só aparece se Coprodutor estiver marcado */}
-        {tipoUsuario === 'mentorado' && isCoprodutorChecked && (
+        {/* COPRODUTOR SECTION - Só aparece se Coprodutor estiver marcado (nunca para prestador) */}
+        {tipoUsuario === 'mentorado' && !isPrestadorForm && isCoprodutorChecked && (
           <CoprodutorSection formData={localFormData} onChange={updateFormData} />
         )}
 
-        {/* PRESTADOR SECTION (ALUNO) */}
-        {tipoUsuario === 'aluno' && localFormData.prestador && localFormData && (
+        {/* PRESTADOR SECTION (ALUNO) - só no formulário mentorado quando tipo é aluno */}
+        {(tipoUsuario as string) === 'aluno' && localFormData.prestador && localFormData && (
           <PrestadorSection formData={localFormData} onChange={updateFormData} />
         )}
 
