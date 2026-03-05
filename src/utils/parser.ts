@@ -1,7 +1,7 @@
 import XLSX from 'xlsx';
 import Papa from 'papaparse';
 import path from 'path';
-import type { ParsedCampaign, ParseResult } from '../types';
+import type { ParsedCampaign, ParseResult } from '../types.js';
 
 const COLUMN_MAP: Record<string, string> = {
   'Início dos relatórios': 'report_start',

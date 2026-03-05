@@ -1,5 +1,5 @@
-import { initDb } from './db/database';
-import app from './app';
+import { initDb } from './db/database.js';
+import app from './app.js';
 const PORT = process.env.PORT || 3000;
 
 async function start(): Promise<void> {

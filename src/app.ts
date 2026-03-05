@@ -9,7 +9,7 @@ import auditRoutes from './routes/audits.js';
 import adminRoutes from './routes/admin.js';
 import creativesRoutes from './routes/creatives.js';
 import tinderRoutes from './routes/tinder.js';
-import './types';
+import './types.js';
 
 dotenv.config();
 

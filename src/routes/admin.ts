@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { getSupabase } from '../db/database';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { getSupabase } from '../db/database.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 

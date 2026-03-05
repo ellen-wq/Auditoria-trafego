@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import { getSupabase } from '../db/database';
-import { getFileBuffer } from '../utils/getFileBuffer';
-import { requireAuth } from '../middleware/auth';
-import { ProfileService } from '../services/profile.service';
+import { getSupabase } from '../db/database.js';
+import { getFileBuffer } from '../utils/getFileBuffer.js';
+import { requireAuth } from '../middleware/auth.js';
+import { ProfileService } from '../services/profile.service.js';
 
 const router = Router();
 

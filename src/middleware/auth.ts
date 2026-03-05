@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-import { getSupabase } from '../db/database';
-import type { JwtPayload, SafeUser } from '../types';
+import { getSupabase } from '../db/database.js';
+import type { JwtPayload, SafeUser } from '../types.js';
 
 const JWT_SECRET: string = process.env.JWT_SECRET || 'fluxer_auditoria_secret_2024';
 

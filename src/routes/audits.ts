@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
 import path from 'path';
-import { getSupabase, STORAGE_BUCKET_NAME } from '../db/database';
-import { requireAuth } from '../middleware/auth';
-import upload from '../middleware/upload';
-import { parseSpreadsheetBuffer } from '../utils/parser';
-import { analyzeAllCampaigns } from '../engine/rules';
-import { getFileBuffer } from '../utils/getFileBuffer';
+import { getSupabase, STORAGE_BUCKET_NAME } from '../db/database.js';
+import { requireAuth } from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
+import { parseSpreadsheetBuffer } from '../utils/parser.js';
+import { analyzeAllCampaigns } from '../engine/rules.js';
+import { getFileBuffer } from '../utils/getFileBuffer.js';
 
 const router = Router();
 

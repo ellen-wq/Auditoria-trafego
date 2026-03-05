@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { getSupabase } from '../db/database';
-import { generateToken, requireAuth } from '../middleware/auth';
-import type { SafeUser } from '../types';
+import { getSupabase } from '../db/database.js';
+import { generateToken, requireAuth } from '../middleware/auth.js';
+import type { SafeUser } from '../types.js';
 
 const router = Router();
 

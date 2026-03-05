@@ -1,5 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { getSupabase } from '../db/database';
+import { getSupabase } from '../db/database.js';
 
 // ============================================================
 // TYPES

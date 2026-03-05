@@ -1,4 +1,4 @@
-import type { AnalysisResult, ParsedCampaign } from '../types';
+import type { AnalysisResult, ParsedCampaign } from '../types.js';
 
 interface AnalyzedResult extends ParsedCampaign {
   scenario: number;
