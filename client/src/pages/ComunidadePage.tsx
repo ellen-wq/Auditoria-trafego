@@ -1,10 +1,26 @@
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 
+type LevelId = 'NEWBIE' | 'SOFT' | 'HARD' | 'PRO' | 'PRO_PLUS' | 'MASTER';
+
+const LEVELS: { id: LevelId; label: string; range: string; badgeClass: string; filterClass: string }[] = [
+  { id: 'NEWBIE', label: 'Newbie', range: '0 vendas', badgeClass: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600', filterClass: 'border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300' },
+  { id: 'SOFT', label: 'Soft', range: '1 a 10 mil', badgeClass: 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/40 dark:text-rose-200 dark:border-rose-600', filterClass: 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-600 dark:bg-rose-900/30 dark:text-rose-300' },
+  { id: 'HARD', label: 'Hard', range: '10 mil a 100 mil', badgeClass: 'bg-slate-800 text-slate-100 border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-500', filterClass: 'border-slate-600 bg-slate-800 text-slate-100 dark:border-slate-500 dark:bg-slate-900 dark:text-slate-200' },
+  { id: 'PRO', label: 'Pro', range: '100 mil a 1 milhão', badgeClass: 'bg-violet-100 text-violet-800 border-violet-300 dark:bg-violet-900/40 dark:text-violet-200 dark:border-violet-600', filterClass: 'border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-600 dark:bg-violet-900/30 dark:text-violet-300' },
+  { id: 'PRO_PLUS', label: 'Pro +', range: '1 milhão a 2 milhões', badgeClass: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/40 dark:text-green-200 dark:border-green-600', filterClass: 'border-green-300 bg-green-50 text-green-700 dark:border-green-600 dark:bg-green-900/30 dark:text-green-300' },
+  { id: 'MASTER', label: 'Master', range: '2 milhões +', badgeClass: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-600', filterClass: 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-600 dark:bg-amber-900/30 dark:text-amber-300' },
+];
+
+function getLevel(levelId: LevelId) {
+  return LEVELS.find((l) => l.id === levelId) ?? LEVELS[0];
+}
+
 type MockProfile = {
   name: string;
   location: string;
-  level: string;
+  level: LevelId;
+  nicho: string;
   imageUrl: string;
   tags: { icon: string; label: string }[];
 };
@@ -14,7 +30,8 @@ const MOCK_PROFILES: MockProfile[] = [
   {
     name: 'Ricardo',
     location: 'São Paulo, SP',
-    level: 'Pro+Master',
+    level: 'MASTER',
+    nicho: 'Marketing Digital',
     imageUrl:
       'https://lh3.googleusercontent.com/aida-public/AB6AXuB0HMZu3MgpQRiHZkWgPPxKugufeGll-MrO67qB7LNB_LuSuNwOml-m_0jIvs0OONvHi0DiFaAwW97h5GWdvi_MCo4CNgWZFSWJHLJUh_ldBFf7_NkcnWrvlnBr-L0rxK0BKcBFWAkQOtxdzcN2iPUptI-dyU0bzjB7WfNnXXFBMyHrhUSxYEhtch0rgF2cu5aTY2GxcOcXirRazxV8Kz3kpvRrzewUj10DSNjAoP_qSaIzd8xshuVSYlHlXxjRsnKPTdaUhkPkBQk',
     tags: [
@@ -27,7 +44,8 @@ const MOCK_PROFILES: MockProfile[] = [
   {
     name: 'Marina',
     location: 'Rio de Janeiro, RJ',
-    level: 'Hard',
+    level: 'HARD',
+    nicho: 'Arte e Cultura',
     imageUrl:
       'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80',
     tags: [
@@ -40,7 +58,8 @@ const MOCK_PROFILES: MockProfile[] = [
   {
     name: 'Lucas',
     location: 'Belo Horizonte, MG',
-    level: 'Soft',
+    level: 'SOFT',
+    nicho: 'Tech e Games',
     imageUrl:
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
     tags: [
@@ -53,7 +72,8 @@ const MOCK_PROFILES: MockProfile[] = [
   {
     name: 'Julia',
     location: 'Curitiba, PR',
-    level: 'Pro+Master',
+    level: 'PRO_PLUS',
+    nicho: 'Coaching e Desenvolvimento',
     imageUrl:
       'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=800&q=80',
     tags: [
@@ -118,13 +138,21 @@ export default function ComunidadePage() {
 
               <div className="flex-1 p-6 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
                       Nível de Assinatura
                     </span>
-                    <span className="px-3 py-1 bg-primary/20 text-primary text-[11px] font-bold rounded-lg border border-primary/30 uppercase">
-                      {profile.level}
+                    <span className={`px-3 py-1 text-[11px] font-bold rounded-lg border uppercase ${getLevel(profile.level).badgeClass}`}>
+                      {getLevel(profile.level).label} · {getLevel(profile.level).range}
                     </span>
+                  </div>
+                  <div className="mb-4">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] block mb-1">
+                      Nicho
+                    </span>
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      {profile.nicho}
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-6">
                     {profile.tags.map((tag) => (
@@ -207,35 +235,24 @@ export default function ComunidadePage() {
 
             <div className="flex flex-col gap-4">
               <label className="text-xs font-bold text-slate-500 uppercase">Nível</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-2">
                 <button
                   type="button"
                   onClick={nextProfile}
-                  className="px-3 py-2 text-xs font-bold rounded-xl border border-primary bg-primary/10 text-primary"
+                  className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 text-left"
                 >
-                  All Levels
+                  Todos os níveis
                 </button>
-                <button
-                  type="button"
-                  onClick={nextProfile}
-                  className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary text-slate-600 dark:text-slate-400"
-                >
-                  Pro+Master
-                </button>
-                <button
-                  type="button"
-                  onClick={nextProfile}
-                  className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary text-slate-600 dark:text-slate-400"
-                >
-                  Hard
-                </button>
-                <button
-                  type="button"
-                  onClick={nextProfile}
-                  className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary text-slate-600 dark:text-slate-400"
-                >
-                  Soft
-                </button>
+                {LEVELS.map((level) => (
+                  <button
+                    key={level.id}
+                    type="button"
+                    onClick={nextProfile}
+                    className={`px-3 py-2 text-xs font-bold rounded-xl border text-left ${level.filterClass} hover:opacity-90`}
+                  >
+                    {level.label} · {level.range}
+                  </button>
+                ))}
               </div>
             </div>
 
