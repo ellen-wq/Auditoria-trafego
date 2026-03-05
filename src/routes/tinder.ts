@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import { getSupabase } from '../db/database.js';
-import { getFileBuffer } from '../utils/getFileBuffer.js';
-import { requireAuth } from '../middleware/auth.js';
-import { ProfileService } from '../services/profile.service.js';
+import { getSupabase } from '../db/database';
+import { requireAuth } from '../middleware/auth';
+import { ProfileService } from '../services/profile.service';
 
 const router = Router();
 
@@ -68,8 +67,11 @@ async function logAction(actorUserId: string | null, action: string, meta: Recor
 
 router.use(requireAuth);
 
-// Multer 2.x: sem storage = stream em memória. 10MB para avatares etc.
-const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } });
+// Configurar multer para upload de arquivos (temporário, será usado quando implementar upload)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
 
 // Tutorial status
 router.get('/tutorial-status', async (req: Request, res: Response): Promise<void> => {
@@ -937,7 +939,7 @@ router.post('/services/:id/reviews', async (req: Request, res: Response): Promis
   res.json({ ok: true });
 });
 
-// Interest / conexão
+// Interest / match
 router.post('/interest', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
   const toUserId = isValidUUID(req.body.toUserId);
@@ -1023,7 +1025,7 @@ router.get('/matches', async (req: Request, res: Response): Promise<void> => {
   if (type) q = q.eq('type', type);
   const { data: rows, error } = await q;
   if (error) {
-    res.status(500).json({ error: 'Erro ao buscar conexões.' });
+    res.status(500).json({ error: 'Erro ao buscar matches.' });
     return;
   }
   const matchesList = rows || [];
@@ -1086,12 +1088,12 @@ router.get('/matches', async (req: Request, res: Response): Promise<void> => {
   res.json({ matches });
 });
 
-// Listar mensagens de uma conexão (conversa)
+// Listar mensagens de um match (conversa)
 router.get('/matches/:matchId/messages', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
   const matchId = toPositiveInt(req.params.matchId);
   if (!matchId) {
-    res.status(400).json({ error: 'ID da conexão inválido.' });
+    res.status(400).json({ error: 'ID do match inválido.' });
     return;
   }
   const supabase = getSupabase();
@@ -1101,7 +1103,7 @@ router.get('/matches/:matchId/messages', async (req: Request, res: Response): Pr
     .eq('id', matchId)
     .single();
   if (matchError || !matchRow) {
-    res.status(404).json({ error: 'Conexão não encontrada.' });
+    res.status(404).json({ error: 'Match não encontrado.' });
     return;
   }
   const userId = req.user!.id;
@@ -1121,13 +1123,13 @@ router.get('/matches/:matchId/messages', async (req: Request, res: Response): Pr
   res.json({ messages: rows || [] });
 });
 
-// Enviar mensagem em uma conexão
+// Enviar mensagem em um match
 router.post('/matches/:matchId/messages', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
   const matchId = toPositiveInt(req.params.matchId);
   const body = cleanString(req.body.body, 10000);
   if (!matchId) {
-    res.status(400).json({ error: 'ID da conexão inválido.' });
+    res.status(400).json({ error: 'ID do match inválido.' });
     return;
   }
   if (!body) {
@@ -1141,7 +1143,7 @@ router.post('/matches/:matchId/messages', async (req: Request, res: Response): P
     .eq('id', matchId)
     .single();
   if (matchError || !matchRow) {
-    res.status(404).json({ error: 'Conexão não encontrada.' });
+    res.status(404).json({ error: 'Match não encontrado.' });
     return;
   }
   const userId = req.user!.id;
@@ -1174,7 +1176,7 @@ router.post('/matches/:matchId/typing', async (req: Request, res: Response): Pro
   const matchId = toPositiveInt(req.params.matchId);
   const typing = req.body.typing === true;
   if (!matchId) {
-    res.status(400).json({ error: 'ID da conexão inválido.' });
+    res.status(400).json({ error: 'ID do match inválido.' });
     return;
   }
   const supabase = getSupabase();
@@ -1184,7 +1186,7 @@ router.post('/matches/:matchId/typing', async (req: Request, res: Response): Pro
     .eq('id', matchId)
     .single();
   if (matchError || !matchRow) {
-    res.status(404).json({ error: 'Conexão não encontrada.' });
+    res.status(404).json({ error: 'Match não encontrado.' });
     return;
   }
   const userId = req.user!.id;
@@ -1205,7 +1207,7 @@ router.get('/matches/:matchId/typing', async (req: Request, res: Response): Prom
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
   const matchId = toPositiveInt(req.params.matchId);
   if (!matchId) {
-    res.status(400).json({ error: 'ID da conexão inválido.' });
+    res.status(400).json({ error: 'ID do match inválido.' });
     return;
   }
   const supabase = getSupabase();
@@ -1215,7 +1217,7 @@ router.get('/matches/:matchId/typing', async (req: Request, res: Response): Prom
     .eq('id', matchId)
     .single();
   if (matchError || !matchRow) {
-    res.status(404).json({ error: 'Conexão não encontrada.' });
+    res.status(404).json({ error: 'Match não encontrado.' });
     return;
   }
   const userId = req.user!.id;
@@ -2111,7 +2113,7 @@ router.get('/admin/dashboard', async (req: Request, res: Response): Promise<void
     if (mentorProfiles.error) console.error('[Admin Dashboard] Erro mentorProfiles:', mentorProfiles.error);
     if (serviceProfiles.error) console.error('[Admin Dashboard] Erro serviceProfiles:', serviceProfiles.error);
     if (interests.error) console.error('[Admin Dashboard] Erro interests:', interests.error);
-    if (matches.error) console.error('[Admin Dashboard] Erro conexões:', matches.error);
+    if (matches.error) console.error('[Admin Dashboard] Erro matches:', matches.error);
     if (jobs.error) console.error('[Admin Dashboard] Erro jobs:', jobs.error);
     if (applications.error) console.error('[Admin Dashboard] Erro applications:', applications.error);
     if (reviews.error) console.error('[Admin Dashboard] Erro reviews:', reviews.error);
@@ -3330,17 +3332,12 @@ router.post('/profile/avatar', upload.single('avatar'), async (req: Request, res
       res.status(400).json({ error: 'Nenhum arquivo enviado.' });
       return;
     }
-    const buffer = await getFileBuffer(file);
-    if (!buffer || buffer.length === 0) {
-      res.status(400).json({ error: 'Arquivo vazio ou não pôde ser lido.' });
-      return;
-    }
     const profileService = new ProfileService();
     const result = await profileService.uploadAvatar(
       userId,
-      buffer,
-      file.originalname || 'avatar',
-      file.mimetype || 'application/octet-stream'
+      file.buffer,
+      file.originalname,
+      file.mimetype
     );
     
     res.json(result);

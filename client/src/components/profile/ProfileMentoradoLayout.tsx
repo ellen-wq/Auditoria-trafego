@@ -68,9 +68,6 @@ export function ProfileMentoradoLayout({
             name={user.nome}
             photoUrl={profile?.photo_url}
             cidade={profile?.cidade}
-            nicho={profile?.nicho}
-            hobbies={profile?.hobbies}
-            nivelFluxo={profile?.nivel_fluxo_label}
             isExpert={!!isExpert}
             isCoprodutor={!!isCoprodutor}
             onEdit={isOwnProfile ? onEdit : undefined}
