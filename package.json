@@ -7,7 +7,7 @@
   "scripts": {
     "build:server": "tsc",
     "build:client": "cd client && npm install && npm run build",
-    "build": "npm run build:server && npm run build:client",
+    "build": "npm run build:server && npm run build:client && node scripts/vercel-workaround-chunk.js",
     "start": "node dist/server.js",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "node --import tsx src/server.ts",
