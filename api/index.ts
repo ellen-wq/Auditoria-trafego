@@ -55,7 +55,7 @@ async function getAppInstance(): Promise<ExpressAppLike> {
 async function ensureDbInit(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
-      const dbModule = await import('../src/db/database');
+      const dbModule = await import('../dist/db/database.js');
       await dbModule.initDb({ seedUsers: true, ensureStorageBucket: false });
     })().catch((err) => {
       initPromise = null;
