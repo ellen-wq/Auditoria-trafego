@@ -12,6 +12,10 @@ import MatchModal from '../components/tinder/MatchModal';
 import MatchesList from '../components/tinder/MatchesList';
 import SwipeActions from '../components/tinder/SwipeActions';
 
+function EmptyState({ text }: { text: string }) {
+  return <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{text}</p>;
+}
+
 // Comunidade: discovery card (apenas frontend, design do HTML de referência)
 const MOCK_PROFILES = [
   {
