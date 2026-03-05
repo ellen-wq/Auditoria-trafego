@@ -54,6 +54,7 @@ interface ProfileDiscoveryCardProps {
   onPass: () => void;
   onMatch: () => void;
   onSwipe?: (direction: 'left' | 'right') => void;
+  isSendingInterest?: boolean;
   /** Se o perfil está nos favoritos do usuário logado */
   isFavorited?: boolean;
   /** Callback ao clicar na estrela (favoritar/desfavoritar) */
@@ -86,8 +87,9 @@ export default function ProfileDiscoveryCard({
   onPass,
   onMatch,
   onSwipe,
+  isSendingInterest = false,
   isFavorited = false,
-  onFavorite
+  onFavorite,
 }: ProfileDiscoveryCardProps) {
   const navigate = useNavigate();
   const profileType = profile.isExpert
@@ -249,17 +251,6 @@ export default function ProfileDiscoveryCard({
                   <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>{profile.formato}</p>
                 </div>
               )}
-            </div>
-            {profile.bio && (
-              <div style={{ marginBottom: 24 }}>
-                <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--expert-slate-400)', margin: '0 0 8px 0' }}>Bio</p>
-                <p style={{ fontSize: 13, color: 'var(--expert-slate-600)', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>&quot;{profile.bio}&quot;</p>
-              </div>
-            )}
-            <div style={{ marginTop: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {tags.map((tag, idx) => (
-                <span key={idx} style={{ padding: '6px 12px', borderRadius: 8, background: 'var(--expert-background-light)', color: 'var(--expert-slate-600)', fontSize: 12, fontWeight: 700 }}>{tag}</span>
-              ))}
             </div>
           )}
 

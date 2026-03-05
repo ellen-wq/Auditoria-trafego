@@ -544,21 +544,39 @@ export function TinderExpertPage() {
                   onMatch={handleMatch}
                   onSwipe={handleSwipe}
                   isSendingInterest={isSendingInterest}
+                  isFavorited={favoritedIds.has(String(currentProfile.id))}
+                  onFavorite={() => handleToggleFavorite(String(currentProfile.id))}
                 />
               </SwipeActions>
             </div>
-      ) : (
-        <SwipeActions onSwipeLeft={handlePass} onSwipeRight={handleMatch} disabled={isSendingInterest}>
-          <ProfileDiscoveryCard
-            profile={currentProfile}
-            onPass={handlePass}
-            onMatch={handleMatch}
-            onSwipe={handleSwipe}
-            isFavorited={favoritedIds.has(currentProfile.id)}
-            onFavorite={() => handleToggleFavorite(currentProfile.id)}
-          />
-        </SwipeActions>
-      )}
+            <button
+              type="button"
+              onClick={() => navigate(`/tinder-do-fluxo/profile-view?userId=${currentProfile.id}`)}
+              style={{
+                position: 'absolute',
+                bottom: 32,
+                right: 32,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '12px 24px',
+                borderRadius: 9999,
+                border: '1px solid var(--expert-slate-200)',
+                background: 'var(--bg-white)',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+                color: 'var(--text-primary)',
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: 'pointer',
+                zIndex: 40,
+              }}
+            >
+              Ver Perfil Completo
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Match Modal */}
       <MatchModal
