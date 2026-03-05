@@ -73,7 +73,9 @@ class ApiService {
         const isLoginRequest = url.includes('/api/auth/login');
         const isAuthMeRequest = url.includes('/api/auth/me');
         const isOnMatchesPage = (typeof window !== 'undefined' && window.location.pathname.includes('/tinder-do-fluxo/matches'));
-        if (!isLoginRequest && !isAuthMeRequest && !isOnMatchesPage) {
+        const isTinderDoFluxoRequest = url.includes('/api/tinder-do-fluxo/');
+        // Não desloga nem redireciona em 401 em rotas do Tinder (evita redirect em cold start / falha transitória)
+        if (!isLoginRequest && !isAuthMeRequest && !isOnMatchesPage && !isTinderDoFluxoRequest) {
           this.clearAuthStorage();
           window.location.href = '/login';
         }

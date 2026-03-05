@@ -17,8 +17,14 @@ export default function SwipeActions({
   const containerRef = useRef<HTMLDivElement>(null);
   const SWIPE_THRESHOLD = 100;
 
+  const isInteractive = (target: EventTarget | null) => {
+    const el = target as HTMLElement;
+    return el?.closest?.('button, a, [role="button"]') != null;
+  };
+
   const handleTouchStart = (e: React.TouchEvent) => {
     if (disabled) return;
+    if (isInteractive(e.target)) return;
     setDrag({ x: 0, startX: e.touches[0].clientX, isDragging: true });
   };
 
@@ -42,6 +48,7 @@ export default function SwipeActions({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (disabled) return;
+    if (isInteractive(e.target)) return;
     setDrag({ x: 0, startX: e.clientX, isDragging: true });
   };
 

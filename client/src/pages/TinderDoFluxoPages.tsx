@@ -137,6 +137,7 @@ export function TinderExpertPage() {
   const [lookingFor, setLookingFor] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
+  const [feedLoadError, setFeedLoadError] = useState<string | null>(null);
 
   const currentUser = api.getUser();
 
@@ -157,6 +158,7 @@ export function TinderExpertPage() {
 
   const loadDiscoveryProfiles = async () => {
     setLoading(true);
+    setFeedLoadError(null);
     try {
     const params = new URLSearchParams();
       if (debouncedSearchQuery?.trim()) {
@@ -239,6 +241,7 @@ export function TinderExpertPage() {
     } catch (err) {
       console.error('[TinderExpertPage] Erro ao carregar perfis:', err);
       setDiscoveryProfiles([]);
+      setFeedLoadError(err instanceof Error ? err.message : 'Falha ao carregar perfis. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -524,15 +527,21 @@ export function TinderExpertPage() {
       ) : discoveryProfiles.length === 0 ? (
           <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
             <p style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
-              {hasActiveFilters
+              {feedLoadError
+                ? 'Problema ao carregar perfis. Pode ser falha de conexão ou servidor; tente novamente.'
+                : hasActiveFilters
                 ? 'Nenhum perfil encontrado com a busca ou tipo selecionado.'
                 : 'Nenhum perfil disponível no momento. O feed mostra outros usuários Expert ou Coprodutor; verifique se há outros perfis no sistema.'}
             </p>
-            {hasActiveFilters && (
+            {feedLoadError ? (
+              <button type="button" className="btn btn-primary" onClick={() => loadDiscoveryProfiles()} style={{ marginTop: 12 }}>
+                Tentar novamente
+              </button>
+            ) : hasActiveFilters ? (
             <button className="btn btn-outline" onClick={handleClearFilters}>
                 Limpar busca e filtros
             </button>
-        )}
+            ) : null}
       </div>
       ) : !currentProfile ? (
           <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>

@@ -21,12 +21,14 @@ const { rootDir, publicDistDir } = (() => {
     return { rootDir: path.dirname(explicit), publicDistDir: explicit };
   }
   const cwd = process.cwd();
-  const pd = path.join(cwd, 'public_dist');
-  if (fs.existsSync(pd)) return { rootDir: cwd, publicDistDir: pd };
   const parent = path.join(__dirname, '..');
-  const pdParent = path.join(parent, 'public_dist');
-  if (fs.existsSync(pdParent)) return { rootDir: parent, publicDistDir: pdParent };
-  return { rootDir: cwd, publicDistDir: pd };
+  for (const base of [cwd, parent]) {
+    const pub = path.join(base, 'public');
+    const pd = path.join(base, 'public_dist');
+    if (fs.existsSync(path.join(pub, 'index.html'))) return { rootDir: base, publicDistDir: pub };
+    if (fs.existsSync(path.join(pd, 'index.html'))) return { rootDir: base, publicDistDir: pd };
+  }
+  return { rootDir: cwd, publicDistDir: path.join(cwd, 'public_dist') };
 })();
 
 app.use(cors({ origin: true, credentials: true }));

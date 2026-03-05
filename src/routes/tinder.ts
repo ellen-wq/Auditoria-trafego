@@ -573,17 +573,11 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
     
     const userIds = (mentorados || []).map((u: any) => u.user_id);
     
-    let mentorProfilesQuery = supabase
+    // Buscar perfis SEM filtro de cidade para detectar quem não tem linha e criar se necessário
+    const { data: allProfilesForUserIds, error: mentorError } = await supabase
       .from('tinder_mentor_profiles')
       .select('*')
       .in('user_id', userIds);
-    
-    // Aplicar filtro de cidade
-    if (cities.length > 0) {
-      mentorProfilesQuery = mentorProfilesQuery.or(cities.map(c => `city.ilike.%${c}%`).join(','));
-    }
-    
-    const { data: mentorProfiles, error: mentorError } = await mentorProfilesQuery;
     
     if (mentorError) {
       console.error('[Feed Expert] Erro ao buscar mentor profiles:', mentorError);
@@ -594,8 +588,39 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
       return;
     }
     
+    const mentoradosCount = (mentorados || []).length;
+    let profilesList: any[] = (allProfilesForUserIds || []).slice();
+    console.log('[Feed Expert] Mentorados:', mentoradosCount, '| Com tinder_mentor_profiles:', profilesList.length);
+    
+    const existingProfileUserIds = new Set(profilesList.map((mp: any) => mp.user_id));
+    const missingUserIds = userIds.filter((id: string) => !existingProfileUserIds.has(id));
+    if (missingUserIds.length > 0) {
+      console.log('[Feed Expert] Criando perfis para', missingUserIds.length, 'mentorados sem tinder_mentor_profiles');
+      const { error: insertError } = await supabase
+        .from('tinder_mentor_profiles')
+        .insert(missingUserIds.map((user_id: string) => ({ user_id })));
+      if (insertError) {
+        console.error('[Feed Expert] Erro ao criar perfis:', insertError);
+      } else {
+        const { data: afterInsert } = await supabase
+          .from('tinder_mentor_profiles')
+          .select('*')
+          .in('user_id', userIds);
+        if (afterInsert) profilesList = afterInsert;
+      }
+    }
+    
+    // Aplicar filtro de cidade em memória
+    let mentorProfiles = profilesList.slice();
+    if (cities.length > 0) {
+      mentorProfiles = mentorProfiles.filter((mp: any) => {
+        const city = (mp.city || '').toLowerCase();
+        return cities.some(c => city.includes(c.toLowerCase()));
+      });
+    }
+    
     // Criar map para facilitar lookup (campos de Expert/Coprodutor agora estão em tinder_mentor_profiles)
-    const mentorMap = new Map((mentorProfiles || []).map((mp: any) => [mp.user_id, mp]));
+    const mentorMap = new Map(mentorProfiles.map((mp: any) => [mp.user_id, mp]));
     
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
     if (authError) console.error('[Feed Expert] Erro ao buscar auth.users:', authError);
@@ -626,6 +651,7 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
       });
     
     // Filtrar apenas perfis que são Expert OU Coprodutor (mutuamente exclusivos)
+    const usersWithProfile = users.slice();
     users = users.filter((u: any) => {
       const mp = u.tinder_mentor_profiles;
       if (!mp) return false;
@@ -634,6 +660,11 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
       const isCoprodutor = (mp.is_coproducer || false) && !(mp.is_expert || false);
       return isExpert || isCoprodutor;
     });
+    // Fallback: se ninguém tem Expert/Coprodutor preenchido, mostrar todos com tinder_mentor_profiles
+    if (users.length === 0 && usersWithProfile.length > 0) {
+      users = usersWithProfile;
+      console.log('[Feed Expert] Fallback: exibindo', users.length, 'perfis (sem filtro Expert/Coprodutor)');
+    }
     
     // Aplicar filtro de tipo só quando um único tipo está selecionado (Expert OU Coprodutor)
     // Se ambos estiverem selecionados (ou nenhum), mostrar todos os perfis
@@ -3260,15 +3291,23 @@ router.put('/profile', async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
     const supabase = getSupabase();
     
-    // Buscar tipo_usuario
+    // Buscar tipo_usuario e role (PRESTADOR sempre usa fluxo aluno/prestador)
     const { data: userRole } = await supabase
       .from('user_roles')
-      .select('tipo_usuario')
+      .select('tipo_usuario, role')
       .eq('user_id', userId)
       .single();
-    
-    const tipoUsuario = (userRole?.tipo_usuario || 'mentorado') as 'mentorado' | 'aluno';
-    
+
+    let tipoUsuario: 'mentorado' | 'aluno' = (userRole?.tipo_usuario || 'mentorado') as 'mentorado' | 'aluno';
+    if (userRole?.role === 'PRESTADOR') {
+      tipoUsuario = 'aluno';
+    }
+    // Se o payload é de prestador (tem prestador, sem expert/coprodutor), nunca usar tinder_mentor_profiles
+    const body = req.body || {};
+    if (body.prestador && !body.isExpert && !body.isCoprodutor) {
+      tipoUsuario = 'aluno';
+    }
+
     const profileService = new ProfileService();
     await profileService.updateProfile(userId, tipoUsuario, req.body);
     

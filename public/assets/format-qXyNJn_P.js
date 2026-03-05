@@ -1,1 +1,0 @@
-function r(t){return"R$ "+(t||0).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}function n(t){return((t||0)*100).toFixed(2).replace(".",",")+"%"}function a(t){if(!t)return"-";const e=new Date(t);return e.toLocaleDateString("pt-BR")+" "+e.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}export{r as a,n as b,a as f};

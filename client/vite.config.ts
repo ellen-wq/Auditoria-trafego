@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+  },
   server: {
     host: true,
     port: 5174,
@@ -21,7 +24,17 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../public_dist',
-    emptyOutDir: true
-  }
+    // Na Vercel: pasta "public" é servida como estático (evita ESM→CJS e "exports is not defined")
+    outDir: '../public',
+    emptyOutDir: true,
+    commonjsOptions: {
+      transformMixedEsModules: true,
+      include: [/node_modules/],
+    },
+    rollupOptions: {
+      output: {
+        format: 'es',
+      },
+    },
+  },
 })

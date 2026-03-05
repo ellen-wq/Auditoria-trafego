@@ -13,11 +13,17 @@ function resolvePublicDist(): string {
   }
   const cwd = process.cwd();
   const candidates = [
+    path.join(cwd, 'public'),
     path.join(cwd, 'public_dist'),
+    path.join(cwd, '..', 'public'),
     path.join(cwd, '..', 'public_dist'),
+    path.join(__dirname, '..', 'public'),
     path.join(__dirname, '..', 'public_dist'),
+    path.join(__dirname, '..', '..', 'public'),
     path.join(__dirname, '..', '..', 'public_dist'),
+    path.join(__dirname, 'public'),
     path.join(__dirname, 'public_dist'),
+    path.join(process.env.VERCEL_PROJECT_ROOT || cwd, 'public'),
     path.join(process.env.VERCEL_PROJECT_ROOT || cwd, 'public_dist'),
   ];
   for (const dir of candidates) {
@@ -27,13 +33,13 @@ function resolvePublicDist(): string {
       return dir;
     }
   }
-  const fallback = path.join(cwd, 'public_dist');
+  const fallback = path.join(cwd, 'public');
   if (fs.existsSync(path.join(fallback, 'index.html'))) {
     (global as any).__PUBLIC_DIST__ = fallback;
     return fallback;
   }
-  (global as any).__PUBLIC_DIST__ = fallback;
-  return fallback;
+  (global as any).__PUBLIC_DIST__ = path.join(cwd, 'public_dist');
+  return (global as any).__PUBLIC_DIST__;
 }
 
 async function getAppInstance(): Promise<ExpressAppLike> {
