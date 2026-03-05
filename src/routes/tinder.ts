@@ -1227,18 +1227,46 @@ router.post('/favorite', async (req: Request, res: Response): Promise<void> => {
   res.json({ ok: true });
 });
 
+const FAVORITOS_FAKE_NAMES = ['Bruno Silva', 'Maria Santos', 'Ana Costa'] as const;
+const FAVORITOS_FAKE_TYPES = ['EXPERT', 'COMUNIDADE', 'EXPERT'] as const;
+
+/** Garante que o usuário logado tenha os 3 perfis fakes como favoritos (para quem ainda não tem). */
+router.post('/favorites/seed-current-user', async (req: Request, res: Response): Promise<void> => {
+  if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
+  const supabase = getSupabase();
+  const { data: fakes } = await supabase
+    .from('user_roles')
+    .select('user_id')
+    .in('name', [...FAVORITOS_FAKE_NAMES]);
+  if (!fakes || fakes.length === 0) {
+    res.status(404).json({ error: 'Perfis fakes não encontrados. Rode o seed no Supabase ou o script seed-favoritos-fakes.ts.' });
+    return;
+  }
+  const userId = req.user!.id;
+  for (let i = 0; i < fakes.length; i++) {
+    const type = FAVORITOS_FAKE_TYPES[i] ?? 'EXPERT';
+    await supabase.from('tinder_favorites').upsert(
+      { user_id: userId, target_user_id: (fakes[i] as any).user_id, type },
+      { onConflict: 'user_id,target_user_id,type' }
+    );
+  }
+  res.json({ ok: true, added: fakes.length });
+});
+
 router.get('/favorites', async (req: Request, res: Response): Promise<void> => {
   if (!ensureRoles(req, res, ['MENTORADO', 'LIDERANCA'])) return;
   const type = cleanOptionalString(req.query.type, 40);
   const supabase = getSupabase();
+  // Select simples (sem join) para evitar falha com FK para auth.users; nomes vêm de user_roles abaixo
   let q = supabase
     .from('tinder_favorites')
-    .select('*, users!tinder_favorites_target_user_id_fkey(id,name,email,role)')
+    .select('*')
     .eq('user_id', req.user!.id)
     .order('created_at', { ascending: false });
   if (type) q = q.eq('type', type);
   const { data, error } = await q;
   if (error) {
+    console.error('[Favorites] Erro Supabase:', error.message);
     res.status(500).json({ error: 'Erro ao buscar favoritos.' });
     return;
   }
@@ -1248,8 +1276,7 @@ router.get('/favorites', async (req: Request, res: Response): Promise<void> => {
     const { data: roles } = await supabase.from('user_roles').select('user_id, name').in('user_id', targetIds);
     const nameByUserId = new Map((roles || []).map((r: any) => [r.user_id, r.name]));
     list.forEach((f: any) => {
-      if (f.users) f.users.name = f.users.name || nameByUserId.get(f.target_user_id) || null;
-      else f.users = { id: f.target_user_id, name: nameByUserId.get(f.target_user_id) || null, email: null, role: null };
+      f.users = { id: f.target_user_id, name: nameByUserId.get(f.target_user_id) || null, email: null, role: null };
     });
   }
   res.json({ favorites: list });

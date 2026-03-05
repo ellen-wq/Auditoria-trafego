@@ -81,24 +81,18 @@ const capabilityLabels: Record<string, string> = {
   'faz_automacoes': 'Automações',
 };
 
-export default function ProfileDiscoveryCard({ 
-  profile, 
-  onPass, 
+export default function ProfileDiscoveryCard({
+  profile,
+  onPass,
   onMatch,
   onSwipe,
   isFavorited = false,
   onFavorite
 }: ProfileDiscoveryCardProps) {
   const navigate = useNavigate();
-
-  const handleViewProfile = () => {
-    navigate(`/tinder-do-fluxo/profile-view?userId=${profile.id}`);
-  };
-
-  // Expert e Coprodutor são mutuamente exclusivos
-  const profileType = profile.isExpert 
+  const profileType = profile.isExpert
     ? 'Expert'
-    : profile.isCoprodutor 
+    : profile.isCoprodutor
     ? 'Coprodutor'
     : '';
 
@@ -219,6 +213,19 @@ export default function ProfileDiscoveryCard({
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: isFavorited ? '"FILL" 1' : '"FILL" 0' }}>star</span>
               </button>
             )}
+            <div style={{ position: 'absolute', top: 16, left: 16 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 9999, background: 'var(--expert-primary)', color: '#0f172a', fontSize: 10, fontWeight: 800, letterSpacing: '0.05em', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>bolt</span>
+                95% MATCH
+              </span>
+            </div>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent 40%, transparent)' }} />
+            <div style={{ position: 'absolute', bottom: 16, left: 16 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 9999, background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', color: 'var(--expert-slate-800)', fontSize: 10, fontWeight: 800, letterSpacing: '0.05em', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--expert-accent-blue)' }}>verified</span>
+                Verificado
+              </span>
+            </div>
           </div>
           {/* Objetivo abaixo do nome */}
           {profile.objective && (
@@ -232,8 +239,8 @@ export default function ProfileDiscoveryCard({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
               {profile.niche && (
                 <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', margin: '0 0 4px 0' }}>Nicho</p>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>{profile.niche}</p>
+                  <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--expert-slate-400)', margin: '0 0 8px 0' }}>Nicho</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--expert-slate-700)', margin: 0 }}>{profile.niche}</p>
                 </div>
               )}
               {profile.formato && (
@@ -243,15 +250,16 @@ export default function ProfileDiscoveryCard({
                 </div>
               )}
             </div>
-          )}
-
-          {/* Bio */}
-          {profile.bio && (
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', margin: '0 0 6px 0' }}>Bio</p>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, fontStyle: 'italic' }}>
-                {profile.bio}
-              </p>
+            {profile.bio && (
+              <div style={{ marginBottom: 24 }}>
+                <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--expert-slate-400)', margin: '0 0 8px 0' }}>Bio</p>
+                <p style={{ fontSize: 13, color: 'var(--expert-slate-600)', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>&quot;{profile.bio}&quot;</p>
+              </div>
+            )}
+            <div style={{ marginTop: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {tags.map((tag, idx) => (
+                <span key={idx} style={{ padding: '6px 12px', borderRadius: 8, background: 'var(--expert-background-light)', color: 'var(--expert-slate-600)', fontSize: 12, fontWeight: 700 }}>{tag}</span>
+              ))}
             </div>
           )}
 
@@ -421,101 +429,15 @@ export default function ProfileDiscoveryCard({
         </div>
         </div>
       </div>
-
-      {/* Actions: X (passar), Coração (match); Ver Perfil Completo – estilo matte */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        gap: 24, 
-        padding: 20,
-        borderTop: '1px solid var(--border)',
-        background: 'var(--bg-white)'
-      }}>
-        <button
-          type="button"
-          onClick={onPass}
-          aria-label="Passar"
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: '50%',
-            border: '2px solid var(--border)',
-            background: 'var(--bg-secondary)',
-            color: 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            fontSize: 24,
-            transition: 'transform 0.15s, background 0.15s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
-            e.currentTarget.style.color = 'var(--red)';
-            e.currentTarget.style.transform = 'scale(1.08)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--bg-secondary)';
-            e.currentTarget.style.color = 'var(--text-muted)';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
-        >
-          ✕
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 32, marginTop: 48, zIndex: 30 }}>
+        <button type="button" onClick={onPass} disabled={isSendingInterest} aria-label="Passar" style={{ width: 64, height: 64, borderRadius: '50%', border: '2px solid var(--expert-slate-200)', background: 'var(--bg-white)', color: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isSendingInterest ? 'not-allowed' : 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', transition: 'transform 0.15s, background 0.15s' }} onMouseEnter={(e) => { if (!isSendingInterest) { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.transform = 'scale(1.1)'; } }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-white)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 28, fontWeight: 700 }}>close</span>
         </button>
-        <button
-          type="button"
-          onClick={onMatch}
-          aria-label="Match"
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: '50%',
-            border: 'none',
-            background: 'var(--green)',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            fontSize: 28,
-            boxShadow: '0 4px 14px rgba(34, 197, 94, 0.35)',
-            transition: 'transform 0.15s, box-shadow 0.15s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.08)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(34, 197, 94, 0.45)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 4px 14px rgba(34, 197, 94, 0.35)';
-          }}
-        >
-          ♥
+        <button type="button" onClick={() => navigate(`/tinder-do-fluxo/profile-view?userId=${profile.id}`)} aria-label="Ver perfil" style={{ width: 56, height: 56, borderRadius: '50%', border: '2px solid var(--expert-slate-200)', background: 'var(--bg-white)', color: 'var(--expert-accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', transition: 'transform 0.15s, background 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(60, 131, 246, 0.08)'; e.currentTarget.style.transform = 'scale(1.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-white)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 24, fontWeight: 700 }}>star</span>
         </button>
-      </div>
-
-      {/* Ver Perfil Completo - botão flutuante/abaixo */}
-      <div style={{ padding: '0 20px 20px', textAlign: 'center' }}>
-        <button 
-          type="button"
-          className="btn btn-outline"
-          onClick={handleViewProfile}
-          style={{ 
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '10px 20px',
-            borderRadius: 9999,
-            border: '1px solid var(--border)',
-            background: 'var(--bg-white)',
-            color: 'var(--text)',
-            fontWeight: 600,
-            fontSize: 14
-          }}
-        >
-          Ver Perfil Completo
-          <span style={{ fontSize: 16 }}>→</span>
+        <button type="button" onClick={onMatch} disabled={isSendingInterest} aria-label="Match" style={{ width: 80, height: 80, borderRadius: '50%', border: 'none', background: 'var(--expert-primary)', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isSendingInterest ? 'not-allowed' : 'pointer', boxShadow: '0 10px 30px rgba(190, 242, 100, 0.4)', transition: 'transform 0.15s, box-shadow 0.15s' }} onMouseEnter={(e) => { if (!isSendingInterest) { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(190, 242, 100, 0.5)'; } }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 10px 30px rgba(190, 242, 100, 0.4)'; }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 36, fontWeight: 700, fontVariationSettings: "'FILL' 1" }}>favorite</span>
         </button>
       </div>
     </div>

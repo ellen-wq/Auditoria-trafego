@@ -381,42 +381,28 @@ export function TinderExpertPage() {
 
   return (
     <TinderDoFluxoPageShell title="Expert & Coprodutor" subtitle="Descubra perfis e faça matches">
-      <div id="tinder-expert-page-root" data-page="expert" data-expert-version="2-no-filtros">
-      {/* Header com busca (spec: Buscar por objetivo, nome...) + Expert/Coprodutor + ícones */}
+      <div id="tinder-expert-page-root" data-page="expert" style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', minHeight: 0 }}>
+      {/* Header: glass, busca + Expert/Coprodutor + ícones (design HTML) */}
       <header
+        className="expert-glass-header"
         data-page="expert-search"
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 40,
           height: 80,
-          padding: '0 24px',
+          padding: '0 32px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 16,
-          background: 'var(--bg-white)',
-          borderBottom: '1px solid var(--border)',
-          marginBottom: 16,
+          borderBottom: '1px solid var(--expert-slate-200)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, maxWidth: 560 }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <label htmlFor="expert-search-input" style={{ position: 'absolute', left: -9999 }}>Busca</label>
-            <span
-              style={{
-                position: 'absolute',
-                left: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-                fontSize: 18,
-                pointerEvents: 'none',
-              }}
-              aria-hidden
-            >
-              🔍
-            </span>
+            <span className="material-symbols-outlined" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--expert-slate-400)', fontSize: 20, pointerEvents: 'none' }} aria-hidden>search</span>
             <input
               id="expert-search-input"
               type="text"
@@ -429,15 +415,15 @@ export function TinderExpertPage() {
                 fontSize: 14,
                 border: 'none',
                 borderRadius: 12,
-                background: 'var(--bg-secondary)',
-                color: 'var(--text)',
+                background: 'var(--expert-background-light)',
+                color: 'var(--text-primary)',
                 outline: 'none',
               }}
               onFocus={(e) => {
-                e.target.style.boxShadow = '0 0 0 2px var(--green)';
+                e.currentTarget.style.boxShadow = '0 0 0 2px var(--expert-primary)';
               }}
               onBlur={(e) => {
-                e.target.style.boxShadow = 'none';
+                e.currentTarget.style.boxShadow = 'none';
               }}
             />
           </div>
@@ -454,13 +440,13 @@ export function TinderExpertPage() {
                 fontWeight: 700,
                 border: 'none',
                 borderRadius: 12,
-                background: lookingFor.includes('expert') ? 'var(--accent-dark)' : 'var(--bg-secondary)',
-                color: lookingFor.includes('expert') ? 'white' : 'var(--text)',
+                background: lookingFor.includes('expert') ? 'var(--expert-primary)' : 'var(--expert-background-light)',
+                color: lookingFor.includes('expert') ? '#0f172a' : 'var(--text-primary)',
                 cursor: 'pointer',
               }}
             >
               Expert
-              <span style={{ fontSize: 14 }}>▼</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>keyboard_arrow_down</span>
             </button>
             <button
               type="button"
@@ -474,17 +460,17 @@ export function TinderExpertPage() {
                 fontWeight: 700,
                 border: 'none',
                 borderRadius: 12,
-                background: lookingFor.includes('coprodutor') ? 'var(--purple)' : 'var(--bg-secondary)',
-                color: lookingFor.includes('coprodutor') ? 'white' : 'var(--text)',
+                background: lookingFor.includes('coprodutor') ? 'var(--purple)' : 'var(--expert-background-light)',
+                color: lookingFor.includes('coprodutor') ? 'white' : 'var(--text-primary)',
                 cursor: 'pointer',
               }}
             >
               Coprodutor
-              <span style={{ fontSize: 14 }}>▼</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>keyboard_arrow_down</span>
             </button>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link
             to="/tinder-do-fluxo/matches"
             style={{
@@ -494,61 +480,72 @@ export function TinderExpertPage() {
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '50%',
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-muted)',
+              background: 'var(--expert-background-light)',
+              color: 'var(--expert-slate-600)',
               textDecoration: 'none',
               position: 'relative',
             }}
             title="Notificações / Matches"
           >
-            🔔
-            <span
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'var(--red)',
-                border: '2px solid var(--bg-white)',
-              }}
-            />
+            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>notifications</span>
+            <span style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: '50%', background: 'var(--red)', border: '2px solid white' }} />
+          </Link>
+          <Link
+            to="/tinder-do-fluxo/matches"
+            style={{
+              width: 40,
+              height: 40,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              background: 'var(--expert-background-light)',
+              color: 'var(--expert-slate-600)',
+              textDecoration: 'none',
+            }}
+            title="Filtros"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>tune</span>
           </Link>
         </div>
       </header>
 
-      {/* Link rápido para matches */}
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
-        <Link to="/tinder-do-fluxo/matches" className="btn btn-outline">
-          👋 Ver Matches
-        </Link>
-      </div>
-
-      {/* Discovery Card */}
+      {/* Área central: card stack + ações (design HTML) */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, overflow: 'hidden', position: 'relative' }}>
         {loading ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
-          <div className="loading-spinner" />
-          <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando perfis...</p>
+          <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
+            <div className="loading-spinner" />
+            <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando perfis...</p>
           </div>
-      ) : discoveryProfiles.length === 0 ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
-            {hasActiveFilters
-              ? 'Nenhum perfil encontrado com a busca ou tipo selecionado.'
-              : 'Nenhum perfil disponível no momento. O feed mostra outros usuários Expert ou Coprodutor; verifique se há outros perfis no sistema.'}
-          </p>
-          {hasActiveFilters && (
-            <button className="btn btn-outline" onClick={handleClearFilters}>
-              Limpar busca e filtros
-            </button>
-          )}
-        </div>
-      ) : !currentProfile ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
-            Nenhum perfil disponível no momento
-          </p>
+        ) : discoveryProfiles.length === 0 ? (
+          <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
+              {hasActiveFilters
+                ? 'Nenhum perfil encontrado com a busca ou tipo selecionado.'
+                : 'Nenhum perfil disponível no momento. O feed mostra outros usuários Expert ou Coprodutor; verifique se há outros perfis no sistema.'}
+            </p>
+            {hasActiveFilters && (
+              <button className="btn btn-outline" onClick={handleClearFilters}>
+                Limpar busca e filtros
+              </button>
+            )}
+          </div>
+        ) : !currentProfile ? (
+          <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>Nenhum perfil disponível no momento</p>
+          </div>
+        ) : (
+          <>
+            <div style={{ position: 'relative', width: '100%', maxWidth: 800, height: 550, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <SwipeActions onSwipeLeft={handlePass} onSwipeRight={handleMatch} disabled={isSendingInterest}>
+                <ProfileDiscoveryCard
+                  profile={currentProfile}
+                  onPass={handlePass}
+                  onMatch={handleMatch}
+                  onSwipe={handleSwipe}
+                  isSendingInterest={isSendingInterest}
+                />
+              </SwipeActions>
             </div>
       ) : (
         <SwipeActions onSwipeLeft={handlePass} onSwipeRight={handleMatch} disabled={isSendingInterest}>
@@ -2136,9 +2133,26 @@ function formatFavoriteType(type: string): string {
 export function TinderFavoritosPage() {
   const [favorites, setFavorites] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  useEffect(() => {
-    api.get<{ favorites: any[] }>('/api/tinder-do-fluxo/favorites').then((r) => setFavorites(r.favorites || []));
+  const [loading, setLoading] = useState(true);
+
+  const fetchFavorites = useCallback(() => {
+    api.get<{ favorites: any[] }>('/api/tinder-do-fluxo/favorites').then((r) => {
+      setFavorites(r.favorites || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get<{ favorites: any[] }>('/api/tinder-do-fluxo/favorites').then((r) => {
+      const list = r.favorites || [];
+      setFavorites(list);
+      setLoading(false);
+      if (list.length === 0) {
+        api.post<{ ok: boolean }>('/api/tinder-do-fluxo/favorites/seed-current-user').then(() => fetchFavorites()).catch(() => {});
+      }
+    }).catch(() => setLoading(false));
+  }, [fetchFavorites]);
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -2215,6 +2229,116 @@ export function TinderFavoritosPage() {
   );
 }
 
+const FAVORITOS_2_MOCK: Array<{ id: string; nome: string; especialidade: string; tags: string[]; avatarUrl: string }> = [
+  { id: '1', nome: 'Ana Silva', especialidade: 'Estrategista Digital', tags: ['VENDA TODO SANTO DIA', '+2 CURSOS'], avatarUrl: 'https://i.pravatar.cc/192?u=ana-silva-1' },
+  { id: '2', nome: 'Marcos Oliveira', especialidade: 'Copywriter Senior', tags: ['COPYWRITING PRO', 'LANÇAMENTO METEÓRICO'], avatarUrl: 'https://i.pravatar.cc/192?u=marcos-oliveira-2' },
+  { id: '3', nome: 'Juliana Costa', especialidade: 'Gestora de Tráfego', tags: ['GESTÃO DE TRÁFEGO'], avatarUrl: 'https://i.pravatar.cc/192?u=juliana-costa-3' },
+  { id: '4', nome: 'Ricardo Santos', especialidade: 'Social Media', tags: ['CONTEÚDO INFINITO', 'CANVA PRO'], avatarUrl: 'https://i.pravatar.cc/192?u=ricardo-santos-4' },
+  { id: '5', nome: 'Beatriz Lima', especialidade: 'Lançadora', tags: ['ESTRATÉGIA DE LANÇAMENTO'], avatarUrl: 'https://i.pravatar.cc/192?u=beatriz-lima-5' },
+  { id: '6', nome: 'Felipe Mendes', especialidade: 'UX Designer', tags: ['DESIGN PARA CONVERSÃO', 'FIGMA MASTER'], avatarUrl: 'https://i.pravatar.cc/192?u=felipe-mendes-6' },
+];
+
+function getInitialsF2(name: string): string {
+  if (!name || !name.trim()) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+export function TinderFavoritos2Page() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [heartedIds, setHeartedIds] = useState<Set<string>>(new Set(FAVORITOS_2_MOCK.map((f) => f.id)));
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return FAVORITOS_2_MOCK;
+    return FAVORITOS_2_MOCK.filter(
+      (f) =>
+        f.nome.toLowerCase().includes(q) ||
+        f.especialidade.toLowerCase().includes(q) ||
+        f.tags.some((t) => t.toLowerCase().includes(q))
+    );
+  }, [searchQuery]);
+
+  const toggleHeart = (id: string) => {
+    setHeartedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  return (
+    <TinderDoFluxoPageShell
+      title="Favoritos"
+      subtitle="Alunos e parceiros que você salvou na sua rede"
+    >
+      <header className="favoritos-2-actions">
+        <div className="favoritos-search-wrap">
+          <span className="favoritos-search-icon" aria-hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+          </span>
+          <input
+            type="search"
+            placeholder="Buscar nos favoritos..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Buscar nos favoritos"
+          />
+        </div>
+        <button type="button" className="favoritos-2-btn-filter">
+          Filtrar
+        </button>
+      </header>
+
+      <div className="favoritos-2-grid">
+        {filtered.map((f) => (
+          <article key={f.id} className="favoritos-2-card">
+            <button
+              type="button"
+              className="favoritos-2-heart"
+              onClick={() => toggleHeart(f.id)}
+              aria-label={heartedIds.has(f.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill={heartedIds.has(f.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            </button>
+            <div className="favoritos-2-avatar-wrap">
+              {f.avatarUrl ? (
+                <img src={f.avatarUrl} alt="" className="favoritos-2-avatar-img" />
+              ) : (
+                <span className="favoritos-2-avatar-initials">{getInitialsF2(f.nome)}</span>
+              )}
+            </div>
+            <h3 className="favoritos-2-name">{f.nome}</h3>
+            <p className="favoritos-2-especialidade">{f.especialidade}</p>
+            <div className="favoritos-2-chips">
+              {f.tags.map((tag) => (
+                <span key={tag} className="favoritos-2-chip">{tag}</span>
+              ))}
+            </div>
+            <hr className="favoritos-2-divider" />
+            <div className="favoritos-2-footer">
+              <div className="favoritos-2-mini-avatars" aria-hidden>
+                <span className="favoritos-2-mini-avatar" />
+                <span className="favoritos-2-mini-avatar" />
+                <span className="favoritos-2-mini-avatar" />
+              </div>
+              <button type="button" className="favoritos-2-btn-ver-perfil">
+                Ver Perfil
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </TinderDoFluxoPageShell>
+  );
+}
 
 export function TinderAvaliacoesPrestadorPage() {
   const [reviews, setReviews] = useState<any[]>([]);
@@ -2481,116 +2605,186 @@ export function TinderServiceDetailPage() {
   );
 }
 
+// Dados mock para a página Minhas Candidaturas (apenas frontend) — design referência
+type ApplicationStatus = 'ENVIADA' | 'VISUALIZADA' | 'EM_CONVERSA' | 'ENCERRADA';
+const MOCK_MY_APPLICATIONS: Array<{
+  id: number;
+  applicationStatus: ApplicationStatus;
+  created_at: string;
+  tinder_jobs: { id: number; title: string; specialty?: string };
+  recruiter: { name: string; avatar_url: string; tags: string[] };
+  creator_id?: number;
+}> = [
+  {
+    id: 1,
+    applicationStatus: 'ENVIADA',
+    created_at: '2023-10-12T10:00:00.000Z',
+    tinder_jobs: { id: 101, title: 'Gestor de Tráfego para Perpétuo', specialty: 'Tráfego' },
+    recruiter: { name: 'Bernardo Silva', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC1SRqJrsTD7nx3El7ByFaRR0mUl64vLK_CxxRLhtRzh8Hm1_4EWMykDM2Gcl748MyLxrLux9xBf1E8Dtg6Nb1N4gsyq5hOk8SADBxGB-qzhvXbH8BFPZhSyOPr9lCnNSmaTv6vN2XwL2oQ1XJHygyHx88YAR-2p3QzsAOpgUO-hl8BgcMJvmuAKqjOctd-gI4pSwmXnSbCBM4Lwc_lnYsyFKVTC06lmf73PdnzOyiqJ5lQ8T4aKsG29hcoD8t-A9ZBcXXX--Zi50JY', tags: ['VTSD', 'FLUXO'] },
+    creator_id: 1,
+  },
+  {
+    id: 2,
+    applicationStatus: 'VISUALIZADA',
+    created_at: '2023-10-08T14:30:00.000Z',
+    tinder_jobs: { id: 102, title: 'Copywriter para Lançamento High-Ticket', specialty: 'Copy' },
+    recruiter: { name: 'Juliana Rocha', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC28q1YC49W44YujbHN0Omj8gWOHUfXG_SoEGVYqsjXfCCMe1K3RYkm4--e_lIv80zntPm-7guW5n7rFS1uBx1RUTATT_jNZrI3AMeZVFdFkHHFsJ_EzGsfOt7CKgOsExn7kFg-CCQMQWFe9J4Wwo_ygWvM8r_jAZy2QX_uQizHVV1gZpCJxCnn6-ZGgJ_85RHD1QlO1SKhFxUsnE30HRhppwzkRyXJ9N8dAqrMn9gmFib6q612TasJ9nSq4_ZGIPC5AY67mjTElIC1', tags: ['VTSD'] },
+    creator_id: 2,
+  },
+  {
+    id: 3,
+    applicationStatus: 'EM_CONVERSA',
+    created_at: '2023-10-05T09:15:00.000Z',
+    tinder_jobs: { id: 103, title: 'Especialista em Automação (n8n/Make)', specialty: 'Automação' },
+    recruiter: { name: 'Marcos Olive', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBcqYbANZg7ueMQpsf9mWkMuguZKJ8OOJEGZkxMgPXnZ2kc-k6ofn2udr_YgksUZHL38TukV1W-cJxeSuQqUGCY3z76TSVLw2LQ7UPmCzatlxwYRYTdq4CDQl4FCRp1SJ8XKl_qXrEdqoq7Teyt9MArwrCo7OLZhwkyMoqn2wiV1WL2NhLOby1KTyFo7YVeTWpH5ELFmUDH_lw0rR7B13_x1B-K15B5UT6bI80gv1Cjo0pp8L23WI8p6m6gxfhPqE9pkmYra38diqS5', tags: ['VTSD', 'FLUXO'] },
+    creator_id: 3,
+  },
+  {
+    id: 4,
+    applicationStatus: 'ENCERRADA',
+    created_at: '2023-09-20T16:00:00.000Z',
+    tinder_jobs: { id: 104, title: 'Lançador de Infoprodutos Wellness', specialty: 'Produto' },
+    recruiter: { name: 'Clara Nunes', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAPLVw_sUkNEQcad1f-JV-A5GZtkzS0UTXNaMKd9HkB43popS18HqtXCP87ymK9lim0zssiPzPp-u74BECC1TyaSmeaGagQjKe3htogDZ6B42IBe_EGMA979850kOIDNt3rKizLdGaPzdM_5C4QmQLUQlWXBSwVS-NhDjDnqFsINvte2S9RsiD4Z7g3BC_l92ctwx2_6QxQf_ADtqoFojD6As2dl7buKdQ4NWKfAsjQHSo_ibvhYGpe7dvYmYEPj0K9aNhZOJ8pdZd-', tags: ['VTSD'] },
+    creator_id: 4,
+  },
+];
+
+const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
+  ENVIADA: 'Enviada',
+  VISUALIZADA: 'Visualizada',
+  EM_CONVERSA: 'Em conversa',
+  ENCERRADA: 'Encerrada',
+};
+
 export function TinderMyApplicationsPage() {
-  const [applications, setApplications] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    loadApplications();
-  }, []);
-  
-  const loadApplications = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<{ applications: any[] }>('/api/tinder-do-fluxo/jobs/my-applications');
-      setApplications(res.applications || []);
-    } catch (err: any) {
-      console.error('Erro ao carregar candidaturas:', err);
-      setApplications([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
+  const [search, setSearch] = useState('');
+  const applications = MOCK_MY_APPLICATIONS;
+
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
-  
+
+  const filteredApplications = search.trim()
+    ? applications.filter(
+        (app) =>
+          app.tinder_jobs.title.toLowerCase().includes(search.toLowerCase()) ||
+          app.recruiter.name.toLowerCase().includes(search.toLowerCase()) ||
+          (app.tinder_jobs.specialty && app.tinder_jobs.specialty.toLowerCase().includes(search.toLowerCase()))
+      )
+    : applications;
+
   return (
-    <TinderDoFluxoPageShell title="Minhas Candidaturas" subtitle="Vagas que você se candidatou">
-      {loading ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
-          <div className="loading-spinner" />
-          <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando candidaturas...</p>
+    <TinderDoFluxoPageShell title="Minhas Candidaturas" subtitle="Acompanhe as vagas para as quais você se candidatou.">
+      <div className="candidaturas-page">
+        <header className="candidaturas-header">
+          <div className="search-wrap">
+            <span className="material-symbols-outlined search-icon">search</span>
+            <input
+              type="text"
+              placeholder="Buscar candidaturas..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="header-actions">
+            <button type="button" title="Notificações">
+              <span className="material-symbols-outlined">notifications</span>
+              <span className="notif-dot" aria-hidden />
+            </button>
+            <button type="button" title="Chat">
+              <span className="material-symbols-outlined">chat_bubble</span>
+            </button>
+          </div>
+        </header>
+
+        <div className="filters">
+          <button type="button">
+            Status
+            <span className="material-symbols-outlined">keyboard_arrow_down</span>
+          </button>
+          <button type="button">
+            Categoria
+            <span className="material-symbols-outlined">keyboard_arrow_down</span>
+          </button>
+          <button type="button">
+            Ordenação (Mais recentes)
+            <span className="material-symbols-outlined">keyboard_arrow_down</span>
+          </button>
         </div>
-      ) : applications.length === 0 ? (
-        <div className="card">
-          <EmptyState text="Você ainda não se candidatou para nenhuma vaga." />
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 12 }}>
-          {applications.map((app: any) => {
-            const job = app.tinder_jobs;
-            if (!job) return null;
-            
-            return (
-              <div key={app.id} className="card" style={{ padding: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ margin: 0, marginBottom: 8 }}>{job.title}</h3>
-                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 14 }}>
-                      Candidatado em {formatDate(app.created_at)}
-                    </p>
+
+        {filteredApplications.length === 0 ? (
+          <div className="card empty-state-card">
+            <EmptyState text={search ? 'Nenhuma candidatura encontrada para essa busca.' : 'Você ainda não se candidatou para nenhuma vaga.'} />
+          </div>
+        ) : (
+          <>
+            <div className="cards-list">
+              {filteredApplications.map((app) => {
+                const job = app.tinder_jobs;
+                const statusClass = app.applicationStatus.toLowerCase().replace('_', '-');
+                const isEncerrada = app.applicationStatus === 'ENCERRADA';
+                const isEmConversa = app.applicationStatus === 'EM_CONVERSA';
+                return (
+                  <div key={app.id} className={`app-card ${isEncerrada ? 'encerrada' : ''} ${isEmConversa ? 'em-conversa' : ''}`}>
+                    <div className="app-card-body">
+                      <div className="app-card-meta">
+                        <span className={`app-card-badge ${statusClass}`}>{APPLICATION_STATUS_LABEL[app.applicationStatus]}</span>
+                        <span className="app-card-date">Aplicada em {formatDate(app.created_at)}</span>
+                      </div>
+                      <h3 className="app-card-title">{job.title}</h3>
+                      <p className="app-card-category">{job.specialty || 'Vaga'}</p>
+                      <div className="app-card-recruiter">
+                        <div className="avatar">
+                          <img src={app.recruiter.avatar_url} alt="" />
+                        </div>
+                        <div>
+                          <p className="recruiter-name">{app.recruiter.name}</p>
+                          <div className="recruiter-tags">
+                            {app.recruiter.tags.map((tag) => (
+                              <span key={tag}>{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="app-card-actions">
+                      {isEmConversa && (
+                        <Link className="btn-card primary" to="/tinder-do-fluxo/matches">
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chat</span>
+                          Abrir conversa
+                        </Link>
+                      )}
+                      {isEncerrada ? (
+                        <button type="button" className="btn-card disabled">Encerrada</button>
+                      ) : (
+                        <Link className="btn-card secondary" to={`/tinder-do-fluxo/vagas/${job.id}`}>Ver vaga</Link>
+                      )}
+                      {!isEncerrada && (
+                        <Link className="btn-card outline" to={app.creator_id ? `/tinder-do-fluxo/users/${app.creator_id}` : '#'}>Ver perfil</Link>
+                      )}
+                      {isEncerrada && (
+                        <Link className="btn-card outline" to={`/tinder-do-fluxo/vagas/${job.id}`}>Ver vaga</Link>
+                      )}
+                    </div>
                   </div>
-                  <Link 
-                    className="btn btn-outline" 
-                    to={`/tinder-do-fluxo/vagas/${job.id}`}
-                    style={{ marginLeft: 12 }}
-                  >
-                    Ver vaga
-                  </Link>
-                </div>
-                
-                {job.description && (
-                  <p style={{ marginTop: 8, marginBottom: 8, color: 'var(--text-secondary)' }}>
-                    {job.description.length > 200 ? job.description.substring(0, 200) + '...' : job.description}
-                  </p>
-                )}
-                
-                <div style={{ 
-                  display: 'flex', 
-                  gap: 12, 
-                  flexWrap: 'wrap', 
-                  marginTop: 12,
-                  padding: 12,
-                  background: 'var(--bg-secondary)',
-                  borderRadius: 'var(--radius)'
-                }}>
-                  {job.specialty && <span style={{ fontSize: 12 }}>📌 {job.specialty}</span>}
-                  {job.model && <span style={{ fontSize: 12 }}>💼 {job.model}</span>}
-                  {job.location && <span style={{ fontSize: 12 }}>📍 {job.location}</span>}
-                  {job.value && <span style={{ fontSize: 12 }}>💰 R$ {Number(job.value).toLocaleString('pt-BR')}</span>}
-                  {job.status && (
-                    <span style={{ 
-                      fontSize: 12,
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      background: job.status === 'OPEN' ? 'var(--green)' : 'var(--text-muted)',
-                      color: 'white'
-                    }}>
-                      {job.status === 'OPEN' ? 'Aberta' : 'Fechada'}
-                    </span>
-                  )}
-                </div>
-                
-                {app.message && (
-                  <div style={{ marginTop: 12, padding: 12, background: 'var(--bg-sidebar)', borderRadius: 'var(--radius)' }}>
-                    <strong style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sua mensagem:</strong>
-                    <p style={{ marginTop: 4, fontSize: 14 }}>{app.message}</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                );
+              })}
+            </div>
+            <div className="pagination">
+              <nav>
+                <button type="button" disabled aria-label="Página anterior">
+                  <span className="material-symbols-outlined">chevron_left</span>
+                </button>
+                <button type="button" className="active">1</button>
+                <button type="button">2</button>
+                <button type="button" aria-label="Próxima página">
+                  <span className="material-symbols-outlined">chevron_right</span>
+                </button>
+              </nav>
+            </div>
+          </>
+        )}
+      </div>
     </TinderDoFluxoPageShell>
   );
 }

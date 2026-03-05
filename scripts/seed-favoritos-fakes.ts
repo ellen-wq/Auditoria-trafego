@@ -1,6 +1,6 @@
 /**
  * Cria 3 perfis fakes (auth + user_roles) e os adiciona como favoritos
- * do primeiro usuário MENTORADO, para visualizar a tela de Favoritos.
+ * para TODOS os usuários. Qualquer um que acessar Favoritos verá os 3.
  *
  * Execute: npx ts-node scripts/seed-favoritos-fakes.ts
  * Requer: SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no .env
@@ -20,25 +20,9 @@ async function run(): Promise<void> {
   await initDb({ seedUsers: false, ensureStorageBucket: false });
   const supabase = getSupabase();
 
-  // 1. Pegar o primeiro MENTORADO (quem vai "ver" os favoritos na tela)
-  const { data: mentorados, error: errMentorados } = await supabase
-    .from('user_roles')
-    .select('user_id, name')
-    .eq('role', 'MENTORADO')
-    .order('created_at', { ascending: true })
-    .limit(1);
+  const fakeUserIds: string[] = [];
 
-  if (errMentorados || !mentorados?.length) {
-    console.error('Nenhum MENTORADO encontrado em user_roles. Crie um usuário e faça login como MENTORADO primeiro.');
-    process.exit(1);
-  }
-
-  const viewerId = mentorados[0].user_id;
-  console.log('Usuário que verá os favoritos:', mentorados[0].name, '(' + viewerId + ')');
-
-  const createdTargetIds: string[] = [];
-
-  // 2. Para cada perfil fake: criar no Auth + user_roles (se não existir) e guardar user_id
+  // 1. Criar ou buscar os 3 perfis fake (Auth + user_roles)
   const { data: authList } = await supabase.auth.admin.listUsers({ perPage: 1000 });
   const authByEmail = new Map((authList?.users || []).map((u) => [u.email?.toLowerCase() ?? '', u]));
 
@@ -88,49 +72,53 @@ async function run(): Promise<void> {
       console.log('Criado:', profile.name, userId);
     }
 
-    if (userId && userId !== viewerId) createdTargetIds.push(userId);
+    fakeUserIds.push(userId);
   }
 
-  if (createdTargetIds.length === 0) {
-    console.log('Nenhum perfil novo criado. Adicionando favoritos com usuários existentes...');
-    const { data: others } = await supabase
-      .from('user_roles')
-      .select('user_id, name')
-      .neq('user_id', viewerId)
-      .limit(3);
-    if (others?.length) {
-      for (let i = 0; i < others.length; i++) {
-        await supabase.from('tinder_favorites').upsert(
-          {
-            user_id: viewerId,
-            target_user_id: others[i].user_id,
-            type: FAKE_PROFILES[i]?.type ?? 'EXPERT',
-          },
-          { onConflict: 'user_id,target_user_id,type' }
-        );
-      }
-      console.log('Inseridos', others.length, 'favoritos (nomes:', others.map((o) => o.name).join(', ') + ').');
-    }
+  if (fakeUserIds.length === 0) {
+    console.error('Nenhum perfil fake disponível. Crie os 3 perfis (Bruno Silva, Maria Santos, Ana Costa) ou rode o SQL após criá-los.');
+    process.exit(1);
   }
 
-  if (createdTargetIds.length > 0) {
-    // 3. Inserir tinder_favorites: viewer + cada um dos 3 alvos
-    for (let i = 0; i < createdTargetIds.length; i++) {
+  // 2. Todos os usuários que podem ver Favoritos (exceto os 3 fakes)
+  const { data: allUsers, error: errUsers } = await supabase
+    .from('user_roles')
+    .select('user_id')
+    .in('role', ['MENTORADO', 'LIDERANCA']);
+
+  if (errUsers || !allUsers?.length) {
+    console.error('Nenhum usuário MENTORADO/LIDERANCA em user_roles.');
+    process.exit(1);
+  }
+
+  const fakeSet = new Set(fakeUserIds);
+  const viewerIds = allUsers.map((u: any) => u.user_id).filter((id: string) => !fakeSet.has(id));
+
+  if (viewerIds.length === 0) {
+    console.log('Apenas os perfis fake existem. Adicione outro usuário (MENTORADO ou LIDERANCA) para ver os favoritos.');
+  }
+
+  // 3. Para cada usuário, inserir os 3 favoritos (um para cada fake)
+  let inserted = 0;
+  for (const viewerId of viewerIds) {
+    for (let i = 0; i < fakeUserIds.length; i++) {
       const type = FAKE_PROFILES[i]?.type ?? 'EXPERT';
       const { error: favError } = await supabase.from('tinder_favorites').upsert(
         {
           user_id: viewerId,
-          target_user_id: createdTargetIds[i],
+          target_user_id: fakeUserIds[i],
           type,
         },
         { onConflict: 'user_id,target_user_id,type' }
       );
       if (favError) console.error('Erro ao favoritar:', favError.message);
+      else inserted++;
     }
-    console.log('Inseridos', createdTargetIds.length, 'favoritos.');
   }
 
-  console.log('\nConcluído. Faça login como o MENTORADO que vê os favoritos e acesse Tinder do Fluxo > Favoritos.');
+  console.log('\nConcluído. Os 3 perfis fakes foram adicionados como favoritos para', viewerIds.length, 'usuário(s).');
+  console.log('Total de linhas de favoritos inseridas/atualizadas:', inserted);
+  console.log('Qualquer usuário MENTORADO ou LIDERANCA verá os 3 na aba Favoritos.');
   console.log('Senha dos perfis fakes (se criados agora):', FAKE_PASSWORD);
 }
 

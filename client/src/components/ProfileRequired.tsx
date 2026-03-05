@@ -6,13 +6,17 @@ import type { User } from '../services/api';
 interface ProfileRequiredProps {
   children: React.ReactNode;
   user: User;
+  /** When provided (from /api/auth/me), skips the extra profile-check request */
+  initialHasProfile?: boolean;
 }
 
-export default function ProfileRequired({ children, user }: ProfileRequiredProps) {
-  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
-  const [isChecking, setIsChecking] = useState(true);
-  const navigate = useNavigate();
-
+export default function ProfileRequired({ children, user, initialHasProfile }: ProfileRequiredProps) {
+  const [hasProfile, setHasProfile] = useState<boolean | null>(
+    initialHasProfile !== undefined ? initialHasProfile ? true : false : null
+  );
+  const [isChecking, setIsChecking] = useState(
+    initialHasProfile === undefined && user.role !== 'LIDERANCA'
+  );
   const [checkError, setCheckError] = useState<string | null>(null);
 
   const checkProfile = useCallback(() => {
@@ -32,14 +36,18 @@ export default function ProfileRequired({ children, user }: ProfileRequiredProps
   }, []);
 
   useEffect(() => {
-    // LIDERANCA doesn't need a profile
     if (user.role === 'LIDERANCA') {
       setHasProfile(true);
       setIsChecking(false);
       return;
     }
+    if (initialHasProfile !== undefined) {
+      setHasProfile(initialHasProfile);
+      setIsChecking(false);
+      return;
+    }
     checkProfile();
-  }, [user.role, checkProfile]);
+  }, [user.role, initialHasProfile, checkProfile]);
 
   if (isChecking) {
     return (

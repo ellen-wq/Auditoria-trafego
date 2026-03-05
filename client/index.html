@@ -20,8 +20,9 @@
       <p><a href="/login">Ir para o login</a></p>
     </div>
   </noscript>
-  <div id="load-fallback" style="display:none;font-family:sans-serif;padding:2rem;text-align:center;max-width:420px;margin:2rem auto;">
+  <div id="load-fallback" style="display:none;font-family:sans-serif;padding:2rem;text-align:center;max-width:520px;margin:2rem auto;">
     <p style="font-weight:600;">A página não carregou.</p>
+    <p id="load-fallback-msg" style="margin-top:8px;color:#666;font-size:14px;word-break:break-word;"></p>
     <p style="margin-top:8px;color:#666;">Tente: atualizar com Ctrl+Shift+R (ou Cmd+Shift+R no Mac), limpar cache do navegador ou abrir em outra aba anônima.</p>
     <p style="margin-top:12px;"><a href="/" style="color:#0d1526;">Recarregar a página</a></p>
   </div>
@@ -29,15 +30,28 @@
   <script>
     (function() {
       var fallback = document.getElementById('load-fallback');
+      var msgEl = document.getElementById('load-fallback-msg');
       var root = document.getElementById('root');
+      function showFallback(text) {
+        if (fallback) {
+          if (msgEl) msgEl.textContent = text || '';
+          fallback.style.display = 'block';
+        }
+      }
       window.addEventListener('error', function(e) {
         if (e.filename && (e.filename.indexOf('/assets/') !== -1 || e.filename.indexOf('main') !== -1)) {
-          if (fallback) fallback.style.display = 'block';
+          var txt = (e.message || '') + (e.filename ? ' (' + e.filename + ')' : '');
+          showFallback(txt);
         }
       }, true);
+      window.addEventListener('unhandledrejection', function(e) {
+        if (e.reason && (String(e.reason).indexOf('Loading chunk') !== -1 || String(e.reason).indexOf('Failed to fetch') !== -1)) {
+          showFallback('Falha ao carregar recurso: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
+        }
+      });
       setTimeout(function() {
-        if (root && root.children.length === 0 && fallback) {
-          fallback.style.display = 'block';
+        if (root && root.children.length === 0 && fallback && fallback.style.display !== 'block') {
+          showFallback('A aplicação não iniciou em 6 segundos.');
         }
       }, 6000);
     })();
