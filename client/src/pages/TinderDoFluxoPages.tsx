@@ -2686,7 +2686,7 @@ const MOCK_MY_APPLICATIONS: Array<{
     applicationStatus: 'ENVIADA',
     created_at: '2023-10-12T10:00:00.000Z',
     tinder_jobs: { id: 101, title: 'Gestor de Tráfego para Perpétuo', specialty: 'Tráfego' },
-    recruiter: { name: 'Bernardo Silva', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC1SRqJrsTD7nx3El7ByFaRR0mUl64vLK_CxxRLhtRzh8Hm1_4EWMykDM2Gcl748MyLxrLux9xBf1E8Dtg6Nb1N4gsyq5hOk8SADBxGB-qzhvXbH8BFPZhSyOPr9lCnNSmaTv6vN2XwL2oQ1XJHygyHx88YAR-2p3QzsAOpgUO-hl8BgcMJvmuAKqjOctd-gI4pSwmXnSbCBM4Lwc_lnYsyFKVTC06lmf73PdnzOyiqJ5lQ8T4aKsG29hcoD8t-A9ZBcXXX--Zi50JY', tags: ['VTSD', 'FLUXO'] },
+    recruiter: { name: 'Bernardo Silva', avatar_url: 'https://i.pravatar.cc/400?u=bernardo-silva', tags: ['VTSD', 'FLUXO'] },
     creator_id: 1,
   },
   {
@@ -2694,7 +2694,7 @@ const MOCK_MY_APPLICATIONS: Array<{
     applicationStatus: 'VISUALIZADA',
     created_at: '2023-10-08T14:30:00.000Z',
     tinder_jobs: { id: 102, title: 'Copywriter para Lançamento High-Ticket', specialty: 'Copy' },
-    recruiter: { name: 'Juliana Rocha', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC28q1YC49W44YujbHN0Omj8gWOHUfXG_SoEGVYqsjXfCCMe1K3RYkm4--e_lIv80zntPm-7guW5n7rFS1uBx1RUTATT_jNZrI3AMeZVFdFkHHFsJ_EzGsfOt7CKgOsExn7kFg-CCQMQWFe9J4Wwo_ygWvM8r_jAZy2QX_uQizHVV1gZpCJxCnn6-ZGgJ_85RHD1QlO1SKhFxUsnE30HRhppwzkRyXJ9N8dAqrMn9gmFib6q612TasJ9nSq4_ZGIPC5AY67mjTElIC1', tags: ['VTSD'] },
+    recruiter: { name: 'Juliana Rocha', avatar_url: 'https://i.pravatar.cc/400?u=juliana-rocha', tags: ['VTSD'] },
     creator_id: 2,
   },
   {
@@ -2702,7 +2702,7 @@ const MOCK_MY_APPLICATIONS: Array<{
     applicationStatus: 'EM_CONVERSA',
     created_at: '2023-10-05T09:15:00.000Z',
     tinder_jobs: { id: 103, title: 'Especialista em Automação (n8n/Make)', specialty: 'Automação' },
-    recruiter: { name: 'Marcos Olive', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBcqYbANZg7ueMQpsf9mWkMuguZKJ8OOJEGZkxMgPXnZ2kc-k6ofn2udr_YgksUZHL38TukV1W-cJxeSuQqUGCY3z76TSVLw2LQ7UPmCzatlxwYRYTdq4CDQl4FCRp1SJ8XKl_qXrEdqoq7Teyt9MArwrCo7OLZhwkyMoqn2wiV1WL2NhLOby1KTyFo7YVeTWpH5ELFmUDH_lw0rR7B13_x1B-K15B5UT6bI80gv1Cjo0pp8L23WI8p6m6gxfhPqE9pkmYra38diqS5', tags: ['VTSD', 'FLUXO'] },
+    recruiter: { name: 'Marcos Olive', avatar_url: 'https://i.pravatar.cc/400?u=marcos-olive', tags: ['VTSD', 'FLUXO'] },
     creator_id: 3,
   },
   {
@@ -2710,7 +2710,7 @@ const MOCK_MY_APPLICATIONS: Array<{
     applicationStatus: 'ENCERRADA',
     created_at: '2023-09-20T16:00:00.000Z',
     tinder_jobs: { id: 104, title: 'Lançador de Infoprodutos Wellness', specialty: 'Produto' },
-    recruiter: { name: 'Clara Nunes', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAPLVw_sUkNEQcad1f-JV-A5GZtkzS0UTXNaMKd9HkB43popS18HqtXCP87ymK9lim0zssiPzPp-u74BECC1TyaSmeaGagQjKe3htogDZ6B42IBe_EGMA979850kOIDNt3rKizLdGaPzdM_5C4QmQLUQlWXBSwVS-NhDjDnqFsINvte2S9RsiD4Z7g3BC_l92ctwx2_6QxQf_ADtqoFojD6As2dl7buKdQ4NWKfAsjQHSo_ibvhYGpe7dvYmYEPj0K9aNhZOJ8pdZd-', tags: ['VTSD'] },
+    recruiter: { name: 'Clara Nunes', avatar_url: 'https://i.pravatar.cc/400?u=clara-nunes', tags: ['VTSD'] },
     creator_id: 4,
   },
 ];
