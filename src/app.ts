@@ -4,11 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import authRoutes from './routes/auth';
-import auditRoutes from './routes/audits';
-import adminRoutes from './routes/admin';
-import creativesRoutes from './routes/creatives';
-import tinderRoutes from './routes/tinder';
+import authRoutes from './routes/auth.js';
+import auditRoutes from './routes/audits.js';
+import adminRoutes from './routes/admin.js';
+import creativesRoutes from './routes/creatives.js';
+import tinderRoutes from './routes/tinder.js';
 import './types';
 
 dotenv.config();
