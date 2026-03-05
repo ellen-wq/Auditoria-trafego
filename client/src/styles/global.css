@@ -1041,12 +1041,15 @@ button { font-family: inherit; }
 }
 
 .sidebar-accordion-content.open {
-  max-height: 320px;
+  max-height: 720px;
   opacity: 1;
+  overflow-y: auto;
 }
 
 .sidebar-accordion-content--em-breve.open {
-  max-height: 420px;
+  max-height: 520px;
+  opacity: 1;
+  overflow-y: auto;
 }
 
 .sidebar-accordion-nested {
