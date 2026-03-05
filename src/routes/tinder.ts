@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import { getSupabase } from '../db/database';
-import { requireAuth } from '../middleware/auth';
-import { ProfileService } from '../services/profile.service';
+import { getSupabase } from '../db/database.js';
+import { requireAuth } from '../middleware/auth.js';
+import { ProfileService } from '../services/profile.service.js';
 
 const router = Router();
 
@@ -698,7 +698,7 @@ router.get('/feed/expert', async (req: Request, res: Response): Promise<void> =>
     // Aplicar Smart Ordering se solicitado
     if (smartOrdering && users.length > 0) {
       try {
-        const { SmartOrderingService } = await import('../services/smart-ordering.service');
+        const { SmartOrderingService } = await import('../services/smart-ordering.service.js');
         const currentUserProfile = await supabase
           .from('tinder_mentor_profiles')
           .select('*')
