@@ -1,5 +1,7 @@
 node_modules/
 data/
+!client/src/data/
+!client/src/data/*
 uploads/
 *.db
 .env
