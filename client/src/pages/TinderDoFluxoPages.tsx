@@ -12,7 +12,7 @@ import TrendingPosts from '../components/comunidade/TrendingPosts';
 import GlobalSearch from '../components/search/GlobalSearch';
 import { useDebounce } from '../hooks/useDebounce';
 import type { PostWithCounts } from '../types/comunidade';
-import ProfileDiscoveryCard from '../components/tinder/ProfileDiscoveryCard';
+import ProfileDiscoveryCard, { ProfileDiscoveryCardActions } from '../components/tinder/ProfileDiscoveryCard';
 import MatchModal from '../components/tinder/MatchModal';
 import MatchesList from '../components/tinder/MatchesList';
 import SwipeActions from '../components/tinder/SwipeActions';
@@ -132,7 +132,7 @@ export function TinderExpertPage() {
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedUser, setMatchedUser] = useState<any>(null);
   const [favoritedIds, setFavoritedIds] = useState<Set<string>>(() => new Set());
-
+  
   // Header: busca + Expert/Coprodutor (sem filtros de parceria/cidade)
   const [lookingFor, setLookingFor] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -381,10 +381,9 @@ export function TinderExpertPage() {
 
   return (
     <TinderDoFluxoPageShell title="Expert & Coprodutor" subtitle="Descubra perfis e faça matches">
-      <div id="tinder-expert-page-root" data-page="expert" style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', minHeight: 0 }}>
-      {/* Header: glass, busca + Expert/Coprodutor + ícones (design HTML) */}
+      <div id="tinder-expert-page-root" data-page="expert" style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', minHeight: 0, background: '#F8FAFC' }}>
+      {/* Header: glass referência - h-20, backdrop-blur, px-8 */}
       <header
-        className="expert-glass-header"
         data-page="expert-search"
         style={{
           position: 'sticky',
@@ -396,13 +395,16 @@ export function TinderExpertPage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 16,
-          borderBottom: '1px solid var(--expert-slate-200)',
+          background: 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid #e2e8f0',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, maxWidth: 560 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, maxWidth: 672 }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <label htmlFor="expert-search-input" style={{ position: 'absolute', left: -9999 }}>Busca</label>
-            <span className="material-symbols-outlined" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--expert-slate-400)', fontSize: 20, pointerEvents: 'none' }} aria-hidden>search</span>
+            <span className="material-symbols-outlined" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 20, pointerEvents: 'none' }} aria-hidden>search</span>
             <input
               id="expert-search-input"
               type="text"
@@ -415,12 +417,12 @@ export function TinderExpertPage() {
                 fontSize: 14,
                 border: 'none',
                 borderRadius: 12,
-                background: 'var(--expert-background-light)',
-                color: 'var(--text-primary)',
+                background: '#f1f5f9',
+                color: '#0f172a',
                 outline: 'none',
               }}
               onFocus={(e) => {
-                e.currentTarget.style.boxShadow = '0 0 0 2px var(--expert-primary)';
+                e.currentTarget.style.boxShadow = '0 0 0 2px rgba(190, 242, 100, 0.5)';
               }}
               onBlur={(e) => {
                 e.currentTarget.style.boxShadow = 'none';
@@ -434,19 +436,19 @@ export function TinderExpertPage() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
-                padding: '10px 14px',
+                gap: 8,
+                padding: '10px 16px',
                 fontSize: 12,
                 fontWeight: 700,
                 border: 'none',
                 borderRadius: 12,
-                background: lookingFor.includes('expert') ? 'var(--expert-primary)' : 'var(--expert-background-light)',
-                color: lookingFor.includes('expert') ? '#0f172a' : 'var(--text-primary)',
+                background: lookingFor.includes('expert') ? '#BEF264' : '#f1f5f9',
+                color: lookingFor.includes('expert') ? '#0f172a' : '#0f172a',
                 cursor: 'pointer',
               }}
             >
               Expert
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>keyboard_arrow_down</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>keyboard_arrow_down</span>
             </button>
             <button
               type="button"
@@ -454,23 +456,23 @@ export function TinderExpertPage() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
-                padding: '10px 14px',
+                gap: 8,
+                padding: '10px 16px',
                 fontSize: 12,
                 fontWeight: 700,
                 border: 'none',
                 borderRadius: 12,
-                background: lookingFor.includes('coprodutor') ? 'var(--purple)' : 'var(--expert-background-light)',
-                color: lookingFor.includes('coprodutor') ? 'white' : 'var(--text-primary)',
+                background: lookingFor.includes('coprodutor') ? '#8b5cf6' : '#f1f5f9',
+                color: lookingFor.includes('coprodutor') ? '#fff' : '#0f172a',
                 cursor: 'pointer',
               }}
             >
               Coprodutor
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>keyboard_arrow_down</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>keyboard_arrow_down</span>
             </button>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Link
             to="/tinder-do-fluxo/matches"
             style={{
@@ -480,15 +482,15 @@ export function TinderExpertPage() {
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '50%',
-              background: 'var(--expert-background-light)',
-              color: 'var(--expert-slate-600)',
+              background: '#f1f5f9',
+              color: '#475569',
               textDecoration: 'none',
               position: 'relative',
             }}
             title="Notificações / Matches"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 22 }}>notifications</span>
-            <span style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: '50%', background: 'var(--red)', border: '2px solid white' }} />
+            <span style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: '50%', background: '#ef4444', border: '2px solid white' }} />
           </Link>
           <Link
             to="/tinder-do-fluxo/matches"
@@ -499,25 +501,25 @@ export function TinderExpertPage() {
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '50%',
-              background: 'var(--expert-background-light)',
-              color: 'var(--expert-slate-600)',
+              background: '#f1f5f9',
+              color: '#475569',
               textDecoration: 'none',
             }}
             title="Filtros"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 22 }}>tune</span>
           </Link>
-        </div>
+      </div>
       </header>
 
-      {/* Área central: card stack + ações (design HTML) */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, overflow: 'hidden', position: 'relative' }}>
+      {/* Área central: card tamanho fixo 800px, overflow visible para botões; scroll horizontal em telas estreitas */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: 32, overflowX: 'auto', overflowY: 'visible', position: 'relative', background: '#F8FAFC', minHeight: 0 }}>
         {loading ? (
           <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
-            <div className="loading-spinner" />
-            <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando perfis...</p>
+          <div className="loading-spinner" />
+          <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando perfis...</p>
           </div>
-        ) : discoveryProfiles.length === 0 ? (
+      ) : discoveryProfiles.length === 0 ? (
           <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
             <p style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
               {hasActiveFilters
@@ -525,29 +527,40 @@ export function TinderExpertPage() {
                 : 'Nenhum perfil disponível no momento. O feed mostra outros usuários Expert ou Coprodutor; verifique se há outros perfis no sistema.'}
             </p>
             {hasActiveFilters && (
-              <button className="btn btn-outline" onClick={handleClearFilters}>
+            <button className="btn btn-outline" onClick={handleClearFilters}>
                 Limpar busca e filtros
-              </button>
-            )}
-          </div>
-        ) : !currentProfile ? (
+            </button>
+        )}
+      </div>
+      ) : !currentProfile ? (
           <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
             <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>Nenhum perfil disponível no momento</p>
-          </div>
-        ) : (
+            </div>
+      ) : (
           <>
-            <div style={{ position: 'relative', width: '100%', maxWidth: 800, height: 550, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Container tamanho fixo (800x678) - card não redimensiona com a tela */}
+            <div style={{ position: 'relative', width: 800, minWidth: 800, flexShrink: 0, height: 678, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
               <SwipeActions onSwipeLeft={handlePass} onSwipeRight={handleMatch} disabled={isSendingInterest}>
-                <ProfileDiscoveryCard
-                  profile={currentProfile}
-                  onPass={handlePass}
-                  onMatch={handleMatch}
-                  onSwipe={handleSwipe}
-                  isSendingInterest={isSendingInterest}
-                  isFavorited={favoritedIds.has(String(currentProfile.id))}
-                  onFavorite={() => handleToggleFavorite(String(currentProfile.id))}
-                />
-              </SwipeActions>
+                <div style={{ width: 800, height: 550, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
+          <ProfileDiscoveryCard
+            profile={currentProfile}
+            onPass={handlePass}
+            onMatch={handleMatch}
+            onSwipe={handleSwipe}
+                    isSendingInterest={isSendingInterest}
+                    isFavorited={favoritedIds.has(String(currentProfile.id))}
+                    onFavorite={() => handleToggleFavorite(String(currentProfile.id))}
+          />
+                </div>
+        </SwipeActions>
+              <ProfileDiscoveryCardActions
+                profile={currentProfile}
+                onPass={handlePass}
+                onMatch={handleMatch}
+                onFavorite={() => handleToggleFavorite(String(currentProfile.id))}
+                isSendingInterest={isSendingInterest}
+                isFavorited={favoritedIds.has(String(currentProfile.id))}
+              />
             </div>
             <button
               type="button"
@@ -561,10 +574,10 @@ export function TinderExpertPage() {
                 gap: 8,
                 padding: '12px 24px',
                 borderRadius: 9999,
-                border: '1px solid var(--expert-slate-200)',
-                background: 'var(--bg-white)',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
-                color: 'var(--text-primary)',
+                border: '1px solid #e2e8f0',
+                background: '#fff',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                color: '#0f172a',
                 fontWeight: 700,
                 fontSize: 14,
                 cursor: 'pointer',
@@ -701,7 +714,7 @@ export function TinderPrestadoresPage() {
       if (debouncedSearchText) params.append('q', debouncedSearchText);
       if (activeTab !== 'ALL') params.append('tipo_servico', activeTab);
       if (ratingMin != null) params.append('rating_min', String(ratingMin));
-
+      
       const res = await api.get<{ services: any[] }>(`/api/tinder-do-fluxo/services?${params.toString()}`);
       setServices(res.services || []);
       setCurrentPage(1);
@@ -725,13 +738,13 @@ export function TinderPrestadoresPage() {
           <div className="prestadores-search-wrap">
             <label>
               <span className="material-symbols-outlined search-icon">search</span>
-              <input
+                <input
                 type="search"
                 placeholder="Buscar por nome, habilidade ou palavra-chave..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
               />
-            </label>
+              </label>
           </div>
           <div className="prestadores-filter-buttons">
             <button type="button" className="prestadores-filter-btn" title="Especialidade filtrada pelas abas abaixo">
@@ -749,26 +762,26 @@ export function TinderPrestadoresPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Avaliação mínima:</span>
               {([null, 1, 2, 3, 4, 5] as const).map((r) => (
-                <button
+              <button
                   key={r ?? 0}
-                  type="button"
+                type="button"
                   onClick={() => setRatingMin(r === ratingMin ? null : r)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 'var(--radius)',
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius)',
                     border: `1px solid ${ratingMin === r ? 'var(--accent-dark)' : 'var(--border)'}`,
                     background: ratingMin === r ? 'color-mix(in srgb, var(--accent) 18%, transparent)' : 'var(--bg-white)',
                     color: ratingMin === r ? 'var(--accent-dark)' : 'var(--text-primary)',
-                    cursor: 'pointer',
-                    fontSize: 14,
+                  cursor: 'pointer',
+                  fontSize: 14,
                     fontWeight: 600,
-                  }}
-                >
+                }}
+              >
                   {r == null ? 'Qualquer' : `${r}+`}
-                </button>
-              ))}
-            </div>
+              </button>
+            ))}
           </div>
+        </div>
           <div className="prestadores-tabs">
             {SPECIALTY_TABS.map(({ value, label }) => (
               <button
@@ -781,7 +794,7 @@ export function TinderPrestadoresPage() {
               </button>
             ))}
           </div>
-        </div>
+      </div>
 
         {/* Results Grid */}
         {loading ? (
@@ -803,7 +816,7 @@ export function TinderPrestadoresPage() {
                       src={prestadoresAvatarUrl(s)}
                       alt=""
                     />
-                  </div>
+                </div>
                   <div className="prestadores-card-body">
                     <div>
                       <div className="prestadores-card-header">
@@ -811,7 +824,7 @@ export function TinderPrestadoresPage() {
                         <div className="prestadores-card-rating">
                           <span className="material-symbols-outlined">star</span>
                           {Number(s.rating_avg ?? 0).toFixed(1)}
-                        </div>
+              </div>
                       </div>
                       <p className="prestadores-card-city">{prestadoresCityDisplay(s)}</p>
                     </div>
@@ -867,8 +880,8 @@ export function TinderPrestadoresPage() {
                 >
                   <span className="material-symbols-outlined">chevron_right</span>
                 </button>
-              </div>
-            )}
+          </div>
+        )}
           </>
         )}
 
@@ -1001,7 +1014,7 @@ export function TinderVagasPage() {
   }, [location.state]);
 
   useEffect(() => {
-    loadJobs();
+      loadJobs();
   }, [statusTab, page, debouncedSearch, filters.tipo_vaga, filters.pretensao_min, filters.pretensao_max, filters.modelo_trabalho]);
 
   const loadJobs = async () => {
@@ -1046,23 +1059,23 @@ export function TinderVagasPage() {
       headerRight={
         <div className="vagas-tabs">
           {(['todas', 'minhas', 'abertas', 'encerradas'] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
+          <button
+            key={t}
+            type="button"
               className={statusTab === t ? 'active' : ''}
-              onClick={() => {
-                setSearchParams((p) => {
-                  const next = new URLSearchParams(p);
-                  next.set('tab', t);
-                  return next;
-                });
-                setPage(1);
-              }}
+            onClick={() => {
+              setSearchParams((p) => {
+                const next = new URLSearchParams(p);
+                next.set('tab', t);
+                return next;
+              });
+              setPage(1);
+            }}
             >
               {t === 'todas' ? 'Todas' : t === 'minhas' ? 'Minhas vagas' : t === 'abertas' ? 'Abertas' : 'Encerradas'}
-            </button>
-          ))}
-        </div>
+          </button>
+        ))}
+      </div>
       }
     >
       <div className="vagas-page">
@@ -1073,7 +1086,7 @@ export function TinderVagasPage() {
               onSearch={setSearchQuery}
               initialValue={searchQuery}
             />
-          </div>
+        </div>
           <Link className="btn btn-outline" to="/tinder-do-fluxo/vagas/minhas-candidaturas">
             Minhas Candidaturas
           </Link>
@@ -1104,36 +1117,36 @@ export function TinderVagasPage() {
                 onChange={(e) => { setFilters((f) => ({ ...f, tipo_vaga: e.target.value })); setPage(1); }}
                 style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)' }}
               >
-                <option value="">Todos</option>
+              <option value="">Todos</option>
                 {TIPO_VAGA_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt.toLowerCase()}>{opt}</option>
-                ))}
-              </select>
-            </div>
+                <option key={opt} value={opt.toLowerCase()}>{opt}</option>
+              ))}
+            </select>
+          </div>
             <div className="form-group" style={{ marginBottom: 0, minWidth: 120 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
                 Valor mín. (R$)
               </label>
-              <input
-                type="number"
-                placeholder="0"
-                value={filters.pretensao_min}
+            <input
+              type="number"
+              placeholder="0"
+              value={filters.pretensao_min}
                 onChange={(e) => { setFilters((f) => ({ ...f, pretensao_min: e.target.value })); setPage(1); }}
                 style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)' }}
-              />
-            </div>
+            />
+          </div>
             <div className="form-group" style={{ marginBottom: 0, minWidth: 120 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
                 Valor máx. (R$)
               </label>
-              <input
-                type="number"
+            <input
+              type="number"
                 placeholder="—"
-                value={filters.pretensao_max}
+              value={filters.pretensao_max}
                 onChange={(e) => { setFilters((f) => ({ ...f, pretensao_max: e.target.value })); setPage(1); }}
                 style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)' }}
-              />
-            </div>
+            />
+          </div>
             <div className="form-group" style={{ marginBottom: 0, minWidth: 140 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
                 Modelo de trabalho
@@ -1143,12 +1156,12 @@ export function TinderVagasPage() {
                 onChange={(e) => { setFilters((f) => ({ ...f, modelo_trabalho: e.target.value })); setPage(1); }}
                 style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)' }}
               >
-                <option value="">Todos</option>
+              <option value="">Todos</option>
                 {MODELO_TRABALHO_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt.toLowerCase()}>{opt}</option>
-                ))}
-              </select>
-            </div>
+                <option key={opt} value={opt.toLowerCase()}>{opt}</option>
+              ))}
+            </select>
+          </div>
             {hasActiveFilters && (
               <button type="button" className="btn btn-outline" onClick={clearFilters} style={{ padding: '8px 16px', fontSize: 13 }}>
                 Limpar filtros
@@ -1167,7 +1180,7 @@ export function TinderVagasPage() {
         {error && (
           <div className="alert alert-error" style={{ marginBottom: 16 }}>
             {error}
-          </div>
+            </div>
         )}
 
         {loading ? (
@@ -1178,7 +1191,7 @@ export function TinderVagasPage() {
                 <div style={{ height: 24, background: 'var(--border-light)', borderRadius: 8, marginBottom: 8 }} />
                 <div style={{ height: 16, background: 'var(--border-light)', borderRadius: 8, marginBottom: 16 }} />
                 <div style={{ height: 16, background: 'var(--border-light)', borderRadius: 8, width: '60%' }} />
-              </div>
+          </div>
             ))}
           </div>
         ) : (
@@ -1197,7 +1210,7 @@ export function TinderVagasPage() {
                     ? 'As vagas abertas de todos os usuários aparecem na aba Todas.'
                     : 'Vagas criadas por você aparecerão aqui (Minhas, Abertas e Encerradas).'}
                 </p>
-              </div>
+                    </div>
             ) : jobs.length === 0 && hasActiveFilters ? (
               <div className="card" style={{ padding: 48, textAlign: 'center', borderRadius: 16 }}>
                 <EmptyState text="Nenhuma vaga encontrada com os filtros selecionados." />
@@ -1207,7 +1220,7 @@ export function TinderVagasPage() {
                 <button type="button" className="btn btn-primary" onClick={clearFilters} style={{ marginTop: 16 }}>
                   Limpar filtros
                 </button>
-              </div>
+                    </div>
             ) : (
               <div className="vagas-grid">
                 {jobs.map((j) => {
@@ -1233,7 +1246,7 @@ export function TinderVagasPage() {
                         >
                           <span className="material-symbols-outlined" style={{ fontSize: 24 }}>
                             {getJobCardIcon(j.specialty)}
-                          </span>
+                      </span>
                         </div>
                         <span
                           style={{
@@ -1268,7 +1281,7 @@ export function TinderVagasPage() {
                         >
                           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                             person
-                          </span>
+                        </span>
                           Sua vaga
                         </div>
                       )}
@@ -1284,14 +1297,14 @@ export function TinderVagasPage() {
                             {j.location && /remoto/i.test(String(j.location)) ? 'distance' : 'location_on'}
                           </span>
                           {j.location || j.localizacao || 'Não especificado'}
-                        </div>
+                    </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
                           <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--text-muted)' }}>
                             calendar_today
                           </span>
                           {formatPrazo(j)}
-                        </div>
-                      </div>
+                </div>
+              </div>
                       <div
                         style={{
                           paddingTop: 20,
@@ -1309,7 +1322,7 @@ export function TinderVagasPage() {
                             {j.value != null && Number(j.value) > 0
                               ? `R$ ${Number(j.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                               : 'A combinar'}
-                          </div>
+          </div>
                         </div>
                         <div
                           className="vagas-card-arrow"
@@ -1370,7 +1383,7 @@ export function TinderVagasPage() {
                 <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
                   <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
                     chevron_right
-                  </span>
+                </span>
                 </button>
               </div>
             )}
@@ -1942,9 +1955,9 @@ export function TinderMatchesPage() {
           <div className="matches-chat-left-header">
             <h2>Faça amigos no <span className="accent">Fluxo!</span></h2>
             <p>Gerencie suas conexões e conversas</p>
-          </div>
+                  </div>
 
-          {loading ? (
+      {loading ? (
             <MatchesListSkeleton />
           ) : (
             <>
@@ -2066,10 +2079,10 @@ export function TinderMatchesPage() {
                 </div>
                 {messagesLoading ? (
                   <div style={{ textAlign: 'center', padding: 24 }}>
-                    <div className="loading-spinner" />
+          <div className="loading-spinner" />
                     <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>Carregando mensagens...</p>
                   </div>
-                ) : (
+      ) : (
                   <>
                     {messages.map((msg) => {
                       const isSent = msg.sender_id === currentUser?.id;
@@ -2194,14 +2207,14 @@ export function TinderFavoritosPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Buscar favoritos"
           />
-        </div>
+          </div>
         <div className="favoritos-header-actions">
           <button type="button" className="favoritos-filter-dropdown" aria-haspopup="listbox" aria-label="Filtro">
             Favoritos <span style={{ fontSize: 14 }}>▼</span>
           </button>
           <Link to="/tinder-do-fluxo/matches" className="favoritos-header-btn" title="Matches">🔔</Link>
           <Link to="/tinder-do-fluxo/perfil" className="favoritos-header-btn" title="Meu perfil">👤</Link>
-        </div>
+      </div>
       </header>
 
       {favorites.length === 0 ? (
@@ -2447,8 +2460,8 @@ export function TinderServiceDetailPage() {
   }
 
   if (loading) {
-    return (
-      <TinderDoFluxoPageShell title="Perfil do Prestador">
+  return (
+    <TinderDoFluxoPageShell title="Perfil do Prestador">
         <div className="card" style={{ padding: 48, textAlign: 'center' }}>
           <EmptyState text="Carregando prestador..." />
         </div>
@@ -2459,9 +2472,9 @@ export function TinderServiceDetailPage() {
   if (!service) {
     return (
       <TinderDoFluxoPageShell title="Perfil do Prestador">
-        <div className="card">
+          <div className="card">
           <EmptyState text="Prestador não encontrado." />
-        </div>
+          </div>
       </TinderDoFluxoPageShell>
     );
   }
@@ -2579,14 +2592,14 @@ export function TinderServiceDetailPage() {
                 {reviews.length > 10 && <button type="button" className="prestador-profile-btn-all-reviews">Ver todas as {reviews.length} avaliações</button>}
                 <div className="prestador-profile-form-review">
                   <h4 style={{ marginBottom: 16 }}>Deixar avaliação</h4>
-                  <div className="form-group"><label>Nota (1-5)</label><input type="number" min={1} max={5} value={rating} onChange={(e) => setRating(Number(e.target.value))} /></div>
+            <div className="form-group"><label>Nota (1-5)</label><input type="number" min={1} max={5} value={rating} onChange={(e) => setRating(Number(e.target.value))} /></div>
                   <div className="form-group"><label>Comentário</label><textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Conte sua experiência..." /></div>
-                  <button className="btn btn-primary" type="button" onClick={submitReview}>Avaliar prestador</button>
-                  {message && <p style={{ marginTop: 8, color: 'var(--green)' }}>{message}</p>}
-                </div>
+            <button className="btn btn-primary" type="button" onClick={submitReview}>Avaliar prestador</button>
+            {message && <p style={{ marginTop: 8, color: 'var(--green)' }}>{message}</p>}
+          </div>
               </section>
             )}
-          </div>
+            </div>
 
           <aside className="prestador-profile-sidebar">
             <div className="prestador-profile-price-card">
@@ -2599,7 +2612,7 @@ export function TinderServiceDetailPage() {
                 {beneficios.map((b, i) => (
                   <div key={i} className="prestador-profile-benefit"><span className="material-symbols-outlined">check_circle</span><span>{b}</span></div>
                 ))}
-              </div>
+          </div>
               {whatsappUrl && (
                 <a className="prestador-profile-whatsapp-btn" href={whatsappUrl} target="_blank" rel="noopener noreferrer">
                   <span className="material-symbols-outlined">chat</span> Chamar no WhatsApp
@@ -2677,7 +2690,7 @@ const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
 export function TinderMyApplicationsPage() {
   const [search, setSearch] = useState('');
   const applications = MOCK_MY_APPLICATIONS;
-
+  
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
@@ -2703,7 +2716,7 @@ export function TinderMyApplicationsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-          </div>
+        </div>
           <div className="header-actions">
             <button type="button" title="Notificações">
               <span className="material-symbols-outlined">notifications</span>
@@ -2733,36 +2746,36 @@ export function TinderMyApplicationsPage() {
         {filteredApplications.length === 0 ? (
           <div className="card empty-state-card">
             <EmptyState text={search ? 'Nenhuma candidatura encontrada para essa busca.' : 'Você ainda não se candidatou para nenhuma vaga.'} />
-          </div>
-        ) : (
+        </div>
+      ) : (
           <>
             <div className="cards-list">
               {filteredApplications.map((app) => {
-                const job = app.tinder_jobs;
+            const job = app.tinder_jobs;
                 const statusClass = app.applicationStatus.toLowerCase().replace('_', '-');
                 const isEncerrada = app.applicationStatus === 'ENCERRADA';
                 const isEmConversa = app.applicationStatus === 'EM_CONVERSA';
-                return (
+            return (
                   <div key={app.id} className={`app-card ${isEncerrada ? 'encerrada' : ''} ${isEmConversa ? 'em-conversa' : ''}`}>
                     <div className="app-card-body">
                       <div className="app-card-meta">
                         <span className={`app-card-badge ${statusClass}`}>{APPLICATION_STATUS_LABEL[app.applicationStatus]}</span>
                         <span className="app-card-date">Aplicada em {formatDate(app.created_at)}</span>
-                      </div>
+                  </div>
                       <h3 className="app-card-title">{job.title}</h3>
                       <p className="app-card-category">{job.specialty || 'Vaga'}</p>
                       <div className="app-card-recruiter">
                         <div className="avatar">
                           <img src={app.recruiter.avatar_url} alt="" />
-                        </div>
+                </div>
                         <div>
                           <p className="recruiter-name">{app.recruiter.name}</p>
                           <div className="recruiter-tags">
                             {app.recruiter.tags.map((tag) => (
                               <span key={tag}>{tag}</span>
                             ))}
-                          </div>
-                        </div>
+                </div>
+                  </div>
                       </div>
                     </div>
                     <div className="app-card-actions">
@@ -2784,10 +2797,10 @@ export function TinderMyApplicationsPage() {
                         <Link className="btn-card outline" to={`/tinder-do-fluxo/vagas/${job.id}`}>Ver vaga</Link>
                       )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+              </div>
+            );
+          })}
+        </div>
             <div className="pagination">
               <nav>
                 <button type="button" disabled aria-label="Página anterior">
