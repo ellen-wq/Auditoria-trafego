@@ -5,102 +5,157 @@ import AppLayout from '../components/AppLayout';
 import TinderDoFluxoPageShell from '../components/tinder-do-fluxo/TinderDoFluxoPageShell';
 import { ExpertSwipeDeck, type ExpertUser } from '../components/tinder-do-fluxo/ExpertSwipeDeck';
 import { api } from '../services/api';
-import TemaSidebar from '../components/comunidade/TemaSidebar';
-import FeedHeader from '../components/comunidade/FeedHeader';
-import PostCard from '../components/comunidade/PostCard';
-import TrendingPosts from '../components/comunidade/TrendingPosts';
 import GlobalSearch from '../components/search/GlobalSearch';
 import { useDebounce } from '../hooks/useDebounce';
-import type { PostWithCounts } from '../types/comunidade';
 import ProfileDiscoveryCard, { ProfileDiscoveryCardActions } from '../components/tinder/ProfileDiscoveryCard';
 import MatchModal from '../components/tinder/MatchModal';
 import MatchesList from '../components/tinder/MatchesList';
 import SwipeActions from '../components/tinder/SwipeActions';
 
-function EmptyState({ text }: { text: string }) {
-  return <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{text}</p>;
-}
+// Comunidade: discovery card (apenas frontend, design do HTML de referência)
+const MOCK_PROFILES = [
+  {
+    name: 'Ricardo',
+    location: 'São Paulo, SP',
+    levelLabel: 'Pro+Master',
+    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB0HMZu3MgpQRiHZkWgPPxKugufeGll-MrO67qB7LNB_LuSuNwOml-m_0jIvs0OONvHi0DiFaAwW97h5GWdvi_MCo4CNgWZFSWJHLJUh_ldBFf7_NkcnWrvlnBr-L0rxK0BKcBFWAkQOtxdzcN2iPUptI-dyU0bzjB7WfNnXXFBMyHrhUSxYEhtch0rgF2cu5aTY2GxcOcXirRazxV8Kz3kpvRrzewUj10DSNjAoP_qSaIzd8xshuVSYlHlXxjRsnKPTdaUhkPkBQk',
+    tags: [
+      { icon: 'sports_soccer', label: 'Football' },
+      { icon: 'camera_alt', label: 'Photography' },
+      { icon: 'headphones', label: 'Techno' },
+      { icon: 'terminal', label: 'Coding' },
+    ],
+  },
+];
+
+const LIKED_AVATARS = [
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuDJKR4yzRTvuBkzlaaQuvS7l-_9ufQM1yAG-e-O95QD1zrQV8abs7CL2Y7-FaAC4xogppb29T7cGEW6cbiD-kPXZLucs8ceVNb9sie7Vo09zH8vCBHACEznwN6gSFKg3cB8_Yok8cwG7jMHCiUBM_lqiJcPkgjup6B7KyfRMO5B4VZr0sbOFF0bC_YzzvV2Jrq0bFubC5IaSxq4Yuvn4_NDLruW9rLE21gqTOh_dsSnHMJA9mzmCoM_wWtcqCvDTlUyvrDtflCI33M',
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuAirvVwXFR5ARfYiG7bMwwGNZbr1Up1VRUAhACtAiHgNce_-QMAsfciO_h2QQ4WDyVYlJFDm5o_cn3SG2JkalXfCt9ZqX97Rb9jFei4g_396T2cC8kDLn32T2nWl3lub0q6aXs1dMGLeeoh3heSokUfOy8d_DL6oBpFjzzjdd8I96SFyfQh03Xj-K3A8IgcNHbxn-pm9_vBWEwNgZNgUrmqqSeaEmt2K9_Nv2ObHeN8mi4OxjuCIyEgbf101wP8mn4IrOjZV5zhm_0',
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuA-B07swYWYcssbLEiLULtu0iHtWmTTBBXkh9CQjEJmtvHt_HnaSmuwhJo9y3Jn8_XXrwVWLd1yLpakj6GohfapnyYN7vAz5t028sDg3axpqwvHM0jTKFKp99CtFFgkkIaJrAKPvyEdiIAU0o2yxqcccOflKJYWpmjONX7rEzhSSnzQ143clsmBqcuY47gDG37ygry8RfSEI-0FoM6Tr-zxO8DD-J6uCSIQ7ImGQnnHQ473tCJqgm3ZxYhwAXQLKOCIDUBxHq0rV2c',
+];
 
 export function TinderComunidadePage() {
-  const [selectedTemaId, setSelectedTemaId] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'recent' | 'trending'>('recent');
-  const [searchText, setSearchText] = useState('');
-  const debouncedSearchText = useDebounce(searchText, 400);
-  
-  const { data: feedData, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ['feed', selectedTemaId, sortBy, debouncedSearchText],
-    queryFn: async ({ pageParam = 1 }) => {
-      const params = new URLSearchParams();
-      if (selectedTemaId) params.append('tema_id', selectedTemaId);
-      if (debouncedSearchText) params.append('q', debouncedSearchText);
-      params.append('page', String(pageParam));
-      params.append('per_page', '10');
-      
-      const res = await api.get<{ posts: PostWithCounts[]; hasMore: boolean }>(
-        `/api/tinder-do-fluxo/comunidade/posts?${params.toString()}`
-      );
-      return res;
-    },
-    getNextPageParam: (lastPage, allPages) => {
-      return lastPage.hasMore ? allPages.length + 1 : undefined;
-    },
-    initialPageParam: 1,
-  });
-
-  const posts = feedData?.pages.flatMap((page) => page.posts) || [];
+  const [level, setLevel] = useState<'all' | 'pro_master' | 'hard' | 'soft'>('all');
+  const [hobby, setHobby] = useState('Esportes');
+  const [distance, setDistance] = useState(25);
+  const profile = MOCK_PROFILES[0];
 
   return (
-    <TinderDoFluxoPageShell title="Comunidade">
-      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 300px', gap: 20, alignItems: 'start' }}>
-        {/* Sidebar de Temas */}
-        <TemaSidebar selectedTemaId={selectedTemaId} onSelectTema={setSelectedTemaId} />
+    <AppLayout hideTopbar>
+      <div className="comunidade-discovery">
+        <main>
+          <div className="comunidade-header">
+            <h1 className="comunidade-title">
+              Comunidade<span className="comunidade-title-dot">.</span>
+            </h1>
+            <p className="comunidade-subtitle">Descubra novas conexões no fluxo.</p>
+          </div>
 
-        {/* Feed Principal */}
-        <div>
-          <GlobalSearch
-            placeholder="Buscar por tema, autor, título ou conteúdo..."
-            onSearch={setSearchText}
-          />
-          
-          <FeedHeader 
-            selectedTemaId={selectedTemaId}
-            onSortChange={setSortBy}
-            sortBy={sortBy}
-          />
-
-          {isLoading ? (
-            <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-              <p style={{ color: 'var(--text-secondary)' }}>Carregando publicações...</p>
-            </div>
-          ) : posts.length === 0 ? (
-      <div className="card">
-              <EmptyState text={debouncedSearchText ? "Nenhuma publicação encontrada para sua busca." : "Nenhuma publicação encontrada."} />
-            </div>
-          ) : (
-            <>
-              {posts.map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-              
-              {hasNextPage && (
-                <div style={{ textAlign: 'center', marginTop: 20 }}>
-                  <button
-                    onClick={() => fetchNextPage()}
-                    disabled={isFetchingNextPage}
-                    className="btn btn-outline"
-                  >
-                    {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
-                  </button>
+          <div className="comunidade-card-wrap">
+            <div className="comunidade-card">
+              <div
+                className="comunidade-card-photo"
+                style={{ backgroundImage: `url('${profile.imageUrl}')` }}
+              >
+                <span className="comunidade-badge-ativo">
+                  <span className="material-symbols-outlined filled-icon" style={{ fontSize: 14 }}>verified</span>
+                  {' '}Ativo Agora
+                </span>
+                <div className="comunidade-card-name-block">
+                  <div className="comunidade-card-name-row">
+                    <h2 className="comunidade-card-name">{profile.name}</h2>
+                    <span className="material-symbols-outlined filled-icon comunidade-card-verified">verified_user</span>
+                  </div>
+                  <div className="comunidade-card-location">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>location_on</span>
+                    {profile.location}
+                  </div>
                 </div>
-              )}
-            </>
-          )}
               </div>
 
-        {/* Trending Sidebar */}
-        <TrendingPosts />
+              <div className="comunidade-card-body">
+                <div>
+                  <div className="comunidade-level-row">
+                    <span className="comunidade-level-label">Nível de Assinatura</span>
+                    <span className="comunidade-level-badge">{profile.levelLabel}</span>
+                  </div>
+                  <div className="comunidade-tags">
+                    {profile.tags.map((t) => (
+                      <span key={t.label} className="comunidade-tag">
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{t.icon}</span>
+                        {t.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="comunidade-actions">
+                  <button type="button" className="comunidade-btn-action" aria-label="Passar">
+                    <span className="material-symbols-outlined" style={{ fontSize: 28 }}>close</span>
+                  </button>
+                  <button type="button" className="comunidade-btn-action comunidade-btn-star" aria-label="Super like">
+                    <span className="material-symbols-outlined filled-icon" style={{ fontSize: 36 }}>star</span>
+                  </button>
+                  <button type="button" className="comunidade-btn-action comunidade-btn-like" aria-label="Curtir">
+                    <span className="material-symbols-outlined filled-icon" style={{ fontSize: 28 }}>favorite</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="comunidade-footer-hint">
+            <span><strong>42</strong> Novos matches hoje</span>
+            <span className="comunidade-footer-dot" />
+            <span>Deslize <span className="comunidade-key">E</span> ou <span className="comunidade-key">D</span></span>
+          </div>
+        </main>
+
+        <aside>
+          <h3>Configurações de Descoberta</h3>
+          <div className="comunidade-sidebar-section">
+            <label className="comunidade-sidebar-label">Cidade</label>
+            <div className="comunidade-input-wrap">
+              <span className="material-symbols-outlined comunidade-input-icon">location_on</span>
+              <input type="text" defaultValue="São Paulo, SP" readOnly />
+            </div>
+          </div>
+          <div className="comunidade-sidebar-section">
+            <label className="comunidade-sidebar-label">Nível</label>
+            <div className="comunidade-level-btns">
+              <button type="button" className={`comunidade-sidebar-btn ${level === 'all' ? 'active' : ''}`} onClick={() => setLevel('all')}>All Levels</button>
+              <button type="button" className={`comunidade-sidebar-btn ${level === 'pro_master' ? 'active' : ''}`} onClick={() => setLevel('pro_master')}>Pro+Master</button>
+              <button type="button" className={`comunidade-sidebar-btn ${level === 'hard' ? 'active' : ''}`} onClick={() => setLevel('hard')}>Hard</button>
+              <button type="button" className={`comunidade-sidebar-btn ${level === 'soft' ? 'active' : ''}`} onClick={() => setLevel('soft')}>Soft</button>
+            </div>
+          </div>
+          <div className="comunidade-sidebar-section">
+            <div className="comunidade-distance-row">
+              <label className="comunidade-sidebar-label">Distance (km)</label>
+              <span className="comunidade-distance-value">{distance} km</span>
+            </div>
+            <input type="range" min={1} max={100} value={distance} onChange={(e) => setDistance(Number(e.target.value))} className="comunidade-range" />
+          </div>
+          <div className="comunidade-sidebar-section">
+            <label className="comunidade-sidebar-label">Hobbies</label>
+            <div className="comunidade-hobby-btns">
+              <button type="button" className={`comunidade-hobby-btn ${hobby === 'Esportes' ? 'active' : ''}`} onClick={() => setHobby('Esportes')}>Esportes</button>
+              <button type="button" className={`comunidade-hobby-btn ${hobby === 'Música' ? 'active' : ''}`} onClick={() => setHobby('Música')}>Música</button>
+              <button type="button" className={`comunidade-hobby-btn ${hobby === 'Arte' ? 'active' : ''}`} onClick={() => setHobby('Arte')}>Arte</button>
+              <button type="button" className={`comunidade-hobby-btn ${hobby === 'Tecnologia' ? 'active' : ''}`} onClick={() => setHobby('Tecnologia')}>Tecnologia</button>
+            </div>
+          </div>
+          <div className="comunidade-sidebar-section" style={{ marginTop: '0.5rem' }}>
+            <label className="comunidade-sidebar-label" style={{ display: 'block', marginBottom: '1rem' }}>You recently liked</label>
+            <div className="comunidade-liked">
+              {LIKED_AVATARS.map((url, i) => (
+                <div key={i} className="comunidade-liked-avatar" style={{ backgroundImage: `url('${url}')`, zIndex: 3 - i }} />
+              ))}
+              <div className="comunidade-liked-more">+12</div>
+            </div>
+          </div>
+        </aside>
       </div>
-    </TinderDoFluxoPageShell>
+    </AppLayout>
   );
 }
 
