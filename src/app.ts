@@ -2,8 +2,11 @@ import dotenv from 'dotenv';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import authRoutes from './routes/auth.js';
 import auditRoutes from './routes/audits.js';
 import adminRoutes from './routes/admin.js';
