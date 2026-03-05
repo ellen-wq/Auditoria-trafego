@@ -65,12 +65,6 @@ const MOCK_PROFILES: MockProfile[] = [
   },
 ];
 
-const MOCK_RECENT_LIKES = [
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuDJKR4yzRTvuBkzlaaQuvS7l-_9ufQM1yAG-e-O95QD1zrQV8abs7CL2Y7-FaAC4xogppb29T7cGEW6cbiD-kPXZLucs8ceVNb9sie7Vo09zH8vCBHACEznwN6gSFKg3cB8_Yok8cwG7jMHCiUBM_lqiJcPkgjup6B7KyfRMO5B4VZr0sbOFF0bC_YzzvV2Jrq0bFubC5IaSxq4Yuvn4_NDLruW9rLE21gqTOh_dsSnHMJA9mzmCoM_wWtcqCvDTlUyvrDtflCI33M',
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuAirvVwXFR5ARfYiG7bMwwGNZbr1Up1VRUAhACtAiHgNce_-QMAsfciO_h2QQ4WDyVYlJFDm5o_cn3SG2JkalXfCt9ZqX97Rb9jFei4g_396T2cC8kDLn32T2nWl3lub0q6aXs1dMGLeeoh3heSokUfOy8d_DL6oBpFjzzjdd8I96SFyfQh03Xj-K3A8IgcNHbxn-pm9_vBWEwNgZNgUrmqqSeaEmt2K9_Nv2ObHeN8mi4OxjuCIyEgbf101wP8mn4IrOjZV5zhm_0',
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuA-B07swYWYcssbLEiLULtu0iHtWmTTBBXkh9CQjEJmtvHt_HnaSmuwhJo9y3Jn8_XXrwVWLd1yLpakj6GohfapnyYN7vAz5t028sDg3axpqwvHM0jTKFKp99CtFFgkkIaJrAKPvyEdiIAU0o2yxqcccOflKJYWpmjONX7rEzhSSnzQ143clsmBqcuY47gDG37ygry8RfSEI-0FoM6Tr-zxO8DD-J6uCSIQ7ImGQnnHQ473tCJqgm3ZxYhwAXQLKOCIDUBxHq0rV2c',
-];
-
 export default function ComunidadePage() {
   const [profileIndex, setProfileIndex] = useState(0);
   const profile = MOCK_PROFILES[profileIndex];
@@ -201,6 +195,7 @@ export default function ComunidadePage() {
               <div className="relative">
                 <input
                   type="text"
+                  onKeyDown={(e) => e.key === 'Enter' && nextProfile()}
                   className="w-full pl-9 pr-4 py-2 text-sm bg-slate-100 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-primary/50 text-slate-700 dark:text-slate-300"
                   placeholder="São Paulo, SP"
                 />
@@ -251,6 +246,7 @@ export default function ComunidadePage() {
               </div>
               <input
                 type="range"
+                onChange={nextProfile}
                 className="w-full accent-primary h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer"
               />
             </div>
@@ -289,23 +285,6 @@ export default function ComunidadePage() {
               </div>
             </div>
 
-            <div className="mt-4">
-              <label className="text-xs font-bold text-slate-500 uppercase block mb-4">
-                You recently liked
-              </label>
-              <div className="flex -space-x-3">
-                {MOCK_RECENT_LIKES.map((url, i) => (
-                  <div
-                    key={i}
-                    className="size-10 rounded-full border-2 border-white dark:border-slate-900 bg-cover bg-center flex-shrink-0"
-                    style={{ backgroundImage: `url('${url}')` }}
-                  />
-                ))}
-                <div className="size-10 rounded-full border-2 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500 flex-shrink-0">
-                  +12
-                </div>
-              </div>
-            </div>
           </div>
         </aside>
       </div>
