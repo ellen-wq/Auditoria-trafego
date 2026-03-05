@@ -45,7 +45,8 @@ function resolvePublicDist(): string {
 async function getAppInstance(): Promise<ExpressAppLike> {
   if (!appInstance) {
     resolvePublicDist();
-    const appModule = await import('../src/app');
+    // Usar o app já compilado em dist (inclui rotas compiladas em dist/routes/*)
+    const appModule = await import('../dist/app.js');
     appInstance = appModule.default as ExpressAppLike;
   }
   return appInstance;

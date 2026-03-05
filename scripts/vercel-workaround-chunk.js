@@ -2,9 +2,11 @@
  * Workaround: a Vercel pode tentar abrir um chunk com hash antigo (ex.: AdminCriativosPage-DYA_OOBG.js)
  * após o build. Copiamos o chunk atual para esse nome para o passo da Vercel não falhar.
  */
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public', 'assets');
 const legacyName = 'AdminCriativosPage-DYA_OOBG.js';
 const legacyPath = path.join(publicDir, legacyName);
