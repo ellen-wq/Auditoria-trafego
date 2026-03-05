@@ -2826,7 +2826,7 @@ export function TinderMyApplicationsPage() {
                         <Link className="btn-card secondary" to={`/tinder-do-fluxo/vagas/${job.id}`}>Ver vaga</Link>
                       )}
                       {!isEncerrada && (
-                        <Link className="btn-card outline" to={app.creator_id ? `/tinder-do-fluxo/users/${app.creator_id}` : '#'}>Ver perfil</Link>
+                        <Link className="btn-card outline" to={app.creator_id ? `/tinder-do-fluxo/u/${app.creator_id}` : '#'}>Ver perfil</Link>
                       )}
                       {isEncerrada && (
                         <Link className="btn-card outline" to={`/tinder-do-fluxo/vagas/${job.id}`}>Ver vaga</Link>
