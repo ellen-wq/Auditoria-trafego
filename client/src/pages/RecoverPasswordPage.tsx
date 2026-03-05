@@ -47,7 +47,6 @@ export default function RecoverPasswordPage() {
       <div className="auth-card">
         <div className="auth-logo">
           <img src={logoFluxo} alt="Fluxo" className="auth-logo-image" />
-          <span className="auth-logo-tools">ferramentas</span>
         </div>
         <p className="auth-subtitle">Recupere sua senha para acessar a plataforma</p>
 

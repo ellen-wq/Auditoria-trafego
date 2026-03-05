@@ -6,7 +6,7 @@ export default function SkeletonProfile() {
         borderRadius: 'var(--radius)',
         border: '1px solid var(--border)',
         padding: 24,
-        animation: 'pulse 1.5s ease-in-out infinite',
+        animation: 'pulse 0.7s ease-in-out infinite',
       }}
     >
       <div style={{ display: 'flex', gap: 20, marginBottom: 24 }}>

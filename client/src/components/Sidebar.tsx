@@ -62,7 +62,6 @@ export default function Sidebar({ user }: SidebarProps) {
     <aside className="sidebar">
       <div className="sidebar-logo">
         <img src={logoAnimation} alt="Fluxer" className="sidebar-logo-image" />
-        <span className="sidebar-logo-tools">ferramentas</span>
       </div>
 
       <nav className="sidebar-group">
@@ -74,10 +73,11 @@ export default function Sidebar({ user }: SidebarProps) {
           aria-controls="tinder-accordion-content"
         >
           <span className="sidebar-accordion-label">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 21s-7-4.35-7-11a4 4 0 017-2.65A4 4 0 0119 10c0 6.65-7 11-7 11z" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54 2.54c.61-.61 1.09-1.35 1.27-2.19.18-.84-.05-1.7-.63-2.38L14 7" />
+              <path d="M14 11a5 5 0 0 0-7.54-2.54c-.61.61-1.09 1.35-1.27 2.19-.18.84.05 1.7.63 2.38L10 17" />
             </svg>
-            Tinder do Fluxo
+            Fluxer Hub
           </span>
           <svg className="sidebar-accordion-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="6 9 12 15 18 9" />
@@ -86,23 +86,19 @@ export default function Sidebar({ user }: SidebarProps) {
         <div id="tinder-accordion-content" className={`sidebar-accordion-content${isTinderMenuOpen ? ' open' : ''}`}>
           {user.role === 'MENTORADO' && (
             <>
-              <NavLink to="/tinder-do-fluxo/comunidade" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Comunidade</NavLink>
-              <NavLink to="/tinder-do-fluxo/perguntas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Perguntas e Respostas</NavLink>
-              <NavLink to="/tinder-do-fluxo/conheca-produtos" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Conheça cada produto</NavLink>
-              <NavLink to="/tinder-do-fluxo/ranking" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Ranking</NavLink>
               <NavLink to="/tinder-do-fluxo/expert" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Expert & Coprodutor</NavLink>
+              <NavLink to="/tinder-do-fluxo/comunidade" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Comunidade</NavLink>
               <NavLink to="/tinder-do-fluxo/prestadores" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Prestadores</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Vagas</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas/minhas-candidaturas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Minhas Candidaturas</NavLink>
               <NavLink to="/tinder-do-fluxo/matches" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Conexões</NavLink>
-              <NavLink to="/tinder-do-fluxo/favoritos-2-0" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Favoritos 2.0</NavLink>
+              <NavLink to="/tinder-do-fluxo/favoritos-2-0" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Favoritos</NavLink>
               <NavLink to="/tinder-do-fluxo/perfil" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Meu Perfil</NavLink>
             </>
           )}
           {user.role === 'PRESTADOR' && (
             <>
               <NavLink to="/tinder-do-fluxo/perfil" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Meu Perfil</NavLink>
-              <NavLink to="/tinder-do-fluxo/conheca-produtos" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Conheça cada produto</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Vagas</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas/minhas-candidaturas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Minhas Candidaturas</NavLink>
               <NavLink to="/tinder-do-fluxo/avaliacoes" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Minhas Avaliações</NavLink>
@@ -111,16 +107,13 @@ export default function Sidebar({ user }: SidebarProps) {
           {user.role === 'LIDERANCA' && (
             <>
               <div className="sidebar-subgroup-title">Operacional</div>
-              <NavLink to="/tinder-do-fluxo/comunidade" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Comunidade</NavLink>
-              <NavLink to="/tinder-do-fluxo/perguntas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Perguntas e Respostas</NavLink>
-              <NavLink to="/tinder-do-fluxo/conheca-produtos" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Conheça cada produto</NavLink>
-              <NavLink to="/tinder-do-fluxo/ranking" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Ranking</NavLink>
               <NavLink to="/tinder-do-fluxo/expert" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Expert & Coprodutor</NavLink>
+              <NavLink to="/tinder-do-fluxo/comunidade" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Comunidade</NavLink>
               <NavLink to="/tinder-do-fluxo/prestadores" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Prestadores</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Vagas</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas/minhas-candidaturas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Minhas Candidaturas</NavLink>
               <NavLink to="/tinder-do-fluxo/matches" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Conexões</NavLink>
-              <NavLink to="/tinder-do-fluxo/favoritos-2-0" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Favoritos 2.0</NavLink>
+              <NavLink to="/tinder-do-fluxo/favoritos-2-0" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Favoritos</NavLink>
               <NavLink to="/tinder-do-fluxo/avaliacoes" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Avaliações de Prestador</NavLink>
 
               <div className="sidebar-subgroup-title">Admin</div>

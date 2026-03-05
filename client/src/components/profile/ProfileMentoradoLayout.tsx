@@ -7,7 +7,6 @@ import { ProfileMentoradoProjectsCards } from './ProfileMentoradoProjectsCards';
 import { ProfileMentoradoProductsCards } from './ProfileMentoradoProductsCards';
 import { ProfileReviews } from './ProfileReviews';
 import type { ProfileViewData } from '../../hooks/useProfileView';
-import { PROGRESSO_CURSOS_MOCK } from '../../data/progressoMock';
 
 export interface ProfileMentoradoLayoutProps {
   data: ProfileViewData;
@@ -69,9 +68,11 @@ export function ProfileMentoradoLayout({
             name={user.nome}
             photoUrl={profile?.photo_url}
             cidade={profile?.cidade}
+            nicho={profile?.nicho}
+            hobbies={profile?.hobbies}
+            nivelFluxo={profile?.nivel_fluxo_label}
             isExpert={!!isExpert}
             isCoprodutor={!!isCoprodutor}
-            isMentoradoFluxo={!!profile?.nivel_fluxo_label}
             onEdit={isOwnProfile ? onEdit : undefined}
           />
 
@@ -184,48 +185,6 @@ export function ProfileMentoradoLayout({
                 nivelLabel={profile?.nivel_fluxo_label}
                 nivelPercent={profile?.nivel_fluxo_percent}
               />
-              {/* Progresso nos cursos (mock – front only) */}
-              <section>
-                <h3
-                  style={{
-                    margin: '0 0 12px 0',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: 'var(--text-muted)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                  }}
-                >
-                  Progresso nos cursos
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {PROGRESSO_CURSOS_MOCK.map((c) => (
-                    <div key={c.curso}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-                        <span>{c.curso}</span>
-                        <span style={{ fontWeight: 600 }}>{c.percent}%</span>
-                      </div>
-                      <div
-                        style={{
-                          height: 6,
-                          background: 'var(--border)',
-                          borderRadius: 9999,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: `${c.percent}%`,
-                            height: '100%',
-                            background: 'var(--accent)',
-                            borderRadius: 9999,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
               <ProfileMentoradoRatingStars
                 rating={metrics.rating}
                 totalReviews={reviews.length}

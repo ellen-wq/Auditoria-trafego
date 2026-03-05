@@ -909,6 +909,7 @@ button { font-family: inherit; }
 .sidebar-logo {
   display: flex;
   align-items: center;
+  gap: 0;
   padding: 0 var(--sidebar-space-xs);
   margin-bottom: var(--sidebar-space-2xl);
   flex-shrink: 0;
@@ -919,17 +920,21 @@ button { font-family: inherit; }
   height: auto;
   display: block;
   filter: brightness(0) invert(1);
+  vertical-align: middle;
 }
 
 .sidebar-logo-tools {
-  margin-left: var(--sidebar-space-sm);
-  font-size: 12px;
+  margin-left: 4px;
+  font-family: inherit;
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--sidebar-text-hover);
-  opacity: 0.92;
-  text-transform: lowercase;
+  letter-spacing: -0.02em;
+  color: var(--text-sidebar-active);
+  opacity: 1;
+  text-transform: none;
   white-space: nowrap;
+  line-height: 1;
+  align-self: center;
 }
 
 .sidebar-logo .logo-x {
@@ -982,7 +987,10 @@ button { font-family: inherit; }
     color var(--sidebar-duration) var(--sidebar-transition-ease);
   margin-bottom: var(--sidebar-space-xs);
   text-align: left;
-  font: inherit;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .sidebar-accordion-trigger:hover {
@@ -1016,14 +1024,15 @@ button { font-family: inherit; }
 .sidebar-accordion-label svg {
   width: 18px;
   height: 18px;
-  opacity: 0.85;
+  opacity: 1;
   flex-shrink: 0;
 }
 
 .sidebar-accordion-arrow {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
+  opacity: 1;
   transition: transform var(--sidebar-duration) var(--sidebar-transition-ease);
 }
 
@@ -1093,7 +1102,7 @@ button { font-family: inherit; }
   margin-top: 0;
 }
 
-/* Links — touch target, focus, active state */
+/* Links — touch target, focus, active state (mesma fonte/formato dos accordions) */
 .sidebar-link {
   display: flex;
   align-items: center;
@@ -1103,8 +1112,8 @@ button { font-family: inherit; }
   border-radius: var(--radius-xs);
   color: var(--text-sidebar);
   font-size: 13px;
-  font-weight: 500;
-  line-height: 1.35;
+  font-weight: 600;
+  line-height: 1.3;
   transition: background var(--sidebar-duration) var(--sidebar-transition-ease),
     color var(--sidebar-duration) var(--sidebar-transition-ease);
   margin-bottom: 1px;
@@ -1130,7 +1139,7 @@ button { font-family: inherit; }
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  opacity: 0.75;
+  opacity: 1;
 }
 
 .sidebar-link.active svg {
@@ -1197,7 +1206,8 @@ button { font-family: inherit; }
 
 .sidebar-user-role {
   color: var(--sidebar-text-hint);
-  font-size: 11px;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1.3;
 }
 
@@ -3085,7 +3095,7 @@ tbody tr:hover { background: #fafbfd; }
 .skeleton-line {
   background: linear-gradient(90deg, var(--border-light) 25%, var(--border) 50%, var(--border-light) 75%);
   background-size: 200% 100%;
-  animation: skeleton-shine 1s ease-in-out infinite;
+  animation: skeleton-shine 0.65s ease-in-out infinite;
   border-radius: var(--radius-xs);
 }
 @keyframes skeleton-shine {
