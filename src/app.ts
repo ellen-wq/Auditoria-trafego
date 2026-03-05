@@ -6,7 +6,6 @@ import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import authRoutes from './routes/auth.js';
 import auditRoutes from './routes/audits.js';
 import adminRoutes from './routes/admin.js';
@@ -24,7 +23,8 @@ const { rootDir, publicDistDir } = (() => {
     return { rootDir: path.dirname(explicit), publicDistDir: explicit };
   }
   const cwd = process.cwd();
-  const parent = path.join(__dirname, '..');
+  const dirOfThisFile = path.dirname(fileURLToPath(import.meta.url));
+  const parent = path.join(dirOfThisFile, '..');
   for (const base of [cwd, parent]) {
     const pub = path.join(base, 'public');
     const pd = path.join(base, 'public_dist');
