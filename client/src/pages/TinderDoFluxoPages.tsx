@@ -351,42 +351,28 @@ export function TinderExpertPage() {
 
   return (
     <TinderDoFluxoPageShell title="Expert & Coprodutor" subtitle="Descubra perfis e faça matches">
-      <div id="tinder-expert-page-root" data-page="expert" data-expert-version="2-no-filtros">
-      {/* Header com busca (spec: Buscar por objetivo, nome...) + Expert/Coprodutor + ícones */}
+      <div id="tinder-expert-page-root" data-page="expert" style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', minHeight: 0 }}>
+      {/* Header: glass, busca + Expert/Coprodutor + ícones (design HTML) */}
       <header
+        className="expert-glass-header"
         data-page="expert-search"
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 40,
           height: 80,
-          padding: '0 24px',
+          padding: '0 32px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 16,
-          background: 'var(--bg-white)',
-          borderBottom: '1px solid var(--border)',
-          marginBottom: 16,
+          borderBottom: '1px solid var(--expert-slate-200)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, maxWidth: 560 }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <label htmlFor="expert-search-input" style={{ position: 'absolute', left: -9999 }}>Busca</label>
-            <span
-              style={{
-                position: 'absolute',
-                left: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-                fontSize: 18,
-                pointerEvents: 'none',
-              }}
-              aria-hidden
-            >
-              🔍
-            </span>
+            <span className="material-symbols-outlined" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--expert-slate-400)', fontSize: 20, pointerEvents: 'none' }} aria-hidden>search</span>
             <input
               id="expert-search-input"
               type="text"
@@ -399,15 +385,15 @@ export function TinderExpertPage() {
                 fontSize: 14,
                 border: 'none',
                 borderRadius: 12,
-                background: 'var(--bg-secondary)',
-                color: 'var(--text)',
+                background: 'var(--expert-background-light)',
+                color: 'var(--text-primary)',
                 outline: 'none',
               }}
               onFocus={(e) => {
-                e.target.style.boxShadow = '0 0 0 2px var(--green)';
+                e.currentTarget.style.boxShadow = '0 0 0 2px var(--expert-primary)';
               }}
               onBlur={(e) => {
-                e.target.style.boxShadow = 'none';
+                e.currentTarget.style.boxShadow = 'none';
               }}
             />
           </div>
@@ -424,13 +410,13 @@ export function TinderExpertPage() {
                 fontWeight: 700,
                 border: 'none',
                 borderRadius: 12,
-                background: lookingFor.includes('expert') ? 'var(--accent-dark)' : 'var(--bg-secondary)',
-                color: lookingFor.includes('expert') ? 'white' : 'var(--text)',
+                background: lookingFor.includes('expert') ? 'var(--expert-primary)' : 'var(--expert-background-light)',
+                color: lookingFor.includes('expert') ? '#0f172a' : 'var(--text-primary)',
                 cursor: 'pointer',
               }}
             >
               Expert
-              <span style={{ fontSize: 14 }}>▼</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>keyboard_arrow_down</span>
             </button>
             <button
               type="button"
@@ -444,17 +430,17 @@ export function TinderExpertPage() {
                 fontWeight: 700,
                 border: 'none',
                 borderRadius: 12,
-                background: lookingFor.includes('coprodutor') ? 'var(--purple)' : 'var(--bg-secondary)',
-                color: lookingFor.includes('coprodutor') ? 'white' : 'var(--text)',
+                background: lookingFor.includes('coprodutor') ? 'var(--purple)' : 'var(--expert-background-light)',
+                color: lookingFor.includes('coprodutor') ? 'white' : 'var(--text-primary)',
                 cursor: 'pointer',
               }}
             >
               Coprodutor
-              <span style={{ fontSize: 14 }}>▼</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>keyboard_arrow_down</span>
             </button>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link
             to="/tinder-do-fluxo/matches"
             style={{
@@ -464,72 +450,101 @@ export function TinderExpertPage() {
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '50%',
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-muted)',
+              background: 'var(--expert-background-light)',
+              color: 'var(--expert-slate-600)',
               textDecoration: 'none',
               position: 'relative',
             }}
             title="Notificações / Matches"
           >
-            🔔
-            <span
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'var(--red)',
-                border: '2px solid var(--bg-white)',
-              }}
-            />
+            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>notifications</span>
+            <span style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: '50%', background: 'var(--red)', border: '2px solid white' }} />
+          </Link>
+          <Link
+            to="/tinder-do-fluxo/matches"
+            style={{
+              width: 40,
+              height: 40,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              background: 'var(--expert-background-light)',
+              color: 'var(--expert-slate-600)',
+              textDecoration: 'none',
+            }}
+            title="Filtros"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>tune</span>
           </Link>
         </div>
       </header>
 
-      {/* Link rápido para matches */}
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
-        <Link to="/tinder-do-fluxo/matches" className="btn btn-outline">
-          👋 Ver Matches
-        </Link>
-      </div>
-
-      {/* Discovery Card */}
+      {/* Área central: card stack + ações (design HTML) */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, overflow: 'hidden', position: 'relative' }}>
         {loading ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
-          <div className="loading-spinner" />
-          <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando perfis...</p>
+          <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
+            <div className="loading-spinner" />
+            <p style={{ color: 'var(--text-secondary)', marginTop: 16 }}>Carregando perfis...</p>
           </div>
-      ) : discoveryProfiles.length === 0 ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
-            {hasActiveFilters
-              ? 'Nenhum perfil encontrado com a busca ou tipo selecionado.'
-              : 'Nenhum perfil disponível no momento. O feed mostra outros usuários Expert ou Coprodutor; verifique se há outros perfis no sistema.'}
-          </p>
-          {hasActiveFilters && (
-            <button className="btn btn-outline" onClick={handleClearFilters}>
-              Limpar busca e filtros
-            </button>
-          )}
-        </div>
-      ) : !currentProfile ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto 24px' }}>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
-            Nenhum perfil disponível no momento
-          </p>
+        ) : discoveryProfiles.length === 0 ? (
+          <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
+              {hasActiveFilters
+                ? 'Nenhum perfil encontrado com a busca ou tipo selecionado.'
+                : 'Nenhum perfil disponível no momento. O feed mostra outros usuários Expert ou Coprodutor; verifique se há outros perfis no sistema.'}
+            </p>
+            {hasActiveFilters && (
+              <button className="btn btn-outline" onClick={handleClearFilters}>
+                Limpar busca e filtros
+              </button>
+            )}
+          </div>
+        ) : !currentProfile ? (
+          <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>Nenhum perfil disponível no momento</p>
+          </div>
+        ) : (
+          <>
+            <div style={{ position: 'relative', width: '100%', maxWidth: 800, height: 550, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <SwipeActions onSwipeLeft={handlePass} onSwipeRight={handleMatch} disabled={isSendingInterest}>
+                <ProfileDiscoveryCard
+                  profile={currentProfile}
+                  onPass={handlePass}
+                  onMatch={handleMatch}
+                  onSwipe={handleSwipe}
+                  isSendingInterest={isSendingInterest}
+                />
+              </SwipeActions>
             </div>
-      ) : (
-        <SwipeActions onSwipeLeft={handlePass} onSwipeRight={handleMatch} disabled={isSendingInterest}>
-          <ProfileDiscoveryCard
-            profile={currentProfile}
-            onPass={handlePass}
-            onMatch={handleMatch}
-            onSwipe={handleSwipe}
-          />
-        </SwipeActions>
-      )}
+            <button
+              type="button"
+              onClick={() => navigate(`/tinder-do-fluxo/profile-view?userId=${currentProfile.id}`)}
+              style={{
+                position: 'absolute',
+                bottom: 32,
+                right: 32,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '12px 24px',
+                borderRadius: 9999,
+                border: '1px solid var(--expert-slate-200)',
+                background: 'var(--bg-white)',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+                color: 'var(--text-primary)',
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: 'pointer',
+                zIndex: 40,
+              }}
+            >
+              Ver Perfil Completo
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Match Modal */}
       <MatchModal

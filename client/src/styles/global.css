@@ -36,6 +36,17 @@
   --login-bg-light: #f4f5f7;
   --login-bg-dark: #0f1115;
   --login-neutral-dark: #1b2012;
+  /* Expert & Coprodutor page (design referência HTML) */
+  --expert-primary: #BEF264;
+  --expert-primary-dark: #a3d94e;
+  --expert-background-light: #F8FAFC;
+  --expert-background-dark: #0F172A;
+  --expert-accent-blue: #3C83F6;
+  --expert-slate-200: #e2e8f0;
+  --expert-slate-400: #94a3b8;
+  --expert-slate-600: #475569;
+  --expert-slate-700: #334155;
+  --expert-slate-800: #1e293b;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -708,11 +719,16 @@ button { font-family: inherit; }
   opacity: 1;
 }
 
+.sidebar-accordion-content--em-breve.open {
+  max-height: 400px;
+}
+
 .sidebar-sub-link {
   margin-left: 8px;
 }
 
-.sidebar-group-title {
+.sidebar-group-title,
+.sidebar-subgroup-title {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 1.5px;
@@ -720,6 +736,14 @@ button { font-family: inherit; }
   padding: 0 10px;
   margin-bottom: 6px;
   font-weight: 600;
+}
+
+.sidebar-subgroup-title {
+  margin-top: 10px;
+}
+
+.sidebar-subgroup-title:first-child {
+  margin-top: 0;
 }
 
 .sidebar-link {
@@ -2687,6 +2711,22 @@ tbody tr:hover { background: #fafbfd; }
   border-radius: var(--radius-xs);
   font-size: 14px;
   background: var(--bg-white);
+}
+
+/* Expert page: card stack + glass header (design HTML) */
+#tinder-expert-page-root .expert-card-stack-1 {
+  transform: scale(0.95) translateY(-20px);
+  z-index: 10;
+  opacity: 0.6;
+}
+#tinder-expert-page-root .expert-card-stack-2 {
+  transform: scale(0.90) translateY(-40px);
+  z-index: 5;
+  opacity: 0.3;
+}
+#tinder-expert-page-root .expert-glass-header {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
 }
 
 .tinder-deck-wrap {
