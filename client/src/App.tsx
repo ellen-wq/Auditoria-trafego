@@ -19,7 +19,6 @@ const MentoradoDetalhePage = React.lazy(() => import('./pages/MentoradoDetalhePa
 const AdminCriativosPage = React.lazy(() => import('./pages/AdminCriativosPage'));
 const AuditoriaCopyHistoricoPage = React.lazy(() => import('./pages/AuditoriaCopyHistoricoPage'));
 const AuditoriaCopySolicitacoesPage = React.lazy(() => import('./pages/AuditoriaCopySolicitacoesPage'));
-const CreatePostForm = React.lazy(() => import('./components/comunidade/CreatePostForm'));
 const ProfileViewPage = React.lazy(() => import('./pages/ProfileViewPage'));
 const ProfileFormPage = React.lazy(() => import('./pages/ProfileFormPage'));
 const ProfileRouterPage = React.lazy(() => import('./pages/ProfileRouterPage'));
@@ -31,7 +30,7 @@ const TinderAdminLogsPage = React.lazy(() => import('./pages/TinderDoFluxoPages'
 const TinderAdminReviewsPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderAdminReviewsPage })));
 const TinderAdminUsersPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderAdminUsersPage })));
 const TinderAvaliacoesPrestadorPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderAvaliacoesPrestadorPage })));
-const TinderComunidadePage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderComunidadePage })));
+const TinderComunidadePage = React.lazy(() => import('./pages/ComunidadePage'));
 const TinderExpertPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderExpertPage })));
 const TinderFavoritosPage = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderFavoritosPage })));
 const TinderFavoritos2Page = React.lazy(() => import('./pages/TinderDoFluxoPages').then(m => ({ default: m.TinderFavoritos2Page })));
@@ -94,7 +93,6 @@ export default function App() {
 
         {/* Tinder do Fluxo */}
         <Route path="/tinder-do-fluxo/comunidade" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderComunidadePage /></ProtectedRoute>} />
-        <Route path="/tinder-do-fluxo/comunidade/nova-publicacao" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><CreatePostForm /></ProtectedRoute>} />
         <Route path="/tinder-do-fluxo/expert" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderExpertPage /></ProtectedRoute>} />
         <Route path="/tinder-do-fluxo/prestadores" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderPrestadoresPage /></ProtectedRoute>} />
         <Route path="/tinder-do-fluxo/prestadores/:id" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderServiceDetailPage /></ProtectedRoute>} />
