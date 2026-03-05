@@ -1872,6 +1872,223 @@ button { font-family: inherit; }
   margin: 0;
 }
 
+/* ===================== FAVORITOS 2.0 (Tinder do Fluxo) ===================== */
+.favoritos-2-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.favoritos-2-actions .favoritos-search-wrap {
+  flex: 1;
+  min-width: 200px;
+  max-width: 480px;
+}
+
+.favoritos-2-actions .favoritos-search-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.favoritos-2-actions .favoritos-search-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.favoritos-2-btn-filter {
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.favoritos-2-btn-filter:hover {
+  background: var(--border-light);
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+.favoritos-2-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .favoritos-2-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .favoritos-2-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.favoritos-2-card {
+  position: relative;
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: box-shadow 0.2s;
+}
+
+.favoritos-2-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.favoritos-2-heart {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: color 0.2s, background 0.2s;
+}
+
+.favoritos-2-heart:hover {
+  color: var(--accent-dark);
+  background: rgba(163, 230, 53, 0.15);
+}
+
+.favoritos-2-heart svg {
+  color: inherit;
+}
+
+.favoritos-2-heart[aria-label*="Remover"] {
+  color: var(--accent);
+}
+
+.favoritos-2-avatar-wrap {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--border-light) 0%, var(--border) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.favoritos-2-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.favoritos-2-avatar-initials {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.favoritos-2-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+
+.favoritos-2-especialidade {
+  font-size: 14px;
+  color: var(--accent-dark);
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.favoritos-2-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.favoritos-2-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: var(--border-light);
+  color: var(--text-primary);
+}
+
+.favoritos-2-divider {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0 0 16px;
+}
+
+.favoritos-2-footer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.favoritos-2-mini-avatars {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.favoritos-2-mini-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--border);
+  border: 2px solid var(--bg-white);
+  margin-left: -8px;
+}
+
+.favoritos-2-mini-avatar:first-child {
+  margin-left: 0;
+}
+
+.favoritos-2-btn-ver-perfil {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 14px;
+  border: none;
+  background: var(--accent);
+  color: var(--bg-sidebar);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.favoritos-2-btn-ver-perfil:hover {
+  background: #93d31e;
+}
+
 /* ===================== STATS GRID ===================== */
 .stats-grid {
   display: grid;

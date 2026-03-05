@@ -2104,9 +2104,26 @@ function formatFavoriteType(type: string): string {
 export function TinderFavoritosPage() {
   const [favorites, setFavorites] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  useEffect(() => {
-    api.get<{ favorites: any[] }>('/api/tinder-do-fluxo/favorites').then((r) => setFavorites(r.favorites || []));
+  const [loading, setLoading] = useState(true);
+
+  const fetchFavorites = useCallback(() => {
+    api.get<{ favorites: any[] }>('/api/tinder-do-fluxo/favorites').then((r) => {
+      setFavorites(r.favorites || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get<{ favorites: any[] }>('/api/tinder-do-fluxo/favorites').then((r) => {
+      const list = r.favorites || [];
+      setFavorites(list);
+      setLoading(false);
+      if (list.length === 0) {
+        api.post<{ ok: boolean }>('/api/tinder-do-fluxo/favorites/seed-current-user').then(() => fetchFavorites()).catch(() => {});
+      }
+    }).catch(() => setLoading(false));
+  }, [fetchFavorites]);
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -2183,6 +2200,116 @@ export function TinderFavoritosPage() {
   );
 }
 
+const FAVORITOS_2_MOCK: Array<{ id: string; nome: string; especialidade: string; tags: string[]; avatarUrl: string }> = [
+  { id: '1', nome: 'Ana Silva', especialidade: 'Estrategista Digital', tags: ['VENDA TODO SANTO DIA', '+2 CURSOS'], avatarUrl: '' },
+  { id: '2', nome: 'Marcos Oliveira', especialidade: 'Copywriter Senior', tags: ['COPYWRITING PRO', 'LANÇAMENTO METEÓRICO'], avatarUrl: '' },
+  { id: '3', nome: 'Juliana Costa', especialidade: 'Gestora de Tráfego', tags: ['GESTÃO DE TRÁFEGO'], avatarUrl: '' },
+  { id: '4', nome: 'Ricardo Santos', especialidade: 'Social Media', tags: ['CONTEÚDO INFINITO', 'CANVA PRO'], avatarUrl: '' },
+  { id: '5', nome: 'Beatriz Lima', especialidade: 'Lançadora', tags: ['ESTRATÉGIA DE LANÇAMENTO'], avatarUrl: '' },
+  { id: '6', nome: 'Felipe Mendes', especialidade: 'UX Designer', tags: ['DESIGN PARA CONVERSÃO', 'FIGMA MASTER'], avatarUrl: '' },
+];
+
+function getInitialsF2(name: string): string {
+  if (!name || !name.trim()) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+export function TinderFavoritos2Page() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [heartedIds, setHeartedIds] = useState<Set<string>>(new Set(FAVORITOS_2_MOCK.map((f) => f.id)));
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return FAVORITOS_2_MOCK;
+    return FAVORITOS_2_MOCK.filter(
+      (f) =>
+        f.nome.toLowerCase().includes(q) ||
+        f.especialidade.toLowerCase().includes(q) ||
+        f.tags.some((t) => t.toLowerCase().includes(q))
+    );
+  }, [searchQuery]);
+
+  const toggleHeart = (id: string) => {
+    setHeartedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  return (
+    <TinderDoFluxoPageShell
+      title="Favoritos"
+      subtitle="Alunos e parceiros que você salvou na sua rede"
+    >
+      <header className="favoritos-2-actions">
+        <div className="favoritos-search-wrap">
+          <span className="favoritos-search-icon" aria-hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+          </span>
+          <input
+            type="search"
+            placeholder="Buscar nos favoritos..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Buscar nos favoritos"
+          />
+        </div>
+        <button type="button" className="favoritos-2-btn-filter">
+          Filtrar
+        </button>
+      </header>
+
+      <div className="favoritos-2-grid">
+        {filtered.map((f) => (
+          <article key={f.id} className="favoritos-2-card">
+            <button
+              type="button"
+              className="favoritos-2-heart"
+              onClick={() => toggleHeart(f.id)}
+              aria-label={heartedIds.has(f.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill={heartedIds.has(f.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            </button>
+            <div className="favoritos-2-avatar-wrap">
+              {f.avatarUrl ? (
+                <img src={f.avatarUrl} alt="" className="favoritos-2-avatar-img" />
+              ) : (
+                <span className="favoritos-2-avatar-initials">{getInitialsF2(f.nome)}</span>
+              )}
+            </div>
+            <h3 className="favoritos-2-name">{f.nome}</h3>
+            <p className="favoritos-2-especialidade">{f.especialidade}</p>
+            <div className="favoritos-2-chips">
+              {f.tags.map((tag) => (
+                <span key={tag} className="favoritos-2-chip">{tag}</span>
+              ))}
+            </div>
+            <hr className="favoritos-2-divider" />
+            <div className="favoritos-2-footer">
+              <div className="favoritos-2-mini-avatars" aria-hidden>
+                <span className="favoritos-2-mini-avatar" />
+                <span className="favoritos-2-mini-avatar" />
+                <span className="favoritos-2-mini-avatar" />
+              </div>
+              <button type="button" className="favoritos-2-btn-ver-perfil">
+                Ver Perfil
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </TinderDoFluxoPageShell>
+  );
+}
 
 export function TinderAvaliacoesPrestadorPage() {
   const [reviews, setReviews] = useState<any[]>([]);

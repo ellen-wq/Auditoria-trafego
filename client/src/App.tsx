@@ -26,6 +26,7 @@ import {
   TinderComunidadePage,
   TinderExpertPage,
   TinderFavoritosPage,
+  TinderFavoritos2Page,
   TinderJobCreatePage,
   TinderJobDetailPage,
   TinderMatchesPage,
@@ -90,6 +91,7 @@ export default function App() {
       <Route path="/tinder-do-fluxo/vagas/:id" element={<ProtectedRoute allowedRoles={['MENTORADO', 'PRESTADOR', 'LIDERANCA']}><TinderJobDetailPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/matches" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA', 'PRESTADOR']} skipProfileCheck><TinderMatchesPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/favoritos" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderFavoritosPage /></ProtectedRoute>} />
+      <Route path="/tinder-do-fluxo/favoritos-2-0" element={<ProtectedRoute allowedRoles={['MENTORADO', 'LIDERANCA']}><TinderFavoritos2Page /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/perfil" element={<ProtectedRoute skipProfileCheck><ProfileRouterPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/profile-view" element={<ProtectedRoute skipProfileCheck><ProfileViewPage /></ProtectedRoute>} />
       <Route path="/tinder-do-fluxo/perfil-expert" element={<ProtectedRoute><Navigate to="/tinder-do-fluxo/perfil" replace /></ProtectedRoute>} />
