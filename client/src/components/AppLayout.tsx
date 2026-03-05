@@ -11,9 +11,10 @@ interface Breadcrumb {
 interface AppLayoutProps {
   children: React.ReactNode;
   breadcrumbs?: Breadcrumb[];
+  hideTopbar?: boolean;
 }
 
-export default function AppLayout({ children, breadcrumbs = [] }: AppLayoutProps) {
+export default function AppLayout({ children, breadcrumbs = [], hideTopbar = false }: AppLayoutProps) {
   const user = api.getUser() as User | null;
   if (!user) return <Navigate to="/login" replace />;
 
@@ -21,25 +22,27 @@ export default function AppLayout({ children, breadcrumbs = [] }: AppLayoutProps
     <div className="layout">
       <Sidebar user={user} />
       <main className="main-content">
-        <header className="topbar">
-          <div className="topbar-left">
-            <div className="breadcrumb">
-              {breadcrumbs.map((crumb, i) => {
-                const isLast = i === breadcrumbs.length - 1;
-                return (
-                  <span key={i}>
-                    {i > 0 && <span className="breadcrumb-sep">›</span>}
-                    {crumb.href && !isLast ? (
-                      <Link to={crumb.href} className="breadcrumb-item">{crumb.label}</Link>
-                    ) : (
-                      <span className={`breadcrumb-item${isLast ? ' active' : ''}`}>{crumb.label}</span>
-                    )}
-                  </span>
-                );
-              })}
+        {!hideTopbar && breadcrumbs.length > 0 && (
+          <header className="topbar">
+            <div className="topbar-left">
+              <div className="breadcrumb">
+                {breadcrumbs.map((crumb, i) => {
+                  const isLast = i === breadcrumbs.length - 1;
+                  return (
+                    <span key={i}>
+                      {i > 0 && <span className="breadcrumb-sep">›</span>}
+                      {crumb.href && !isLast ? (
+                        <Link to={crumb.href} className="breadcrumb-item">{crumb.label}</Link>
+                      ) : (
+                        <span className={`breadcrumb-item${isLast ? ' active' : ''}`}>{crumb.label}</span>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
         <div className="page-content">
           {children}
         </div>

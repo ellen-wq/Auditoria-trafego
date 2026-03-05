@@ -51,27 +51,38 @@ class ApiService {
     if (!(options.body instanceof FormData)) {
       headers['Content-Type'] = 'application/json';
     }
-    const res = await fetch(API_BASE + url, { ...options, headers, credentials: 'include' });
+    let res: Response;
+    try {
+      res = await fetch(API_BASE + url, { ...options, headers, credentials: 'include' });
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (/failed to fetch|network|connection|refused/i.test(msg)) {
+        throw new Error('Não foi possível conectar ao servidor. Verifique se o backend está rodando (npm run dev na pasta do projeto).');
+      }
+      throw new Error(msg || 'Erro de conexão.');
+    }
     const raw = await res.text();
     let data: any = {};
     try {
       data = raw ? JSON.parse(raw) : {};
     } catch {
-      data = { error: raw || 'Resposta inválida do servidor.' };
+      data = { error: raw ? raw.slice(0, 200) : 'Resposta inválida do servidor.' };
     }
     if (!res.ok) {
       if (res.status === 401) {
         const isLoginRequest = url.includes('/api/auth/login');
         const isAuthMeRequest = url.includes('/api/auth/me');
         const isOnMatchesPage = (typeof window !== 'undefined' && window.location.pathname.includes('/tinder-do-fluxo/matches'));
-        // Não desloga nem redireciona: login, /me e quando estiver na página de matches
         if (!isLoginRequest && !isAuthMeRequest && !isOnMatchesPage) {
           this.clearAuthStorage();
           window.location.href = '/login';
         }
-        throw new Error(data.error || 'Não autenticado');
+        throw new Error(data.error || 'Email ou senha inválidos.');
       }
-      throw new Error(data.error || 'Erro desconhecido');
+      if (res.status === 502 || res.status === 503) {
+        throw new Error('Servidor indisponível. Inicie o backend com: npm run dev');
+      }
+      throw new Error(data.error || `Erro do servidor (${res.status}). Tente novamente.`);
     }
     return data as T;
   }

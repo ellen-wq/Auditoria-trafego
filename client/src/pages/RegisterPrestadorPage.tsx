@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import logoFluxo from '../assets/fluxo.logo.animation.svg';
+import { NIVEL_OPTIONS, HOBBIES_OPTIONS } from '../constants/registration';
 
 export default function RegisterPrestadorPage() {
   const navigate = useNavigate();
@@ -9,6 +10,10 @@ export default function RegisterPrestadorPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
+  const [niche, setNiche] = useState('');
+  const [hobbies, setHobbies] = useState<string[]>([]);
+  const [city, setCity] = useState('');
+  const [level, setLevel] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +42,15 @@ export default function RegisterPrestadorPage() {
       return;
     }
 
-    const payload = { name: name.trim(), email: email.toLowerCase().trim(), password };
+    const payload = {
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password,
+      niche: niche.trim() || undefined,
+      hobbies: hobbies.length > 0 ? hobbies : undefined,
+      city: city.trim() || undefined,
+      level: level.trim() || undefined,
+    };
     console.log('[Register Prestador] Payload sendo enviado:', { ...payload, password: '***' });
 
     try {
@@ -52,6 +65,10 @@ export default function RegisterPrestadorPage() {
         setEmail('');
         setPassword('');
         setPassword2('');
+        setNiche('');
+        setHobbies([]);
+        setCity('');
+        setLevel('');
         setAcceptTerms(false);
         navigate('/tinder-do-fluxo/perfil', { replace: true });
       } else {
@@ -144,6 +161,60 @@ export default function RegisterPrestadorPage() {
               value={password2}
               onChange={(e) => setPassword2(e.target.value)}
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="niche">Nicho</label>
+            <input
+              type="text"
+              id="niche"
+              placeholder="Ex: Tráfego Pago, Copywriting"
+              value={niche}
+              onChange={(e) => setNiche(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label style={{ display: 'block', marginBottom: 8 }}>Hobbies (pode selecionar vários)</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px' }}>
+              {HOBBIES_OPTIONS.map((h) => (
+                <label key={h} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}>
+                  <input
+                    type="checkbox"
+                    checked={hobbies.includes(h)}
+                    onChange={(e) => {
+                      if (e.target.checked) setHobbies((prev) => [...prev, h]);
+                      else setHobbies((prev) => prev.filter((x) => x !== h));
+                    }}
+                    style={{ margin: 0, cursor: 'pointer', width: 18, height: 18, accentColor: 'var(--accent-dark)' }}
+                  />
+                  <span>{h}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="form-group">
+            <label htmlFor="city">Cidade</label>
+            <input
+              type="text"
+              id="city"
+              placeholder="Ex: São Paulo, SP"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="level">Nível</label>
+            <select
+              id="level"
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border, #ddd)', borderRadius: 'var(--radius-xs, 6px)', fontSize: 14 }}
+            >
+              <option value="">Selecione seu nível</option>
+              {NIVEL_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group" style={{ marginTop: 8 }}>

@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Fontes carregadas via index.html para evitar bloqueio e duplicação */
 :root {
   --bg-main: #f7f8fc;
@@ -80,6 +84,9 @@ button { font-family: inherit; }
   line-height: 1;
   letter-spacing: normal;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+.filled-icon {
+  font-variation-settings: 'FILL' 1;
 }
 
 .material-symbols-rounded {
@@ -990,6 +997,15 @@ button { font-family: inherit; }
 
 .sidebar-accordion-content--em-breve.open {
   max-height: 400px;
+}
+
+.sidebar-accordion-nested {
+  margin-top: 6px;
+  margin-left: 8px;
+}
+
+.sidebar-accordion-content--nested.open {
+  max-height: 100px;
 }
 
 .sidebar-sub-link {

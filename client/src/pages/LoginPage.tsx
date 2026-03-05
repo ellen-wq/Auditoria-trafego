@@ -194,9 +194,9 @@ export default function LoginPage() {
               <div className="login-page-divider">
                 <span>ou</span>
               </div>
-              <a href="#" className="login-btn-secondary">
-                Entrar com convite
-              </a>
+              <Link to="/register" className="login-btn-secondary">
+                Cadastre-se
+              </Link>
             </div>
           </form>
 

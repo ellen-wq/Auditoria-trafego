@@ -13,6 +13,8 @@ export interface ProfileFormData {
   whatsapp: string;
   instagram?: string;
   nicho?: string;
+  /** Hobbies: array when editing (multi-select), stored as comma-separated string in API. */
+  hobbies?: string | string[];
   idiomas: string[];
   anos_experiencia: number;
   photo_url?: string;
@@ -183,6 +185,12 @@ export function useProfileForm() {
       whatsapp: data.profile?.whatsapp || '',
       instagram: (data.profile as any)?.instagram ?? '',
       nicho: (data.profile as any)?.nicho ?? (data.profile as any)?.niche ?? '',
+      hobbies: (() => {
+        const h = (data.profile as any)?.hobbies;
+        if (Array.isArray(h)) return h;
+        if (h && typeof h === 'string') return h.split(',').map((s: string) => s.trim()).filter(Boolean);
+        return [];
+      })(),
       idiomas: data.profile?.idiomas || [],
       anos_experiencia: data.profile?.anos_experiencia || 0,
       bio_busca: data.profile?.bio || data.profile?.search_bio || '',
@@ -255,6 +263,7 @@ export function useProfileForm() {
           whatsapp: data.whatsapp,
           instagram: data.instagram ?? '',
           nicho: data.nicho ?? '',
+          hobbies: Array.isArray(data.hobbies) ? data.hobbies.join(', ') : (data.hobbies ?? ''),
           idiomas: data.idiomas,
           anos_experiencia: data.anos_experiencia,
           bio_busca: data.bio_busca,

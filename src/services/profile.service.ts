@@ -143,6 +143,7 @@ export class ProfileService {
           whatsapp: mentorProfile.whatsapp || '',
           instagram: (mentorProfile as any).instagram || '',
           nicho: (mentorProfile as any).niche || '',
+          hobbies: (mentorProfile as any).hobbies || '',
           bio_busca: mentorProfile.search_bio || mentorProfile.bio || '',
           objetivo: (mentorProfile as any).goal_text || mentorProfile.headline || '',
           modelo_trabalho: mentorProfile.modelo_trabalho || 'remoto',
@@ -204,6 +205,7 @@ export class ProfileService {
         headline: serviceProfile?.headline,
         cidade: serviceProfile?.city,
         whatsapp: serviceProfile?.whatsapp,
+        hobbies: (serviceProfile as any)?.hobbies || '',
         bio_busca: serviceProfile?.bio || serviceProfile?.bio_busca,
         modelo_trabalho: serviceProfile?.modelo_trabalho,
         disponivel: serviceProfile?.disponivel,
@@ -311,8 +313,10 @@ export class ProfileService {
       };
       const instagram = (payload.profile as any).instagram;
       const nicho = (payload.profile as any).nicho;
+      const hobbies = (payload.profile as any).hobbies;
       if (instagram !== undefined) profileData.instagram = instagram ?? '';
       if (nicho !== undefined) profileData.niche = nicho ?? '';
+      if (hobbies !== undefined) profileData.hobbies = hobbies ?? '';
       
       // Adicionar availability_tags apenas se a coluna existir (será adicionada via migration)
       const availabilityTags = (payload.profile as any).availability_tags || [];
