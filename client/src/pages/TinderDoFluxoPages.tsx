@@ -2576,151 +2576,186 @@ export function TinderServiceDetailPage() {
   );
 }
 
-// Dados mock para a página Minhas Candidaturas (apenas frontend)
-const MOCK_MY_APPLICATIONS = [
+// Dados mock para a página Minhas Candidaturas (apenas frontend) — design referência
+type ApplicationStatus = 'ENVIADA' | 'VISUALIZADA' | 'EM_CONVERSA' | 'ENCERRADA';
+const MOCK_MY_APPLICATIONS: Array<{
+  id: number;
+  applicationStatus: ApplicationStatus;
+  created_at: string;
+  tinder_jobs: { id: number; title: string; specialty?: string };
+  recruiter: { name: string; avatar_url: string; tags: string[] };
+  creator_id?: number;
+}> = [
   {
     id: 1,
-    message: 'Tenho experiência em tráfego pago e gestão de campanhas em Meta e Google Ads. Posso começar imediatamente.',
-    portfolio_link: 'https://exemplo.com/portfolio',
-    created_at: '2025-03-01T14:30:00.000Z',
-    tinder_jobs: {
-      id: 101,
-      title: 'Gestor de Tráfego',
-      description: 'Buscamos profissional para gestão de campanhas em Meta e Google Ads. Atuação remota, trabalho em equipe com criação e planejamento.',
-      specialty: 'Tráfego Pago',
-      model: 'Remoto',
-      location: 'Brasil',
-      value: 5000,
-      deadline: '2025-04-15',
-      status: 'OPEN',
-      created_at: '2025-02-20T10:00:00.000Z',
-    },
+    applicationStatus: 'ENVIADA',
+    created_at: '2023-10-12T10:00:00.000Z',
+    tinder_jobs: { id: 101, title: 'Gestor de Tráfego para Perpétuo', specialty: 'Tráfego' },
+    recruiter: { name: 'Bernardo Silva', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC1SRqJrsTD7nx3El7ByFaRR0mUl64vLK_CxxRLhtRzh8Hm1_4EWMykDM2Gcl748MyLxrLux9xBf1E8Dtg6Nb1N4gsyq5hOk8SADBxGB-qzhvXbH8BFPZhSyOPr9lCnNSmaTv6vN2XwL2oQ1XJHygyHx88YAR-2p3QzsAOpgUO-hl8BgcMJvmuAKqjOctd-gI4pSwmXnSbCBM4Lwc_lnYsyFKVTC06lmf73PdnzOyiqJ5lQ8T4aKsG29hcoD8t-A9ZBcXXX--Zi50JY', tags: ['VTSD', 'FLUXO'] },
+    creator_id: 1,
   },
   {
     id: 2,
-    message: 'Atuo há 3 anos com tráfego e tenho cases de e-commerce e infoprodutos.',
-    portfolio_link: null,
-    created_at: '2025-02-28T09:15:00.000Z',
-    tinder_jobs: {
-      id: 102,
-      title: 'Especialista em Meta Ads',
-      description: 'Vaga para especialista em campanhas no Facebook e Instagram. Foco em conversão e ROAS.',
-      specialty: 'Meta Ads',
-      model: 'Híbrido',
-      location: 'São Paulo',
-      value: 4500,
-      deadline: '2025-04-01',
-      status: 'OPEN',
-      created_at: '2025-02-18T08:00:00.000Z',
-    },
+    applicationStatus: 'VISUALIZADA',
+    created_at: '2023-10-08T14:30:00.000Z',
+    tinder_jobs: { id: 102, title: 'Copywriter para Lançamento High-Ticket', specialty: 'Copy' },
+    recruiter: { name: 'Juliana Rocha', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC28q1YC49W44YujbHN0Omj8gWOHUfXG_SoEGVYqsjXfCCMe1K3RYkm4--e_lIv80zntPm-7guW5n7rFS1uBx1RUTATT_jNZrI3AMeZVFdFkHHFsJ_EzGsfOt7CKgOsExn7kFg-CCQMQWFe9J4Wwo_ygWvM8r_jAZy2QX_uQizHVV1gZpCJxCnn6-ZGgJ_85RHD1QlO1SKhFxUsnE30HRhppwzkRyXJ9N8dAqrMn9gmFib6q612TasJ9nSq4_ZGIPC5AY67mjTElIC1', tags: ['VTSD'] },
+    creator_id: 2,
   },
   {
     id: 3,
-    message: 'Interesse em atuar com gestão de tráfego para projetos de educação.',
-    portfolio_link: 'https://meuportfolio.com',
-    created_at: '2025-02-25T16:45:00.000Z',
-    tinder_jobs: {
-      id: 103,
-      title: 'Gestor de Tráfego - Projeto Educacional',
-      description: 'Projeto de longa duração. Requer experiência com audiências e remarketing.',
-      specialty: 'Tráfego Pago',
-      model: 'Remoto',
-      location: null,
-      value: null,
-      deadline: '2025-03-30',
-      status: 'CLOSED',
-      created_at: '2025-02-10T12:00:00.000Z',
-    },
+    applicationStatus: 'EM_CONVERSA',
+    created_at: '2023-10-05T09:15:00.000Z',
+    tinder_jobs: { id: 103, title: 'Especialista em Automação (n8n/Make)', specialty: 'Automação' },
+    recruiter: { name: 'Marcos Olive', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBcqYbANZg7ueMQpsf9mWkMuguZKJ8OOJEGZkxMgPXnZ2kc-k6ofn2udr_YgksUZHL38TukV1W-cJxeSuQqUGCY3z76TSVLw2LQ7UPmCzatlxwYRYTdq4CDQl4FCRp1SJ8XKl_qXrEdqoq7Teyt9MArwrCo7OLZhwkyMoqn2wiV1WL2NhLOby1KTyFo7YVeTWpH5ELFmUDH_lw0rR7B13_x1B-K15B5UT6bI80gv1Cjo0pp8L23WI8p6m6gxfhPqE9pkmYra38diqS5', tags: ['VTSD', 'FLUXO'] },
+    creator_id: 3,
+  },
+  {
+    id: 4,
+    applicationStatus: 'ENCERRADA',
+    created_at: '2023-09-20T16:00:00.000Z',
+    tinder_jobs: { id: 104, title: 'Lançador de Infoprodutos Wellness', specialty: 'Produto' },
+    recruiter: { name: 'Clara Nunes', avatar_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAPLVw_sUkNEQcad1f-JV-A5GZtkzS0UTXNaMKd9HkB43popS18HqtXCP87ymK9lim0zssiPzPp-u74BECC1TyaSmeaGagQjKe3htogDZ6B42IBe_EGMA979850kOIDNt3rKizLdGaPzdM_5C4QmQLUQlWXBSwVS-NhDjDnqFsINvte2S9RsiD4Z7g3BC_l92ctwx2_6QxQf_ADtqoFojD6As2dl7buKdQ4NWKfAsjQHSo_ibvhYGpe7dvYmYEPj0K9aNhZOJ8pdZd-', tags: ['VTSD'] },
+    creator_id: 4,
   },
 ];
 
+const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
+  ENVIADA: 'Enviada',
+  VISUALIZADA: 'Visualizada',
+  EM_CONVERSA: 'Em conversa',
+  ENCERRADA: 'Encerrada',
+};
+
 export function TinderMyApplicationsPage() {
+  const [search, setSearch] = useState('');
   const applications = MOCK_MY_APPLICATIONS;
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
+  const filteredApplications = search.trim()
+    ? applications.filter(
+        (app) =>
+          app.tinder_jobs.title.toLowerCase().includes(search.toLowerCase()) ||
+          app.recruiter.name.toLowerCase().includes(search.toLowerCase()) ||
+          (app.tinder_jobs.specialty && app.tinder_jobs.specialty.toLowerCase().includes(search.toLowerCase()))
+      )
+    : applications;
+
   return (
-    <TinderDoFluxoPageShell title="Minhas Candidaturas" subtitle="Vagas que você se candidatou">
-      {applications.length === 0 ? (
-        <div className="card">
-          <EmptyState text="Você ainda não se candidatou para nenhuma vaga." />
+    <TinderDoFluxoPageShell title="Minhas Candidaturas" subtitle="Acompanhe as vagas para as quais você se candidatou.">
+      <div className="candidaturas-page">
+        <header className="candidaturas-header">
+          <div className="search-wrap">
+            <span className="material-symbols-outlined search-icon">search</span>
+            <input
+              type="text"
+              placeholder="Buscar candidaturas..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="header-actions">
+            <button type="button" title="Notificações">
+              <span className="material-symbols-outlined">notifications</span>
+              <span className="notif-dot" aria-hidden />
+            </button>
+            <button type="button" title="Chat">
+              <span className="material-symbols-outlined">chat_bubble</span>
+            </button>
+          </div>
+        </header>
+
+        <div className="filters">
+          <button type="button">
+            Status
+            <span className="material-symbols-outlined">keyboard_arrow_down</span>
+          </button>
+          <button type="button">
+            Categoria
+            <span className="material-symbols-outlined">keyboard_arrow_down</span>
+          </button>
+          <button type="button">
+            Ordenação (Mais recentes)
+            <span className="material-symbols-outlined">keyboard_arrow_down</span>
+          </button>
         </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 12 }}>
-          {applications.map((app: any) => {
-            const job = app.tinder_jobs;
-            if (!job) return null;
-            
-            return (
-              <div key={app.id} className="card" style={{ padding: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ margin: 0, marginBottom: 8 }}>{job.title}</h3>
-                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 14 }}>
-                      Candidatado em {formatDate(app.created_at)}
-                    </p>
+
+        {filteredApplications.length === 0 ? (
+          <div className="card empty-state-card">
+            <EmptyState text={search ? 'Nenhuma candidatura encontrada para essa busca.' : 'Você ainda não se candidatou para nenhuma vaga.'} />
+          </div>
+        ) : (
+          <>
+            <div className="cards-list">
+              {filteredApplications.map((app) => {
+                const job = app.tinder_jobs;
+                const statusClass = app.applicationStatus.toLowerCase().replace('_', '-');
+                const isEncerrada = app.applicationStatus === 'ENCERRADA';
+                const isEmConversa = app.applicationStatus === 'EM_CONVERSA';
+                return (
+                  <div key={app.id} className={`app-card ${isEncerrada ? 'encerrada' : ''} ${isEmConversa ? 'em-conversa' : ''}`}>
+                    <div className="app-card-body">
+                      <div className="app-card-meta">
+                        <span className={`app-card-badge ${statusClass}`}>{APPLICATION_STATUS_LABEL[app.applicationStatus]}</span>
+                        <span className="app-card-date">Aplicada em {formatDate(app.created_at)}</span>
+                      </div>
+                      <h3 className="app-card-title">{job.title}</h3>
+                      <p className="app-card-category">{job.specialty || 'Vaga'}</p>
+                      <div className="app-card-recruiter">
+                        <div className="avatar">
+                          <img src={app.recruiter.avatar_url} alt="" />
+                        </div>
+                        <div>
+                          <p className="recruiter-name">{app.recruiter.name}</p>
+                          <div className="recruiter-tags">
+                            {app.recruiter.tags.map((tag) => (
+                              <span key={tag}>{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="app-card-actions">
+                      {isEmConversa && (
+                        <Link className="btn-card primary" to="/tinder-do-fluxo/matches">
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chat</span>
+                          Abrir conversa
+                        </Link>
+                      )}
+                      {isEncerrada ? (
+                        <button type="button" className="btn-card disabled">Encerrada</button>
+                      ) : (
+                        <Link className="btn-card secondary" to={`/tinder-do-fluxo/vagas/${job.id}`}>Ver vaga</Link>
+                      )}
+                      {!isEncerrada && (
+                        <Link className="btn-card outline" to={app.creator_id ? `/tinder-do-fluxo/users/${app.creator_id}` : '#'}>Ver perfil</Link>
+                      )}
+                      {isEncerrada && (
+                        <Link className="btn-card outline" to={`/tinder-do-fluxo/vagas/${job.id}`}>Ver vaga</Link>
+                      )}
+                    </div>
                   </div>
-                  <Link 
-                    className="btn btn-outline" 
-                    to={`/tinder-do-fluxo/vagas/${job.id}`}
-                    style={{ marginLeft: 12 }}
-                  >
-                    Ver vaga
-                  </Link>
-                </div>
-                
-                {job.description && (
-                  <p style={{ marginTop: 8, marginBottom: 8, color: 'var(--text-secondary)' }}>
-                    {job.description.length > 200 ? job.description.substring(0, 200) + '...' : job.description}
-                  </p>
-                )}
-                
-                <div style={{ 
-                  display: 'flex', 
-                  gap: 12, 
-                  flexWrap: 'wrap', 
-                  marginTop: 12,
-                  padding: 12,
-                  background: 'var(--bg-secondary)',
-                  borderRadius: 'var(--radius)'
-                }}>
-                  {job.specialty && <span style={{ fontSize: 12 }}>📌 {job.specialty}</span>}
-                  {job.model && <span style={{ fontSize: 12 }}>💼 {job.model}</span>}
-                  {job.location && <span style={{ fontSize: 12 }}>📍 {job.location}</span>}
-                  {job.value && <span style={{ fontSize: 12 }}>💰 R$ {Number(job.value).toLocaleString('pt-BR')}</span>}
-                  {job.status && (
-                    <span style={{ 
-                      fontSize: 12,
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      background: job.status === 'OPEN' ? 'var(--green)' : 'var(--text-muted)',
-                      color: 'white'
-                    }}>
-                      {job.status === 'OPEN' ? 'Aberta' : 'Fechada'}
-                    </span>
-                  )}
-                </div>
-                
-                {app.message && (
-                  <div style={{ marginTop: 12, padding: 12, background: 'var(--bg-sidebar)', borderRadius: 'var(--radius)' }}>
-                    <strong style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sua mensagem:</strong>
-                    <p style={{ marginTop: 4, fontSize: 14 }}>{app.message}</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                );
+              })}
+            </div>
+            <div className="pagination">
+              <nav>
+                <button type="button" disabled aria-label="Página anterior">
+                  <span className="material-symbols-outlined">chevron_left</span>
+                </button>
+                <button type="button" className="active">1</button>
+                <button type="button">2</button>
+                <button type="button" aria-label="Próxima página">
+                  <span className="material-symbols-outlined">chevron_right</span>
+                </button>
+              </nav>
+            </div>
+          </>
+        )}
+      </div>
     </TinderDoFluxoPageShell>
   );
 }

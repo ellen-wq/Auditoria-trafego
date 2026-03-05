@@ -3729,3 +3729,165 @@ tbody tr:hover { background: #fafbfd; }
 }
 .prestador-profile-form-review textarea { min-height: 80px; resize: vertical; }
 .prestador-profile-form-review .btn { margin-top: 8px; }
+
+/* ===================== MINHAS CANDIDATURAS (design referência) ===================== */
+.candidaturas-page { max-width: 1024px; margin: 0 auto; padding: 0 24px 32px; }
+.candidaturas-page .candidaturas-header {
+  height: 64px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 -24px 24px -24px;
+  padding: 0 24px;
+  background: var(--bg-white);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  background: rgba(255,255,255,0.9);
+}
+.candidaturas-page .candidaturas-header .search-wrap { flex: 1; max-width: 400px; position: relative; }
+.candidaturas-page .candidaturas-header .search-wrap .material-symbols-outlined.search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 20px; color: var(--text-muted); pointer-events: none;
+}
+.candidaturas-page .candidaturas-header input {
+  width: 100%; padding: 10px 12px 10px 40px;
+  background: var(--bg-main); border: none; border-radius: var(--radius-sm);
+  font-size: 14px; color: var(--text-primary);
+}
+.candidaturas-page .candidaturas-header input::placeholder { color: var(--text-muted); }
+.candidaturas-page .candidaturas-header input:focus { outline: none; box-shadow: 0 0 0 2px var(--login-primary); }
+.candidaturas-page .candidaturas-header .header-actions {
+  display: flex; align-items: center; gap: 8px;
+}
+.candidaturas-page .candidaturas-header .header-actions button {
+  width: 40px; height: 40px; border: none; background: transparent;
+  border-radius: var(--radius-sm); color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative;
+}
+.candidaturas-page .candidaturas-header .header-actions button:hover { background: var(--bg-main); color: var(--text-primary); }
+.candidaturas-page .candidaturas-header .header-actions .notif-dot {
+  position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+  background: var(--red); border-radius: 50%;
+}
+.candidaturas-page .page-heading { margin-bottom: 24px; }
+.candidaturas-page .page-heading h2 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 8px 0; }
+.candidaturas-page .page-heading p { color: var(--text-secondary); margin: 0; font-size: 14px; }
+.candidaturas-page .filters { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.candidaturas-page .filters button {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; font-size: 13px; font-weight: 500;
+  background: var(--bg-white); border: 1px solid var(--border);
+  border-radius: 12px; cursor: pointer; color: var(--text-primary);
+}
+.candidaturas-page .filters button:hover { border-color: var(--login-primary); }
+.candidaturas-page .filters button .material-symbols-outlined { font-size: 18px; }
+.candidaturas-page .cards-list { display: flex; flex-direction: column; gap: 16px; }
+.candidaturas-page .app-card {
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s ease;
+}
+@media (min-width: 768px) {
+  .candidaturas-page .app-card { flex-direction: row; align-items: stretch; }
+}
+.candidaturas-page .app-card:hover { box-shadow: var(--shadow-md); }
+.candidaturas-page .app-card.em-conversa {
+  border-color: rgba(183, 227, 94, 0.3);
+  box-shadow: 0 0 0 1px rgba(183, 227, 94, 0.1);
+}
+.candidaturas-page .app-card.encerrada {
+  background: var(--bg-main);
+  filter: grayscale(0.6);
+  transition: filter 0.2s ease;
+}
+.candidaturas-page .app-card.encerrada:hover { filter: grayscale(0); }
+.candidaturas-page .app-card.encerrada .app-card-title,
+.candidaturas-page .app-card.encerrada .recruiter-name,
+.candidaturas-page .app-card.encerrada .recruiter-tags { opacity: 0.7; }
+.candidaturas-page .app-card-body { flex: 1; min-width: 0; }
+.candidaturas-page .app-card-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.candidaturas-page .app-card-badge {
+  padding: 6px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  border-radius: 6px;
+}
+.candidaturas-page .app-card-badge.enviada {
+  background: var(--bg-main); color: var(--text-secondary);
+}
+.candidaturas-page .app-card-badge.visualizada {
+  background: var(--blue-light); color: var(--blue);
+}
+.candidaturas-page .app-card-badge.em-conversa {
+  background: var(--login-primary); color: var(--text-primary);
+}
+.candidaturas-page .app-card-badge.encerrada {
+  background: var(--border); color: var(--text-muted);
+}
+.candidaturas-page .app-card-date { font-size: 12px; color: var(--text-muted); }
+.candidaturas-page .app-card-title { font-size: 20px; font-weight: 700; margin: 0 0 4px 0; }
+.candidaturas-page .app-card-category { color: var(--login-primary); font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+.candidaturas-page .app-card-recruiter {
+  display: flex; align-items: center; gap: 12px; margin-top: 16px;
+}
+.candidaturas-page .app-card-recruiter .avatar {
+  width: 40px; height: 40px; border-radius: 50%; background: var(--bg-main);
+  overflow: hidden; flex-shrink: 0;
+}
+.candidaturas-page .app-card-recruiter .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.candidaturas-page .app-card-recruiter .recruiter-name { font-size: 14px; font-weight: 700; }
+.candidaturas-page .recruiter-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.candidaturas-page .recruiter-tags span {
+  padding: 2px 6px; font-size: 9px; font-weight: 800; text-transform: uppercase;
+  background: rgba(183, 227, 94, 0.25); color: var(--text-primary); border-radius: 4px;
+}
+.candidaturas-page .app-card.encerrada .recruiter-tags span { background: var(--border); color: var(--text-secondary); }
+.candidaturas-page .app-card-actions {
+  display: flex; gap: 8px; flex-direction: row; justify-content: flex-end; align-items: center;
+  min-width: 160px;
+}
+@media (min-width: 768px) {
+  .candidaturas-page .app-card-actions { flex-direction: column; align-items: stretch; }
+}
+.candidaturas-page .app-card-actions .btn-card {
+  width: 100%; padding: 10px 16px; font-size: 12px; font-weight: 700;
+  border-radius: var(--radius-sm); cursor: pointer; border: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  text-decoration: none; transition: background 0.2s, border-color 0.2s;
+}
+.candidaturas-page .app-card-actions .btn-card.primary {
+  background: var(--login-primary); color: var(--text-primary);
+}
+.candidaturas-page .app-card-actions .btn-card.primary:hover { filter: brightness(1.05); }
+.candidaturas-page .app-card-actions .btn-card.secondary {
+  background: var(--bg-main); color: var(--text-primary);
+}
+.candidaturas-page .app-card-actions .btn-card.secondary:hover { background: var(--border); }
+.candidaturas-page .app-card-actions .btn-card.outline {
+  background: transparent; border: 1px solid var(--border); color: var(--text-primary);
+}
+.candidaturas-page .app-card-actions .btn-card.outline:hover { background: var(--bg-main); }
+.candidaturas-page .app-card-actions .btn-card.disabled {
+  background: var(--border); color: var(--text-muted); cursor: not-allowed;
+}
+.candidaturas-page .pagination { margin-top: 32px; display: flex; justify-content: center; }
+.candidaturas-page .pagination nav { display: flex; gap: 8px; }
+.candidaturas-page .pagination button {
+  width: 40px; height: 40px; border: 1px solid var(--border); background: var(--bg-white);
+  border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-primary);
+}
+.candidaturas-page .pagination button:hover:not(:disabled) { background: var(--bg-main); }
+.candidaturas-page .pagination button:disabled { opacity: 0.5; cursor: default; }
+.candidaturas-page .pagination button.active { background: var(--login-primary); color: var(--text-primary); border-color: var(--login-primary); }
+.candidaturas-page .empty-state-card { padding: 48px 24px; text-align: center; }
+.candidaturas-page .empty-state-card p { color: var(--text-muted); margin: 0; }

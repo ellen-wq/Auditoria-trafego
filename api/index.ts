@@ -11,12 +11,14 @@ function resolvePublicDist(): string {
   if (typeof (global as any).__PUBLIC_DIST__ === 'string') {
     return (global as any).__PUBLIC_DIST__;
   }
+  const cwd = process.cwd();
   const candidates = [
-    path.join(process.cwd(), 'public_dist'),
-    path.join(process.cwd(), '..', 'public_dist'),
+    path.join(cwd, 'public_dist'),
+    path.join(cwd, '..', 'public_dist'),
     path.join(__dirname, '..', 'public_dist'),
     path.join(__dirname, '..', '..', 'public_dist'),
     path.join(__dirname, 'public_dist'),
+    path.join(process.env.VERCEL_PROJECT_ROOT || cwd, 'public_dist'),
   ];
   for (const dir of candidates) {
     const indexPath = path.join(dir, 'index.html');
@@ -25,8 +27,13 @@ function resolvePublicDist(): string {
       return dir;
     }
   }
-  (global as any).__PUBLIC_DIST__ = path.join(process.cwd(), 'public_dist');
-  return (global as any).__PUBLIC_DIST__;
+  const fallback = path.join(cwd, 'public_dist');
+  if (fs.existsSync(path.join(fallback, 'index.html'))) {
+    (global as any).__PUBLIC_DIST__ = fallback;
+    return fallback;
+  }
+  (global as any).__PUBLIC_DIST__ = fallback;
+  return fallback;
 }
 
 async function getAppInstance(): Promise<ExpressAppLike> {
@@ -74,8 +81,25 @@ export default function handler(req: Request, res: Response): void {
         return;
       }
 
+      // Servir arquivos estáticos (chunks JS/CSS) diretamente para evitar HTML em /assets/* (evita "A página não carregou")
+      if (requestPath.startsWith('/assets/')) {
+        const publicDir = resolvePublicDist();
+        const filePath = path.join(publicDir, requestPath);
+        const ext = path.extname(requestPath);
+        const contentType =
+          ext === '.js' ? 'application/javascript' : ext === '.css' ? 'text/css' : ext === '.svg' ? 'image/svg+xml' : undefined;
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+          const data = fs.readFileSync(filePath);
+          res.writeHead(200, {
+            'Content-Type': contentType || 'application/octet-stream',
+            'Cache-Control': 'public, max-age=31536000, immutable',
+          });
+          res.end(data);
+          return;
+        }
+      }
+
       // Evita quebrar render de páginas estáticas quando há falha de DB/env.
-      // Inicializamos conexão apenas quando a rota é realmente de API.
       if (requestPath.startsWith('/api/')) {
         await ensureDbInit();
       }

@@ -165,7 +165,6 @@ export default function Sidebar({ user }: SidebarProps) {
               <NavLink to="/tinder-do-fluxo/vagas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Vagas</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas/minhas-candidaturas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Minhas Candidaturas</NavLink>
               <NavLink to="/tinder-do-fluxo/matches" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Matches</NavLink>
-              <NavLink to="/tinder-do-fluxo/favoritos" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Favoritos</NavLink>
               <NavLink to="/tinder-do-fluxo/favoritos-2-0" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Favoritos 2.0</NavLink>
               <NavLink to="/tinder-do-fluxo/perfil" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Meu Perfil</NavLink>
             </>
@@ -187,7 +186,6 @@ export default function Sidebar({ user }: SidebarProps) {
               <NavLink to="/tinder-do-fluxo/vagas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Vagas</NavLink>
               <NavLink to="/tinder-do-fluxo/vagas/minhas-candidaturas" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Minhas Candidaturas</NavLink>
               <NavLink to="/tinder-do-fluxo/matches" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Matches</NavLink>
-              <NavLink to="/tinder-do-fluxo/favoritos" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Favoritos</NavLink>
               <NavLink to="/tinder-do-fluxo/favoritos-2-0" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Favoritos 2.0</NavLink>
               <NavLink to="/tinder-do-fluxo/avaliacoes" className={({ isActive }) => `sidebar-link sidebar-sub-link${isActive ? ' active' : ''}`}>Avaliações de Prestador</NavLink>
 
