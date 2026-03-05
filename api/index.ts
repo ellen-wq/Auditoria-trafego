@@ -105,7 +105,32 @@ export default function handler(req: Request, res: Response): void {
         }
       }
 
-      // Evita quebrar render de páginas estáticas quando há falha de DB/env.
+      // Rotas que não são API: servir index.html da SPA sem carregar o Express (evita FUNCTION_INVOCATION_FAILED na Vercel)
+      if (!requestPath.startsWith('/api/')) {
+        const publicDir = resolvePublicDist();
+        // Favicon: servir arquivo se existir, senão 204
+        if (requestPath === '/favicon.ico') {
+          const favPath = path.join(publicDir, 'favicon.ico');
+          if (fs.existsSync(favPath) && fs.statSync(favPath).isFile()) {
+            const data = fs.readFileSync(favPath);
+            res.writeHead(200, { 'Content-Type': 'image/x-icon' });
+            res.end(data);
+            return;
+          }
+          res.writeHead(204);
+          res.end();
+          return;
+        }
+        const indexPath = path.join(publicDir, 'index.html');
+        if (fs.existsSync(indexPath)) {
+          const html = fs.readFileSync(indexPath, 'utf-8');
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(html);
+          return;
+        }
+      }
+
+      // Apenas /api/*: inicializar DB e passar para o Express
       if (requestPath.startsWith('/api/')) {
         await ensureDbInit();
       }
