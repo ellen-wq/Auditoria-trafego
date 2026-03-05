@@ -4,10 +4,6 @@ export interface ProfileMentoradoIdentityProps {
   name: string;
   photoUrl?: string;
   cidade?: string;
-  nicho?: string;
-  hobbies?: string;
-  instagram?: string;
-  nivelFluxo?: string;
   isExpert: boolean;
   isCoprodutor: boolean;
   /** Se true, exibe selo "Mentorado Fluxo" */
@@ -19,17 +15,13 @@ export function ProfileMentoradoIdentity({
   name,
   photoUrl,
   cidade,
-  nicho,
-  hobbies,
-  instagram,
-  nivelFluxo,
   isExpert,
   isCoprodutor,
   isMentoradoFluxo,
   onEdit,
 }: ProfileMentoradoIdentityProps) {
   const badgeLabel = isExpert ? 'Expert' : isCoprodutor ? 'Coprodutor' : '';
-  const showFluxoBadge = isMentoradoFluxo ?? !!nivelFluxo;
+  const showFluxoBadge = isMentoradoFluxo;
 
   return (
     <div
@@ -147,34 +139,6 @@ export function ProfileMentoradoIdentity({
             </span>
             <span>{cidade}</span>
           </div>
-        )}
-        {nicho && (
-          <p style={{ margin: '8px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>🎯 {nicho}</p>
-        )}
-        {hobbies && (
-          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>✨ {hobbies}</p>
-        )}
-        {nivelFluxo && (
-          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>📊 {nivelFluxo}</p>
-        )}
-        {instagram && (
-          <a
-            href={`https://instagram.com/${instagram.replace(/^@/, '')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              marginTop: 8,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              fontSize: 14,
-              color: 'var(--accent)',
-              textDecoration: 'none',
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>camera_alt</span>
-            @{instagram.replace(/^@/, '')}
-          </a>
         )}
       </div>
       {onEdit && (
