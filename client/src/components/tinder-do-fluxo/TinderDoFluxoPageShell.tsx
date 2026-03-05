@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import AppLayout from '../AppLayout';
 
 export interface TinderDoFluxoPageShellProps {
@@ -12,13 +12,8 @@ export interface TinderDoFluxoPageShellProps {
 }
 
 export default function TinderDoFluxoPageShell({ title, subtitle, headerRight, hideBreadcrumbs, children }: TinderDoFluxoPageShellProps) {
-  const breadcrumbs = useMemo(() =>
-    hideBreadcrumbs ? [] : [{ label: 'Tinder do Fluxo' }, { label: title }],
-    [title, hideBreadcrumbs]
-  );
-
   return (
-    <AppLayout breadcrumbs={breadcrumbs}>
+    <AppLayout breadcrumbs={[]}>
       {headerRight != null ? (
         <div className="vagas-header-row">
           <div>

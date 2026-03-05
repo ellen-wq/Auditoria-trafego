@@ -1916,7 +1916,7 @@ export function TinderMatchesPage() {
   };
 
   return (
-    <AppLayout breadcrumbs={[{ label: 'Tinder do Fluxo' }, { label: 'Matches' }]}>
+    <AppLayout breadcrumbs={[]}>
       <div className="matches-chat-page">
         {/* Left panel */}
         <aside className="matches-chat-left">
