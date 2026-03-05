@@ -13,3 +13,6 @@ tmp/
 test-results/
 client/tsconfig.tsbuildinfo
 fluxer-logo-animation.svg
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts
